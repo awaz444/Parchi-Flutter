@@ -19,6 +19,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_handler_service.dart';
 import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
+import 'providers/user_provider.dart'; // [NEW] For guest detection
+import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -259,7 +261,6 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isLoading = true;
-  bool _isAuthenticated = false;
   late final StreamSubscription<AuthState> _authSubscription;
   StreamSubscription<String>? _authErrorSubscription;
 
@@ -342,7 +343,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       final isStudentAuth = await authService.isStudentAuthenticated();
       if (mounted) {
         setState(() {
-          _isAuthenticated = isStudentAuth;
           _isLoading = false;
         });
       }
@@ -356,7 +356,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isAuthenticated = false;
           _isLoading = false;
         });
       }
@@ -373,30 +372,52 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
 
-    return _isAuthenticated ? const MainScreen() : const LoginScreen();
+    // Always show MainScreen — guests can browse restaurants freely.
+    // Account-based features (History, Profile) gate themselves individually.
+    return const MainScreen();
   }
 }
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const LeaderboardScreen(),
-    const RedemptionHistoryScreen(), // [NEW] History instead of Profile
-  ];
 
   @override
   Widget build(BuildContext context) {
+    // Watch the user provider to know if a guest is using the app.
+    // A null user means the user is not authenticated (guest).
+    final userAsync = ref.watch(userProfileProvider);
+    final bool isAuthenticated = userAsync.maybeWhen(
+      data: (user) => user != null,
+      orElse: () => false,
+    );
+
+    // Resolve the active page.
+    // For the History tab (index 2), show a guest prompt if not authenticated.
+    Widget activePage;
+    if (_currentIndex == 2 && !isAuthenticated) {
+      activePage = const GuestLoginPrompt(
+        title: 'Sign in to view your history',
+        subtitle:
+            'Your redemption history and Parchi card are only available to signed-in students.',
+        icon: Icons.history_rounded,
+      );
+    } else {
+      activePage = _currentIndex == 0
+          ? const HomeScreen()
+          : _currentIndex == 1
+              ? const LeaderboardScreen()
+              : const RedemptionHistoryScreen();
+    }
+
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: activePage,
       bottomNavigationBar: Container(
         padding: const EdgeInsets.only(top: 2),
         decoration: BoxDecoration(

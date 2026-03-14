@@ -6,7 +6,7 @@ import 'auth_service.dart';
 class BrandsService {
   Future<List<BrandModel>> getAllBrands() async {
     try {
-      final response = await authService.authenticatedGet(ApiConfig.allBrandsEndpoint);
+      final response = await authService.publicGet(ApiConfig.allBrandsEndpoint);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);

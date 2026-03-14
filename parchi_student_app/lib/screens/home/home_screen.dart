@@ -7,6 +7,7 @@ import '../../providers/user_provider.dart';
 import '../../providers/home_ui_provider.dart'; // [NEW]
 import 'notfication/notification_screen.dart'; // [NEW] Import the new screen
 import '../profile/profile_screen.dart'; // [NEW] Import Profile Screen
+import '../auth/login_screens/login_screen.dart'; // [GUEST] Login screen for guest CTA
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -151,6 +152,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final userAsync = ref.watch(userProfileProvider);
     final homeUIState = ref.watch(homeUIProvider); // [NEW]
 
+    // Determine if the user is a guest (not authenticated)
+    final bool isGuest = userAsync.maybeWhen(
+      data: (user) => user == null,
+      orElse: () => false,
+    );
+
     return ValueListenableBuilder<double>(
       valueListenable: _expandProgress,
       builder: (context, progress, child) {
@@ -158,41 +165,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           backgroundColor: AppColors.lightCanvas,
           body: Stack(
             children: [
-              // LAYER 1: Parchi Card
+              // LAYER 1: Parchi Card (hidden for guests)
               Positioned(
                 top: collapsedHeaderHeight,
                 left: 0,
                 right: 0,
                 child: Opacity(
                   opacity: (1.0 - (progress * 3)).clamp(0.0, 1.0),
-                  child: userAsync.when(
-                    data: (user) {
-                      final fname = user?.firstName ?? "Student";
-                      final lname = user?.lastName ?? "";
-                      final fullName = "$fname $lname".trim().toUpperCase();
-                      final pId = user?.parchiId ?? "PENDING";
-                      final uni = user?.university ?? "Unknown University";
+                  child: isGuest
+                      // [GUEST] Show a sign-in teaser card instead of the Parchi card
+                      ? _GuestParchiCardTeaser(
+                          onSignInTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          },
+                        )
+                      : userAsync.when(
+                          data: (user) {
+                            final fname = user?.firstName ?? "Student";
+                            final lname = user?.lastName ?? "";
+                            final fullName =
+                                "$fname $lname".trim().toUpperCase();
+                            final pId = user?.parchiId ?? "PENDING";
+                            final uni =
+                                user?.university ?? "Unknown University";
 
-                      return ParchiCard(
-                        studentName: fullName.isEmpty ? "STUDENT" : fullName,
-                        studentId: pId,
-                        universityName: uni,
-                        isFoundersClub: user?.isFoundersClub ?? false,
-                        // [NEW] Pass UI states
-                        isLoading: homeUIState.isSkeletonLoading, // Override loading if refreshing
-                      );
-                    },
-                    loading: () => const ParchiCard(
-                        studentName: "",
-                        studentId: "",
-                        universityName: "",
-                        isLoading: true),
-                    error: (err, stack) => const ParchiCard(
-                        studentName: "",
-                        studentId: "",
-                        universityName: "",
-                        isLoading: true), // Skeleton on error
-                  ),
+                            return ParchiCard(
+                              studentName:
+                                  fullName.isEmpty ? "STUDENT" : fullName,
+                              studentId: pId,
+                              universityName: uni,
+                              isFoundersClub: user?.isFoundersClub ?? false,
+                              isLoading: homeUIState.isSkeletonLoading,
+                            );
+                          },
+                          loading: () => const ParchiCard(
+                              studentName: "",
+                              studentId: "",
+                              universityName: "",
+                              isLoading: true),
+                          error: (err, stack) => const ParchiCard(
+                              studentName: "",
+                              studentId: "",
+                              universityName: "",
+                              isLoading: true),
+                        ),
                 ),
               ),
 
@@ -217,61 +237,253 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 top: 0,
                 left: 0,
                 right: 0,
-                child: userAsync.when(
-                  data: (user) {
-                    final fname = user?.firstName ?? "Student";
-                    final lname = user?.lastName ?? "";
-                    final fullName = "$fname $lname".trim().toUpperCase();
-                    final pId = user?.parchiId ?? "PENDING";
-                    final uni = user?.university ?? "Unknown University";
+                child: isGuest
+                    // [GUEST] Minimal header: no profile avatar, just a Sign In button
+                    ? _GuestCompactHeader(
+                        scrollProgress: progress,
+                        onNotificationTap: _openNotifications,
+                        onSearchChanged: (val) {
+                          setState(() {
+                            _searchQuery = val;
+                          });
+                        },
+                        onSignInTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                          );
+                        },
+                      )
+                    : userAsync.when(
+                        data: (user) {
+                          final fname = user?.firstName ?? "Student";
+                          final lname = user?.lastName ?? "";
+                          final fullName =
+                              "$fname $lname".trim().toUpperCase();
+                          final pId = user?.parchiId ?? "PENDING";
+                          final uni = user?.university ?? "Unknown University";
 
-                    final initials = (fname.isNotEmpty ? fname[0] : "") +
-                        (lname.isNotEmpty ? lname[0] : "");
+                          final initials =
+                              (fname.isNotEmpty ? fname[0] : "") +
+                                  (lname.isNotEmpty ? lname[0] : "");
 
-                    return CompactParchiHeader(
-                      studentName: fullName.isEmpty ? "STUDENT" : fullName,
-                      studentId: pId,
-                      universityName: uni,
-                      scrollProgress: progress,
-                      onNotificationTap: _openNotifications,
-                      profilePicture: user?.profilePicture,
-                      studentInitials: initials.toUpperCase(),
-                      onProfileTap: _navigateToProfile,
-                      onSearchChanged: (val) {
-                        setState(() {
-                          _searchQuery = val;
-                        });
-                      },
-                      isLoading: homeUIState.isSkeletonLoading, // [NEW] Pass skeleton state
-                      hasUnreadNotifications: user?.hasUnreadNotifications ?? false, // [NEW]
-                    );
-                  },
-                  loading: () => CompactParchiHeader(
-                    studentName: "", // Empty for skeleton
-                    studentId: "",
-                    universityName: "",
-                    scrollProgress: progress,
-                    onNotificationTap: _openNotifications,
-                    studentInitials: "",
-                    onProfileTap: _navigateToProfile,
-                    isLoading: true, // [NEW] Trigger skeleton
-                  ),
-                  error: (err, stack) => CompactParchiHeader(
-                    studentName: "",
-                    studentId: "",
-                    universityName: "",
-                    scrollProgress: progress,
-                    onNotificationTap: _openNotifications,
-                    studentInitials: "",
-                    onProfileTap: _navigateToProfile,
-                    isLoading: true, // Skeleton on error
-                  ),
-                ),
+                          return CompactParchiHeader(
+                            studentName:
+                                fullName.isEmpty ? "STUDENT" : fullName,
+                            studentId: pId,
+                            universityName: uni,
+                            scrollProgress: progress,
+                            onNotificationTap: _openNotifications,
+                            profilePicture: user?.profilePicture,
+                            studentInitials: initials.toUpperCase(),
+                            onProfileTap: _navigateToProfile,
+                            onSearchChanged: (val) {
+                              setState(() {
+                                _searchQuery = val;
+                              });
+                            },
+                            isLoading: homeUIState.isSkeletonLoading,
+                            hasUnreadNotifications:
+                                user?.hasUnreadNotifications ?? false,
+                          );
+                        },
+                        loading: () => CompactParchiHeader(
+                          studentName: "",
+                          studentId: "",
+                          universityName: "",
+                          scrollProgress: progress,
+                          onNotificationTap: _openNotifications,
+                          studentInitials: "",
+                          onProfileTap: _navigateToProfile,
+                          isLoading: true,
+                        ),
+                        error: (err, stack) => CompactParchiHeader(
+                          studentName: "",
+                          studentId: "",
+                          universityName: "",
+                          scrollProgress: progress,
+                          onNotificationTap: _openNotifications,
+                          studentInitials: "",
+                          onProfileTap: _navigateToProfile,
+                          isLoading: true,
+                        ),
+                      ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Guest header: search bar + Sign In button (no profile avatar)
+// ─────────────────────────────────────────────────────────────────────────────
+class _GuestCompactHeader extends StatelessWidget {
+  final double scrollProgress;
+  final VoidCallback onNotificationTap;
+  final ValueChanged<String>? onSearchChanged;
+  final VoidCallback onSignInTap;
+
+  const _GuestCompactHeader({
+    required this.scrollProgress,
+    required this.onNotificationTap,
+    required this.onSignInTap,
+    this.onSearchChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = Color.lerp(
+      Colors.transparent,
+      AppColors.primary,
+      scrollProgress,
+    );
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+        boxShadow: scrollProgress > 0.1
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1 * scrollProgress),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Row(
+            children: [
+              // Search Bar
+              Expanded(
+                child: Container(
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: AppColors.lightSurface,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: TextField(
+                    onChanged: onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: "Search restaurants...",
+                      hintStyle: TextStyle(
+                          color: AppColors.textSecondary, fontSize: 13),
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(left: 8.0),
+                        child: Icon(
+                          Icons.search,
+                          color: AppColors.textSecondary,
+                          size: 20,
+                        ),
+                      ),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 35),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.only(bottom: 17),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Sign In button
+              GestureDetector(
+                onTap: onSignInTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Guest Parchi card teaser: prompts the user to sign in
+// ─────────────────────────────────────────────────────────────────────────────
+class _GuestParchiCardTeaser extends StatelessWidget {
+  final VoidCallback onSignInTap;
+
+  const _GuestParchiCardTeaser({required this.onSignInTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: onSignInTap,
+        child: Container(
+          height: 180,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.primary.withOpacity(0.7),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.credit_card_rounded,
+                    color: Colors.white70, size: 36),
+                SizedBox(height: 10),
+                Text(
+                  'Sign in to get your Parchi card',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Tap to create a free account',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

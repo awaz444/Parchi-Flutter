@@ -8,7 +8,7 @@ class MerchantsService {
 
   Future<MerchantDetailModel> getMerchantDetails(String merchantId) async {
     try {
-      final response = await authService.authenticatedGet(ApiConfig.merchantDetailsEndpoint(merchantId));
+      final response = await authService.publicGet(ApiConfig.merchantDetailsEndpoint(merchantId));
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -44,7 +44,7 @@ class MerchantsService {
         .replace(queryParameters: queryParameters);
 
     try {
-      final response = await authService.authenticatedGet(uri.toString());
+      final response = await authService.publicGet(uri.toString());
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 

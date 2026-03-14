@@ -19,7 +19,7 @@ class LeaderboardService {
       final uri = Uri.parse(ApiConfig.leaderboardEndpoint)
           .replace(queryParameters: queryParams);
 
-      final response = await authService.authenticatedGet(uri.toString());
+      final response = await authService.publicGet(uri.toString());
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 

@@ -8,7 +8,7 @@ class OffersService {
   // Get Active Offers
   Future<List<OfferModel>> getActiveOffers() async {
     try {
-      final response = await authService.authenticatedGet(ApiConfig.activeOffersEndpoint);
+      final response = await authService.publicGet(ApiConfig.activeOffersEndpoint);
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -33,7 +33,7 @@ class OffersService {
   // Get Featured Offers
   Future<List<OfferModel>> getFeaturedOffers() async {
     try {
-      final response = await authService.authenticatedGet(ApiConfig.featuredOffersEndpoint);
+      final response = await authService.publicGet(ApiConfig.featuredOffersEndpoint);
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -55,7 +55,7 @@ class OffersService {
   // Get Offer Details
   Future<OfferModel> getOfferDetails(String id) async {
     try {
-      final response = await authService.authenticatedGet(ApiConfig.offerDetailsEndpoint(id));
+      final response = await authService.publicGet(ApiConfig.offerDetailsEndpoint(id));
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 

@@ -644,6 +644,17 @@ class AuthService {
         'Authorization': 'Bearer $token',
       };
 
+  /// Makes a GET request that works for both guests and authenticated users.
+  /// If a valid token exists it is included (so the server can personalise the
+  /// response), otherwise the request is sent without an Authorization header.
+  /// Use this for any endpoint that should be publicly accessible.
+  Future<http.Response> publicGet(String url) async {
+    final token = await getToken().catchError((_) => null);
+    final uri = Uri.parse(url);
+    final headers = (token != null) ? _authHeaders(token) : Map<String, String>.from(_baseHeaders);
+    return _httpClient.get(uri, headers: headers);
+  }
+
   // Helper method to handle authenticated GET requests with auto-refresh retry
   Future<http.Response> authenticatedGet(String url) async {
     // 1. Get current token — served from memory cache on most calls

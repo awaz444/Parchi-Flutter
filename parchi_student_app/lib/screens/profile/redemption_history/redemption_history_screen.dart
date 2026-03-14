@@ -8,7 +8,9 @@ import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import '../../../widgets/common/parchi_refresh_loader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/redemption_provider.dart';
+import '../../../providers/user_provider.dart'; // [GUEST] For auth check
 import '../../../widgets/common/blinking_skeleton.dart';
+import '../../../widgets/common/guest_login_prompt.dart'; // [GUEST]
 
 class RedemptionHistoryScreen extends ConsumerStatefulWidget {
   const RedemptionHistoryScreen({super.key});
@@ -82,6 +84,22 @@ class _RedemptionHistoryScreenState
 
   @override
   Widget build(BuildContext context) {
+    // [GUEST] Show login prompt if user is not authenticated
+    final userAsync = ref.watch(userProfileProvider);
+    final bool isGuest = userAsync.maybeWhen(
+      data: (user) => user == null,
+      orElse: () => false,
+    );
+
+    if (isGuest) {
+      return const GuestLoginPrompt(
+        title: 'Sign in to view your history',
+        subtitle:
+            'Your redemption history and savings stats are only available to signed-in students.',
+        icon: Icons.history_rounded,
+      );
+    }
+
     // Watch providers
     final statsAsync = ref.watch(redemptionStatsProvider);
     final historyState = ref.watch(redemptionHistoryProvider);
