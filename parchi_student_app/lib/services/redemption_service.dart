@@ -7,10 +7,11 @@ class RedemptionService {
 
   // Get Redemption History
   Future<List<RedemptionModel>> getRedemptions(
-      {int page = 1, String? status}) async {
+      {int page = 1, int limit = 10, String? status}) async {
     try {
       final queryParams = {
         'page': page.toString(),
+        'limit': limit.toString(),
         if (status != null) 'status': status,
       };
 

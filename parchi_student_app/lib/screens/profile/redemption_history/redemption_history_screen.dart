@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../utils/colours.dart';
 import '../../../models/redemption_model.dart';
-import '../../../services/redemption_service.dart';
 import 'redemption_detail_screen.dart';
 
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
@@ -60,8 +59,10 @@ class _RedemptionHistoryScreenState
 
     try {
       final statsFuture = ref.refresh(redemptionStatsProvider.future);
-      final historyFuture = ref.refresh(redemptionHistoryProvider.future);
-      await Future.wait([statsFuture, historyFuture]);
+      await Future.wait([
+        statsFuture,
+        ref.read(redemptionHistoryProvider.notifier).refresh(),
+      ]);
     } catch (e) {
       debugPrint("Redemption refresh error: $e");
     } finally {
@@ -83,7 +84,7 @@ class _RedemptionHistoryScreenState
   Widget build(BuildContext context) {
     // Watch providers
     final statsAsync = ref.watch(redemptionStatsProvider);
-    final historyAsync = ref.watch(redemptionHistoryProvider);
+    final historyState = ref.watch(redemptionHistoryProvider);
 
     return Scaffold(
       backgroundColor: AppColors.primary,
@@ -158,59 +159,74 @@ class _RedemptionHistoryScreenState
             color: AppColors.lightCanvas,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
-          child: historyAsync.when(
-            loading: () => _buildListSkeleton(),
-            error: (err, stack) => _buildListSkeleton(), // Skeleton on error
-            data: (items) {
-              // [NEW] Logic: If refreshing, FORCE SKELETON, otherwise show data
-              if (_isRefreshing) return _buildListSkeleton();
+          child: Builder(builder: (_) {
+            if (historyState.isLoading || _isRefreshing) {
+              return _buildListSkeleton();
+            }
+            if (historyState.error != null && historyState.items.isEmpty) {
+              return _buildListSkeleton();
+            }
+            if (historyState.items.isEmpty) return _buildEmptyState();
 
-              if (items.isEmpty) return _buildEmptyState();
-              return ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(30)),
-                child: CustomRefreshIndicator(
-                  onRefresh: _refresh,
-                  offsetToArmed: 100.0,
-                  builder: (BuildContext context, Widget child,
-                      IndicatorController controller) {
-                    return Stack(
-                      children: <Widget>[
-                        AnimatedBuilder(
-                          animation: controller,
-                          builder: (context, _) {
-                            return SizedBox(
-                              height: controller.value * 100.0,
-                              width: double.infinity,
-                              child: Center(
-                                child: ParchiLoader(
-                                  isLoading: controller.isLoading,
-                                  progress: controller.value,
-                                ),
+            final items = historyState.items;
+            return ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(30)),
+              child: CustomRefreshIndicator(
+                onRefresh: _refresh,
+                offsetToArmed: 100.0,
+                builder: (BuildContext context, Widget child,
+                    IndicatorController controller) {
+                  return Stack(
+                    children: <Widget>[
+                      AnimatedBuilder(
+                        animation: controller,
+                        builder: (context, _) {
+                          return SizedBox(
+                            height: controller.value * 100.0,
+                            width: double.infinity,
+                            child: Center(
+                              child: ParchiLoader(
+                                isLoading: controller.isLoading,
+                                progress: controller.value,
                               ),
-                            );
-                          },
-                        ),
-                        Transform.translate(
-                          offset: Offset(0.0, controller.value * 100.0),
-                          child: child,
-                        ),
-                      ],
-                    );
+                            ),
+                          );
+                        },
+                      ),
+                      Transform.translate(
+                        offset: Offset(0.0, controller.value * 100.0),
+                        child: child,
+                      ),
+                    ],
+                  );
+                },
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  // +1 for the load-more footer
+                  itemCount: items.length + (historyState.hasMore ? 1 : 0),
+                  separatorBuilder: (context, index) => const Divider(
+                      height: 1, color: AppColors.surfaceVariant),
+                  itemBuilder: (context, index) {
+                    // Load-more trigger at the bottom
+                    if (index == items.length) {
+                      if (!historyState.isLoadingMore) {
+                        ref
+                            .read(redemptionHistoryProvider.notifier)
+                            .loadMore();
+                      }
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    }
+                    return _buildRedemptionNotificationItem(items[index]);
                   },
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    itemCount: items.length,
-                    separatorBuilder: (context, index) => const Divider(
-                        height: 1, color: AppColors.surfaceVariant),
-                    itemBuilder: (context, index) {
-                      return _buildRedemptionNotificationItem(items[index]);
-                    },
-                  ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -252,18 +268,13 @@ class _RedemptionHistoryScreenState
         item.offer?.imageUrl;
     final timeStr = DateFormat('MMM d').format(item.redeemedAt); // e.g. Oct 24
 
-    // Status Logic
-    final isApproved = item.status == 'APPROVED';
-    final statusColor = isApproved
-        ? AppColors.success
-        : (item.status == 'REJECTED' ? AppColors.error : AppColors.primary);
-
     return InkWell(
       onTap: () {
         Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => RedemptionDetailScreen(redemption: item),
+              // Pass only the ID — detail screen fetches the full data
+              builder: (_) => RedemptionDetailScreen(redemptionId: item.id),
             ));
       },
       child: Padding(
