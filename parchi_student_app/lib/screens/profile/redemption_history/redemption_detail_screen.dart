@@ -31,7 +31,12 @@ class RedemptionDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text('Redemption Details',
-            style: TextStyle(color: AppColors.textPrimary)),
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontFamily: 'Hagrid',
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            )),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -68,15 +73,16 @@ class RedemptionDetailScreen extends StatelessWidget {
                         : null,
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    merchantName,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                    Text(
+                      merchantName,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'Hagrid',
+                        color: AppColors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
                   const SizedBox(height: 4),
                   Text(
                     branchName,

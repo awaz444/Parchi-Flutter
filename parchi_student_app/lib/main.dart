@@ -153,7 +153,7 @@ class _ParchiAppState extends State<ParchiApp> {
             const LoginScreen(), // [NEW] Named route for global navigation
       },
       theme: ThemeData(
-        textTheme: GoogleFonts.montserratTextTheme(),
+        textTheme: GoogleFonts.outfitTextTheme(),
         primaryColor: AppColors.primary,
         // [NEW] Enforce Blue Color Scheme to remove default Purple
         colorScheme: ColorScheme.fromSeed(

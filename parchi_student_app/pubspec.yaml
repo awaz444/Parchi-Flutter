@@ -54,6 +54,13 @@ flutter:
     - assets/Parchi-Icon-with-new-blue.png
     - assets/ParchiFullTextYellow.svg 
 
+  fonts:
+    - family: Hagrid
+      fonts:
+        - asset: assets/fonts/Hagrid-Regular.ttf
+        - asset: assets/fonts/Hagrid-Text-Extrabold.ttf
+          weight: 800
+
 flutter_launcher_icons:
   android: true
   ios: true

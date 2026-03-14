@@ -120,8 +120,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
           "Notifications",
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            fontFamily: 'Hagrid',
           ),
         ),
       ),

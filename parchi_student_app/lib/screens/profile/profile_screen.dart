@@ -234,8 +234,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         Text(fullName,
                             style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold)),
+                                fontSize: 26,
+                                fontFamily: 'Hagrid',
+                                fontWeight: FontWeight.w800)),
                         const SizedBox(height: 4),
                         Text(parchiId,
                             style: const TextStyle(

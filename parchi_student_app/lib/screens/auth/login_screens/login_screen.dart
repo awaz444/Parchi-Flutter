@@ -70,19 +70,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Dynamic Height Calculation
-    // Login (1): 55%
-    // Signup (2): 85% (Needs more space)
-    // Forgot Password (0): 55% (Similar to login)
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = keyboardHeight > 0;
+
     double containerHeight;
     if (_currentPage == 2) {
-      containerHeight = screenHeight * 0.75;
+      if (isKeyboardOpen) {
+        // Shrink to fit available space above keyboard
+        containerHeight = (screenHeight - keyboardHeight - 40).clamp(100.0, screenHeight * 0.75);
+      } else {
+        containerHeight = screenHeight * 0.75;
+      }
     } else {
-      containerHeight = screenHeight * 0.50;
+      containerHeight = screenHeight * 0.42;
     }
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // [FIX] Prevent whole screen jump
+      resizeToAvoidBottomInset: true, // [FIXED] Allow screen to lift with keyboard
       body: Stack(
         children: [
           // 1. BACKGROUND
@@ -96,11 +100,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           AnimatedPositioned(
             duration: const Duration(milliseconds: 600),
             curve: Curves.easeInOutQuart,
-            top: _currentPage == 2
-                ? -screenHeight * 0.10
-                : 0, // Moves up when form expands
+            top: 0, // [CENTERED] Vertically centered in remaining space
             left: 0, right: 0,
-            height: screenHeight * 0.45,
+            height: screenHeight - containerHeight, // [DYNAMIC HEIGHT] Use all space above container
             child: SafeArea(
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 400),
@@ -145,8 +147,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 child: Padding(
                   // [FIX] Constrain the PageView to the visible area above the keyboard
                   // This allows internal ScrollViews to auto-scroll focused fields into view
-                  padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom),
+                  padding: EdgeInsets.zero,
                   child: PageView(
                     controller: _pageController,
                     physics:

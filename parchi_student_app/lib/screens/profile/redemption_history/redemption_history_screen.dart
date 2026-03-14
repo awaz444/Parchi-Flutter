@@ -89,7 +89,12 @@ class _RedemptionHistoryScreenState
       backgroundColor: AppColors.primary,
       appBar: AppBar(
         title: const Text('Redemption History',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontFamily: 'Hagrid',
+              fontSize: 16,
+            )),
         backgroundColor: AppColors.primary,
         elevation: 0,
         centerTitle: true,
