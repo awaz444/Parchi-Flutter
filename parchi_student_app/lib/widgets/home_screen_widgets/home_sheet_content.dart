@@ -97,7 +97,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.lightCanvas,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey.withOpacity(0.1))),
       child: Column(
@@ -129,7 +129,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.lightCanvas,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -200,7 +200,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.backgroundLight,
+        color: AppColors.lightCanvas,
       ),
       child: CustomRefreshIndicator(
         onRefresh: _refreshData,
@@ -239,7 +239,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics()),
           slivers: [
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
             // --- SECTION 1: TOP BRANDS (GRID) ---
             if (!isSearching)
@@ -256,7 +256,8 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
               ),
             ),
 
-            if (!isSearching) const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            if (!isSearching) const SliverToBoxAdapter(child: SizedBox(height: 18)),
 
             if (!isSearching)
             SliverToBoxAdapter(
@@ -354,7 +355,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
             if (!isSearching)
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(18, 24, 18, 12),
+                padding: EdgeInsets.fromLTRB(18, 12, 18, 18),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -450,7 +451,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
             // --- SECTION 3: ALL RESTAURANTS HEADER ---
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(18, 24, 18, 8),
+                padding: EdgeInsets.fromLTRB(18, 24, 18, 18),
                 child: Text(
                   "All Restaurants",
                   style: TextStyle(
@@ -573,7 +574,7 @@ class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: AppColors.backgroundLight,
+      color: AppColors.lightCanvas,
       alignment: Alignment.centerLeft,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -583,7 +584,7 @@ class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.lightSurface,
                 borderRadius: BorderRadius.circular(20),
                 border:
                     Border.all(color: AppColors.textSecondary.withOpacity(0.3)),

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // [NEW] Import Riverpod
 import 'package:app_links/app_links.dart'; // [NEW] Import AppLinks
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'screens/auth/reset_password/reset_password_screen.dart';
 import 'config/supabase_config.dart';
 import 'utils/colours.dart';
@@ -430,13 +431,58 @@ class _MainScreenState extends State<MainScreen> {
             showUnselectedLabels: true,
             type: BottomNavigationBarType.fixed,
             enableFeedback: false, // Disables vibration/sound
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+            items: [
               BottomNavigationBarItem(
-                  icon: Icon(Icons.leaderboard), label: "Leaderboard"),
+                icon: SvgPicture.asset(
+                  'assets/home-svgrepo-com.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter: const ColorFilter.mode(
+                      AppColors.textSecondary, BlendMode.srcIn),
+                ),
+                activeIcon: SvgPicture.asset(
+                  'assets/home-svgrepo-com.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter:
+                      const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                ),
+                label: "Home",
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.history),
-                  label: "History"), // [NEW] History Icon
+                icon: SvgPicture.asset(
+                  'assets/leaderboard-svgrepo-com.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter: const ColorFilter.mode(
+                      AppColors.textSecondary, BlendMode.srcIn),
+                ),
+                activeIcon: SvgPicture.asset(
+                  'assets/leaderboard-svgrepo-com.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter:
+                      const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                ),
+                label: "Leaderboard",
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset(
+                  'assets/history-svgrepo-com.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter: const ColorFilter.mode(
+                      AppColors.textSecondary, BlendMode.srcIn),
+                ),
+                activeIcon: SvgPicture.asset(
+                  'assets/history-svgrepo-com.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter:
+                      const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                ),
+                label: "History",
+              ),
             ],
           ),
         ),

@@ -155,7 +155,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       valueListenable: _expandProgress,
       builder: (context, progress, child) {
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.lightCanvas,
           body: Stack(
             children: [
               // LAYER 1: Parchi Card

@@ -58,9 +58,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.lightCanvas,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.lightCanvas,
         scrolledUnderElevation: 0,
         elevation: 0,
         centerTitle: true,
@@ -373,7 +373,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     required bool isCurrentUser,
   }) {
     return Container(
-      color: isCurrentUser ? AppColors.primary : null, // Highlight BG
+      color: isCurrentUser ? AppColors.primary : AppColors.lightSurface, // Highlight BG vs Surface tile
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,

@@ -155,7 +155,7 @@ class _RedemptionHistoryScreenState
         // 2. LIST BODY (White Surface)
         body: Container(
           decoration: const BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.lightCanvas,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: historyAsync.when(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/colours.dart';
+import '../common/blinking_skeleton.dart';
 
 class RestaurantBigCard extends StatelessWidget {
   final String name;
@@ -41,6 +42,15 @@ class RestaurantBigCard extends StatelessWidget {
               height: 180,
               width: double.infinity,
               fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return BlinkingSkeleton(
+                  width: double.infinity,
+                  height: 180,
+                  borderRadius: 16,
+                  baseColor: Colors.grey.withOpacity(0.2),
+                );
+              },
               errorBuilder: (ctx, err, stack) => Container(
                 height: 180,
                 color: AppColors.textSecondary.withOpacity(0.3),

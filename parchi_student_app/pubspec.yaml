@@ -53,7 +53,9 @@ flutter:
     - assets/parchi-icon.svg
     - assets/Parchi-Icon-with-new-blue.png
     - assets/ParchiFullTextYellow.svg 
-
+    - assets/history-svgrepo-com.svg
+    - assets/home-svgrepo-com.svg
+    - assets/leaderboard-svgrepo-com.svg
   fonts:
     - family: Hagrid
       fonts:

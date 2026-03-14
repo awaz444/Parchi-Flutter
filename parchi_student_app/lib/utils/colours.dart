@@ -60,6 +60,10 @@ class AppColors {
   static const Color surface =
       Color(0xFFFFFFFF); // Pure white for cards/surfaces
 
+  // --- New Design System Colors ---
+  static const Color lightSurface = Color(0xFFFFFFFF); // The Surface: Main cards, search bars, and modal bodies.
+  static const Color lightCanvas  = Color(0xFFFAFBFB); // The Canvas: The global background that makes white cards "pop."
+
   static const Color surfaceVariant =
       Color(0xFFF5F5F5); // Light grey for search bar and other elements
 

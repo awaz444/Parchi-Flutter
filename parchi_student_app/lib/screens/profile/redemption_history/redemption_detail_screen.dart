@@ -28,7 +28,7 @@ class RedemptionDetailScreen extends StatelessWidget {
         : (status == 'REJECTED' ? Icons.cancel : Icons.hourglass_top);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.lightCanvas,
       appBar: AppBar(
         title: const Text('Redemption Details',
             style: TextStyle(
@@ -102,7 +102,7 @@ class RedemptionDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.lightSurface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -236,7 +236,7 @@ class RedemptionDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.lightSurface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: AppColors.surfaceVariant),
               ),

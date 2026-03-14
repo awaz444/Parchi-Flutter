@@ -800,7 +800,7 @@ class CompactParchiHeader extends StatelessWidget {
                                 width: 35,
                                 height: 35,
                                 borderRadius: 17.5, // Circular
-                                baseColor: AppColors.surfaceVariant,
+                                baseColor: AppColors.lightSurface,  
                               ),
                             )
                           : GestureDetector(
@@ -845,7 +845,7 @@ class CompactParchiHeader extends StatelessWidget {
                         child: Container(
                           height: 35,
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
+                            color: AppColors.lightSurface,
                             borderRadius: BorderRadius.circular(25),
                           ),
                           child: TextField(
@@ -879,7 +879,7 @@ class CompactParchiHeader extends StatelessWidget {
                             width: 35, // Fixed smaller width
                             height: 35, // Fixed smaller height
                             decoration: const BoxDecoration(
-                              color: AppColors.surfaceVariant,
+                              color: AppColors.lightSurface,
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
