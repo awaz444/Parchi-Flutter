@@ -73,7 +73,11 @@ class HelpCenterScreen extends StatelessWidget {
               ),
               _buildFaqItem(
                 "How do I delete my account?",
-                "You can request account deletion under 'Settings > Privacy'. Once processed, all your verification data and personal records are permanently scrubbed from our servers.",
+                "You can delete your account directly from the app:\n\n"
+                "1. Go to your Profile screen.\n"
+                "2. Tap the 'Delete Account' tile.\n"
+                "3. Confirm the deletion in the dialog that appears.\n\n"
+                "This will open our secure account deletion page where you can complete the process. Once confirmed, all your personal data and records are permanently and irreversibly removed from our servers.",
               ),
 
               const SizedBox(height: 24),

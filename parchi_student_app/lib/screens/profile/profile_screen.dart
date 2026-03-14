@@ -3,6 +3,7 @@ import 'dart:ui'; // [REQUIRED] for ImageFilter
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/colours.dart';
 import '../../services/auth_service.dart';
 import '../../providers/user_provider.dart';
@@ -303,6 +304,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 );
                               },
                             ),
+                            _buildActionTile(
+                              icon: Icons.delete_forever_outlined,
+                              label: "Delete\nAccount",
+                              onTap: () => _handleDeleteAccount(context),
+                              isDestructive: true,
+                            ),
                           ],
                         ),
                         
@@ -454,14 +461,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    bool isDestructive = false,
   }) {
+    final Color iconColor = isDestructive ? AppColors.error : AppColors.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 100, // Fixed width for square-ish look
-        height: 100,
-        padding: const EdgeInsets.all(12),
+        width: 80, // Slightly narrower to fit 4 tiles
+        height: 90,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
@@ -476,14 +485,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: AppColors.primary, size: 28),
-            const SizedBox(height: 8),
+            Icon(icon, color: iconColor, size: 26),
+            const SizedBox(height: 6),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 12,
+              style: TextStyle(
+                color: isDestructive ? AppColors.error : AppColors.textPrimary,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -491,6 +500,63 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _handleDeleteAccount(BuildContext context) async {
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            SizedBox(width: 10),
+            Text(
+              'Delete Account',
+              style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This will permanently delete your Parchi account and all associated data.\n\nYou will be taken to our secure account deletion page to complete the process.',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed == true && context.mounted) {
+      final uri = Uri.parse('https://www.parchipakistan.com/account-deletion');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open the account deletion page. Please visit parchipakistan.com/account-deletion'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
