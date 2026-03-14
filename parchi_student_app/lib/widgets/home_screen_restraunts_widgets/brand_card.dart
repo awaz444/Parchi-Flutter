@@ -40,11 +40,11 @@ class BrandCard extends StatelessWidget {
               fit: BoxFit.contain,
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
-                return const BlinkingSkeleton(
+                return BlinkingSkeleton(
                   width: 50,
                   height: 50,
-                  borderRadius: 25,
-                  baseColor: Colors.grey,
+                  borderRadius: 8,
+                  baseColor: AppColors.textSecondary.withOpacity(0.1),
                 );
               },
               errorBuilder: (context, error, stackTrace) =>

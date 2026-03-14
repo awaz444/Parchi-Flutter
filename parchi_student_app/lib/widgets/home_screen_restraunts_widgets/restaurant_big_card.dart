@@ -48,7 +48,7 @@ class RestaurantBigCard extends StatelessWidget {
                   width: double.infinity,
                   height: 180,
                   borderRadius: 16,
-                  baseColor: Colors.grey.withOpacity(0.2),
+                  baseColor: AppColors.textSecondary.withOpacity(0.1),
                 );
               },
               errorBuilder: (ctx, err, stack) => Container(

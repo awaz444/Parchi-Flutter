@@ -52,7 +52,7 @@ class RestaurantMediumCard extends StatelessWidget {
                       width: double.infinity,
                       height: 100,
                       borderRadius: 12,
-                      baseColor: Colors.grey.withOpacity(0.2),
+                      baseColor: AppColors.textSecondary.withOpacity(0.1),
                     );
                   },
                   errorBuilder: (ctx, err, stack) => Container(

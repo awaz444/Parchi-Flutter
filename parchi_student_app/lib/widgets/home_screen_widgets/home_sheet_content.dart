@@ -81,8 +81,8 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
         BlinkingSkeleton(
           width: 70,
           height: 70,
-          borderRadius: 35, // Circle
-          baseColor: Colors.grey.withOpacity(0.15),
+          borderRadius: 12, // Squared
+          baseColor: AppColors.textSecondary.withOpacity(0.1),
         ),
         const SizedBox(height: 8),
         BlinkingSkeleton(

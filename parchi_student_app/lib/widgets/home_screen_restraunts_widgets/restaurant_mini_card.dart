@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/colours.dart';
+import '../common/blinking_skeleton.dart';
 
 class RestaurantMiniCard extends StatelessWidget {
   const RestaurantMiniCard({super.key});
@@ -9,14 +10,27 @@ class RestaurantMiniCard extends StatelessWidget {
     return Column(
       children: [
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.textSecondary
-                  .withOpacity(0.3), // Placeholder image bg
-              borderRadius: BorderRadius.circular(12),
-              image: const DecorationImage(
-                image: NetworkImage("https://placehold.co/100x100/png"),
-                fit: BoxFit.cover,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              "https://placehold.co/100x100/png",
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return BlinkingSkeleton(
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: 12,
+                  baseColor: AppColors.textSecondary.withOpacity(0.1),
+                );
+              },
+              errorBuilder: (ctx, err, stack) => Container(
+                color: AppColors.textSecondary.withOpacity(0.1),
+                child: const Center(
+                  child: Icon(Icons.broken_image, size: 20, color: AppColors.textSecondary),
+                ),
               ),
             ),
           ),
