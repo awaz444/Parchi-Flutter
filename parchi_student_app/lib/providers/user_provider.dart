@@ -8,14 +8,31 @@ part 'user_provider.g.dart';
 class UserProfile extends _$UserProfile {
   @override
   FutureOr<User?> build() async {
+    // 1. Serve from local storage immediately (zero network latency on startup)
+    final cached = await authService.getUser();
+    if (cached != null) {
+      // 2. Refresh from API in the background without blocking the UI
+      _refreshInBackground();
+      return cached;
+    }
+
+    // 3. No local data at all — must fetch from network (first login)
     try {
-      // 1. Try to get fresh profile from API
       final profile = await authService.getProfile();
       return profile.user;
     } catch (e) {
-      // 2. Fallback to local storage if offline/error
-      return await authService.getUser();
+      return null;
     }
+  }
+
+  /// Silently refreshes the profile from the API and updates state when done.
+  /// Does not show a loading indicator so the UI stays responsive.
+  void _refreshInBackground() {
+    authService.getProfile().then((profile) {
+      state = AsyncValue.data(profile.user);
+    }).catchError((_) {
+      // Ignore background refresh errors — cached data is already showing
+    });
   }
 
   // Use this to manually refresh data (e.g. Pull-to-Refresh)

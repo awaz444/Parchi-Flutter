@@ -14,9 +14,30 @@ class AuthService {
   static const String _tokenExpiresAtKey = 'token_expires_at';
   static const String _userKey = 'user';
 
-  static bool _isLoggingOut = false; // [NEW] Global logout lock
+  static bool _isLoggingOut = false; // Global logout lock
 
   final _secureStorage = const FlutterSecureStorage();
+
+  // ── Persistent HTTP client — reuses TCP+TLS connections across requests ──
+  // This eliminates per-request TLS handshake overhead (saves 200–800ms on
+  // mobile). A single instance is shared for the lifetime of the app.
+  final http.Client _httpClient = http.Client();
+
+  // ── In-memory token cache ─────────────────────────────────────────────────
+  // Avoids hitting FlutterSecureStorage (Keychain/Keystore disk I/O) on every
+  // API call. Invalidated on login, logout, and refresh.
+  String? _cachedAccessToken;
+  int? _cachedExpiresAt;
+
+  // ── Standard request headers ──────────────────────────────────────────────
+  // Accept-Encoding: gzip tells the server to send compressed responses.
+  // The backend already has compression() middleware — browsers send this
+  // automatically, but the Dart http package does NOT. This alone can reduce
+  // payload size by ~70 % and meaningfully speed up responses on mobile.
+  static const Map<String, String> _baseHeaders = {
+    'Content-Type': 'application/json',
+    'Accept-Encoding': 'gzip',
+  };
 
   // Stream controller for broadcasting auth errors (e.g., account deactivation)
   final _authErrorController = StreamController<String>.broadcast();
@@ -24,17 +45,20 @@ class AuthService {
   // Expose stream for listeners to react to auth errors
   Stream<String> get onAuthError => _authErrorController.stream;
 
-  // Get stored access token with auto-refresh check
+  // Get stored access token with auto-refresh check.
+  // Uses an in-memory cache to avoid Keychain/Keystore disk I/O on every call.
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
+    // ── Fast path: serve from memory cache ───────────────────────────────────
+    if (_cachedAccessToken != null && _cachedExpiresAt != null) {
+      final expiryMs = _cachedExpiresAt! * 1000;
+      if (DateTime.now().millisecondsSinceEpoch < expiryMs - 300000) {
+        // Token is still valid and not close to expiry — return immediately
+        // without touching disk storage.
+        return _cachedAccessToken;
+      }
+    }
 
-    // Check if token exists and is expired/about to expire
-    // Note: ExpiresAt is stored in secure storage now too?
-    // Actually, storing expiry in secure storage makes sense if tokens are there.
-    // However, for speed, prefs is faster. Let's keep expiry in prefs or move to secure.
-    // Secure storage is async and slightly slower.
-    // Let's store tokens in secure storage, and keep expiry in secure storage to be consistent.
-
+    // ── Slow path: read from secure storage (first call / cache miss) ────────
     final expiresAtStr = await _secureStorage.read(key: _tokenExpiresAtKey);
     final expiresAt = expiresAtStr != null ? int.tryParse(expiresAtStr) : null;
 
@@ -45,8 +69,8 @@ class AuthService {
         try {
           print("Token expired or close to expiry. Refreshing...");
           await refreshToken();
-          // If refresh succeeded, the new token is in SecureStorage
-          return await _secureStorage.read(key: _accessTokenKey);
+          // refreshToken() updates the cache via setToken() / setTokenExpiry()
+          return _cachedAccessToken;
         } catch (e) {
           print("Auto-refresh in getToken failed: $e");
           // Return null so callers know auth is required — do NOT return the
@@ -56,11 +80,16 @@ class AuthService {
       }
     }
 
-    return await _secureStorage.read(key: _accessTokenKey);
+    final token = await _secureStorage.read(key: _accessTokenKey);
+    // Populate cache so subsequent calls are fast
+    _cachedAccessToken = token;
+    _cachedExpiresAt = expiresAt;
+    return token;
   }
 
-  // Set access token
+  // Set access token (also updates in-memory cache)
   Future<void> setToken(String token) async {
+    _cachedAccessToken = token;
     await _secureStorage.write(key: _accessTokenKey, value: token);
   }
 
@@ -74,8 +103,9 @@ class AuthService {
     await _secureStorage.write(key: _refreshTokenKey, value: token);
   }
 
-  // Set token expiry
+  // Set token expiry (also updates in-memory cache)
   Future<void> setTokenExpiry(int expiresAt) async {
+    _cachedExpiresAt = expiresAt;
     await _secureStorage.write(
         key: _tokenExpiresAtKey, value: expiresAt.toString());
   }
@@ -104,8 +134,11 @@ class AuthService {
     }
   }
 
-  // Remove all stored tokens and user data
+  // Remove all stored tokens and user data (also clears in-memory cache)
   Future<void> removeToken() async {
+    // Clear in-memory cache immediately
+    _cachedAccessToken = null;
+    _cachedExpiresAt = null;
     final prefs = await SharedPreferences.getInstance();
     // Remove user data from prefs
     await prefs.remove(_userKey);
@@ -153,11 +186,9 @@ class AuthService {
     }
 
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse(ApiConfig.refreshEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: _baseHeaders,
         body: jsonEncode({
           'refreshToken': refreshToken,
         }),
@@ -231,11 +262,9 @@ class AuthService {
   }) async {
     _isLoggingOut = false; // Reset logout lock
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse(ApiConfig.signupEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: _baseHeaders,
         body: jsonEncode({
           'email': email,
           'password': password,
@@ -307,11 +336,9 @@ class AuthService {
       };
 
       // Make POST request
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse(ApiConfig.studentSignupEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: _baseHeaders,
         body: jsonEncode(requestBody),
       );
 
@@ -374,11 +401,9 @@ class AuthService {
   }) async {
     _isLoggingOut = false; // Reset logout lock
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse(ApiConfig.loginEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: _baseHeaders,
         body: jsonEncode({
           'email': email,
           'password': password,
@@ -417,11 +442,11 @@ class AuthService {
     }
 
     try {
-      final response = await http.get(
+      final response = await _httpClient.get(
         Uri.parse(ApiConfig.profileEndpoint),
         headers: {
+          ..._baseHeaders,
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
         },
       );
 
@@ -449,11 +474,9 @@ class AuthService {
   // Forgot Password
   Future<void> forgotPassword(String email) async {
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse(ApiConfig.forgotPasswordEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: _baseHeaders,
         body: jsonEncode({
           'email': email,
         }),
@@ -496,12 +519,12 @@ class AuthService {
     }
 
     try {
-      final response = await http.patch(
+      final response = await _httpClient.patch(
         // Ensure this matches your backend route
         Uri.parse('${ApiConfig.baseUrl}/auth/student/profile-picture'),
         headers: {
+          ..._baseHeaders,
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
         },
         body: jsonEncode({'imageUrl': imageUrl}),
       );
@@ -530,10 +553,10 @@ class AuthService {
     }
 
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse(ApiConfig.changePasswordEndpoint),
         headers: {
-          'Content-Type': 'application/json',
+          ..._baseHeaders,
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
@@ -584,11 +607,11 @@ class AuthService {
 
       if (token != null) {
         try {
-          await http.post(
+          await _httpClient.post(
             Uri.parse(ApiConfig.logoutEndpoint),
             headers: {
+              ..._baseHeaders,
               'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
             },
           );
         } catch (e) {
@@ -616,15 +639,17 @@ class AuthService {
   }
   // --- STANDARDIZED API METHODS ---
 
+  Map<String, String> _authHeaders(String token) => {
+        ..._baseHeaders,
+        'Authorization': 'Bearer $token',
+      };
+
   // Helper method to handle authenticated GET requests with auto-refresh retry
   Future<http.Response> authenticatedGet(String url) async {
-    // 1. Get current token (triggers auto-refresh if close to expiry)
+    // 1. Get current token — served from memory cache on most calls
     String? token = await getToken();
 
-    // [New] Check if logout is in progress
-    if (_isLoggingOut) {
-      throw Exception('Session expired');
-    }
+    if (_isLoggingOut) throw Exception('Session expired');
 
     if (token == null) {
       throw Exception('No authentication token found. Please login.');
@@ -632,60 +657,32 @@ class AuthService {
 
     final uri = Uri.parse(url);
 
-    // 2. First Attempt
-    var response = await http.get(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    // 2. First attempt — uses persistent client (no TLS re-handshake)
+    var response = await _httpClient.get(uri, headers: _authHeaders(token));
 
-    // 3. Check for 401 Unauthorized or 403 Forbidden
+    // 3. On 401/403 refresh once and retry
     if (response.statusCode == 401 || response.statusCode == 403) {
-      // 3. Check for 401 Unauthorized or 403 Forbidden
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        // Check lock before retrying
-        if (_isLoggingOut) throw Exception('Session expired');
+      if (_isLoggingOut) throw Exception('Session expired');
 
-        print(
-            "Got ${response.statusCode} ${response.statusCode == 401 ? 'Unauthorized' : 'Forbidden'}. Attempting to refresh token and retry...");
-        try {
-          // Force refresh (will throw & logout if fails)
-          await refreshToken();
-          token = await getToken(); // Get the new token
+      print(
+          "Got ${response.statusCode}. Attempting to refresh token and retry...");
+      try {
+        await refreshToken();
+        token = await getToken();
 
-          if (token != null) {
-            // 4. Retry Request
-            print("Retrying request with new token...");
-            response = await http.get(
-              uri,
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $token',
-              },
-            );
+        if (token != null) {
+          response = await _httpClient.get(uri, headers: _authHeaders(token));
 
-            // Check if retry also failed with 401/403
-            if (response.statusCode == 401 || response.statusCode == 403) {
-              // If retry fails, we assume something is wrong (e.g. deactivated mid-stream)
-              // But refreshToken didn't throw, so we might need to handle this explicitly.
-              // However, usually refreshToken would fail if account is deactivated.
-              // If refreshToken succeeded but we still get 401/403, maybe scopes changed or token invalid.
-
-              final errorMessage = _extractErrorMessage(response);
-              _authErrorController.add(errorMessage);
-              await logout();
-              throw Exception(errorMessage);
-            }
+          if (response.statusCode == 401 || response.statusCode == 403) {
+            final errorMessage = _extractErrorMessage(response);
+            _authErrorController.add(errorMessage);
+            await logout();
+            throw Exception(errorMessage);
           }
-        } catch (e) {
-          print("Retry failed or aborted: $e");
-          // refreshToken already broadcasted & logged out if it failed.
-          // We just rethrow to stop execution context.
-          if (e.toString().contains("Session expired")) rethrow;
-          throw Exception("Unauthorized: Session expired. Please login again.");
         }
+      } catch (e) {
+        if (e.toString().contains("Session expired")) rethrow;
+        throw Exception("Unauthorized: Session expired. Please login again.");
       }
     }
 
@@ -700,12 +697,9 @@ class AuthService {
 
     final uri = Uri.parse(url);
 
-    var response = await http.post(
+    var response = await _httpClient.post(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: _authHeaders(token),
       body: body != null ? jsonEncode(body) : null,
     );
 
@@ -713,22 +707,18 @@ class AuthService {
       if (_isLoggingOut) throw Exception('Session expired');
 
       print(
-          "Got ${response.statusCode} ${response.statusCode == 401 ? 'Unauthorized' : 'Forbidden'} (POST). Attempting to refresh...");
+          "Got ${response.statusCode} (POST). Attempting to refresh...");
       try {
         await refreshToken();
         token = await getToken();
 
         if (token != null) {
-          response = await http.post(
+          response = await _httpClient.post(
             uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
+            headers: _authHeaders(token),
             body: body != null ? jsonEncode(body) : null,
           );
 
-          // Check if retry also failed with 401/403
           if (response.statusCode == 401 || response.statusCode == 403) {
             final errorMessage = _extractErrorMessage(response);
             _authErrorController.add(errorMessage);
@@ -750,17 +740,12 @@ class AuthService {
     try {
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 
-      // Check for message field
       if (responseData.containsKey('message')) {
         final message = responseData['message'];
-        if (message is String) {
-          return message;
-        } else if (message is List) {
-          return message.join(', ');
-        }
+        if (message is String) return message;
+        if (message is List) return message.join(', ');
       }
 
-      // Check for error field
       if (responseData.containsKey('error')) {
         return responseData['error'].toString();
       }
@@ -773,6 +758,7 @@ class AuthService {
 
   // Clean up resources
   void dispose() {
+    _httpClient.close();
     _authErrorController.close();
   }
 }
