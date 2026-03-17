@@ -309,7 +309,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           if (!widget.isSearching)
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 240,
+                height: 300,
                 child: ref.watch(brandsProvider).when(
                   loading: () => GridView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -317,9 +317,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
-                      childAspectRatio: 1.05,
+                      childAspectRatio: 0.85,
                       crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      mainAxisSpacing: 18,
                     ),
                     itemCount: 6,
                     itemBuilder: (context, index) => _buildBrandSkeleton(),
@@ -330,9 +330,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
-                      childAspectRatio: 1.05,
+                      childAspectRatio: 0.85,
                       crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      mainAxisSpacing: 18,
                     ),
                     itemCount: 6,
                     itemBuilder: (context, index) => _buildBrandSkeleton(),
@@ -345,9 +345,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
-                          childAspectRatio: 1.05,
+                          childAspectRatio: 0.85,
                           crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
+                          mainAxisSpacing: 18,
                         ),
                         itemCount: 6,
                         itemBuilder: (context, index) =>
@@ -368,9 +368,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
-                        childAspectRatio: 1.05,
+                        childAspectRatio: 0.85,
                         crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
+                        mainAxisSpacing: 18,
                       ),
                       itemCount: displayBrands.length,
                       itemBuilder: (context, index) {
