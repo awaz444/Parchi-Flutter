@@ -286,7 +286,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
           // ── Gap between card and first section ───────────────────────────
           if (!widget.isSearching)
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(child: SizedBox(height: 18)),
 
           // ── SECTION 1: TOP BRANDS ─────────────────────────────────────────
           if (!widget.isSearching)
