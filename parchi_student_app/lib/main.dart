@@ -313,20 +313,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   void _setupAuthErrorListener() {
-    // Listen for auth errors (e.g., account deactivation)
+    // Listen for auth errors (e.g., account deactivation, token rejection)
     _authErrorSubscription =
         authService.onAuthError.listen((errorMessage) async {
       debugPrint('Auth error received: $errorMessage');
 
-      if (!mounted) return;
-
-      // [UPDATED] Only show SnackBar here. AuthService handles navigation globally.
+      // Show the snackbar with the real reason (deactivated, rejected, etc.)
       NavigationService.messengerKey.currentState?.showSnackBar(
         SnackBar(
           content: Text(errorMessage),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 5),
         ),
+      );
+
+      // Navigate to login screen — tokens are already cleared by AuthService.logout()
+      NavigationService.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
       );
     });
   }

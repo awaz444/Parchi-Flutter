@@ -13,20 +13,22 @@ class AuthService {
   static const String _tokenExpiresAtKey = 'token_expires_at';
   static const String _userKey = 'user';
 
-  static bool _isLoggingOut = false; // Global logout lock
+  bool _isLoggingOut = false; // Logout lock (instance-level, not static)
 
   final _secureStorage = const FlutterSecureStorage();
 
   // ── Persistent HTTP client — reuses TCP+TLS connections across requests ──
   // This eliminates per-request TLS handshake overhead (saves 200–800ms on
   // mobile). A single instance is shared for the lifetime of the app.
-  final http.Client _httpClient = http.Client();
+  final http.Client _httpClient;
 
   // ── In-memory token cache ─────────────────────────────────────────────────
   // Avoids hitting FlutterSecureStorage (Keychain/Keystore disk I/O) on every
   // API call. Invalidated on login, logout, and refresh.
   String? _cachedAccessToken;
   int? _cachedExpiresAt;
+
+  AuthService() : _httpClient = http.Client();
 
   // ── Standard request headers ──────────────────────────────────────────────
   // Accept-Encoding: gzip tells the server to send compressed responses.
@@ -216,9 +218,14 @@ class AuthService {
       } else {
         // Server explicitly rejected the token (4xx/5xx).
         // This is a real auth failure — logout is appropriate.
-        String errorMessage = "Session expired";
+        String errorMessage;
         if (responseData.containsKey('message')) {
-          errorMessage = responseData['message'].toString();
+          final msg = responseData['message'];
+          errorMessage = (msg is List) ? msg.join(', ') : msg.toString();
+        } else if (response.statusCode == 401 || response.statusCode == 403) {
+          errorMessage = 'Your session has expired. Please log in again.';
+        } else {
+          errorMessage = 'Session refresh failed. Please log in again.';
         }
         _authErrorController.add(errorMessage);
         await logout();
@@ -230,11 +237,18 @@ class AuthService {
       print("Network error during token refresh (will not logout): $e");
       throw Exception(
           'Network error during refresh. Please check your connection.');
+    } on FormatException catch (e) {
+      // Malformed JSON response — do NOT logout. This is a server/parse error,
+      // not an auth failure. The refresh token is still valid.
+      print("JSON parse error during token refresh (will not logout): $e");
+      throw Exception('Server returned an unexpected response. Please try again.');
     } catch (e) {
       if (_isLoggingOut) throw Exception('Session expired');
-      if (!e.toString().contains("Session expired")) {
-        await logout();
-      }
+      // Only logout for genuine auth failures (4xx responses).
+      // Those are already handled in the statusCode check above and throw
+      // with a message that has been added to _authErrorController.
+      // Any exception reaching here that is NOT "Session expired" is an
+      // unexpected error — do NOT force logout for it.
       throw Exception('Refresh token failed: ${e.toString()}');
     }
   }
@@ -647,6 +661,9 @@ class AuthService {
 
   // Helper method to handle authenticated GET requests with auto-refresh retry
   Future<http.Response> authenticatedGet(String url) async {
+    // 0. Bail out immediately if a logout is already in progress
+    if (_isLoggingOut) throw Exception('Session expired');
+
     // 1. Get current token — served from memory cache on most calls
     String? token = await getToken();
 
@@ -683,7 +700,7 @@ class AuthService {
         }
       } catch (e) {
         if (e.toString().contains("Session expired")) rethrow;
-        throw Exception("Unauthorized: Session expired. Please login again.");
+        rethrow; // surface the real error (e.g. deactivation message)
       }
     }
 
@@ -692,6 +709,9 @@ class AuthService {
 
   // Helper method to handle authenticated POST requests
   Future<http.Response> authenticatedPost(String url, {Object? body}) async {
+    // 0. Bail out immediately if a logout is already in progress
+    if (_isLoggingOut) throw Exception('Session expired');
+
     String? token = await getToken();
 
     if (token == null) throw Exception('No authentication token found.');
@@ -729,7 +749,7 @@ class AuthService {
         }
       } catch (e) {
         if (e.toString().contains("Session expired")) rethrow;
-        throw Exception("Unauthorized: Session expired.");
+        rethrow; // surface the real error (e.g. deactivation message)
       }
     }
 
