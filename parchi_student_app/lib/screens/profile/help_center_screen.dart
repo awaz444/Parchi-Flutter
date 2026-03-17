@@ -10,11 +10,12 @@ class HelpCenterScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text(
-          'Help Center',
+          "Help Center",
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            fontFamily: 'Hagrid',
           ),
         ),
         centerTitle: true,

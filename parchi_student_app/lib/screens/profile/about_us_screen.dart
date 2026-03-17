@@ -10,11 +10,12 @@ class AboutUsScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text(
-          'About Us',
+          "About Us",
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            fontFamily: 'Hagrid',
           ),
         ),
         centerTitle: true,
