@@ -13,14 +13,14 @@ import '../../screens/auth/login_screens/login_screen.dart';
 // =========================================================
 // 1. ENTRY POINT
 // =========================================================
-class ParchiCard extends StatelessWidget {
+class ParchiCard extends ConsumerStatefulWidget {
   final String studentName;
   final String studentId;
   final String universityName;
-  final bool isGolden; // Gold Mode Flag
-  final bool isFoundersClub; // [NEW] Founders Club Flag
+  final bool isGolden; 
+  final bool isFoundersClub; 
   final bool isLoading;
-  final bool isGuest; // [GUEST] Show sign-in prompt instead of card content
+  final bool isGuest; 
 
   const ParchiCard({
     super.key,
@@ -28,115 +28,330 @@ class ParchiCard extends StatelessWidget {
     this.studentId = "",
     this.universityName = "",
     this.isGolden = false,
-    this.isFoundersClub = false, // [NEW]
+    this.isFoundersClub = false,
     this.isLoading = false,
-    this.isGuest = false, // [GUEST]
+    this.isGuest = false,
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Define Gradients
-    final standardGradient = const LinearGradient(
-      colors: [AppColors.backgroundDark, AppColors.primary],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
+  ConsumerState<ParchiCard> createState() => _ParchiCardState();
+}
 
+class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProviderStateMixin {
+  late AnimationController _flipController;
+  late Animation<double> _flipAnimation;
+  bool _isFront = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _flipController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _flipAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
+      parent: _flipController,
+      curve: Curves.easeInOutBack,
+    ));
+
+    // Refresh stats when card is initialized (Silent Refresh)
+    if (!widget.isGuest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.invalidate(redemptionStatsProvider);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _flipController.dispose();
+    super.dispose();
+  }
+
+  void _flipCard() {
+    if (_isFront) {
+      _flipController.forward();
+    } else {
+      _flipController.reverse();
+    }
+    setState(() {
+      _isFront = !_isFront;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.isGuest) {
+      return _buildGuestCard();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: GestureDetector(
+        onTap: _flipCard,
+        child: AnimatedBuilder(
+          animation: _flipAnimation,
+          builder: (context, child) {
+            final angle = _flipAnimation.value * pi;
+            final flipTransform = Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(angle);
+
+            return Transform(
+              transform: flipTransform,
+              alignment: Alignment.center,
+              child: angle < pi / 2
+                  ? _buildFrontFace()
+                  : Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..rotateY(pi),
+                      child: _buildBackFace(),
+                    ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const LoginScreen(),
+            ),
+          );
+        },
+        child: Container(
+          height: 200,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: widget.isFoundersClub ? AppColors.foundersClub : AppColors.primary,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const _GuestCardContent(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFrontFace() {
     final goldGradient = const LinearGradient(
-      colors: [
-        AppColors.goldStart, // Goldenrod
-        AppColors.goldMid, // Gold
-        AppColors.goldEnd, // Dark Goldenrod
-      ],
+      colors: [AppColors.goldStart, AppColors.goldMid, AppColors.goldEnd],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       stops: [0.1, 0.5, 0.9],
     );
 
-    // [NEW] Founders Club Color (Solid or Gradient if desired, keeping it simple solid based on request)
-    // Request says: make the bg #FF6A39
-    final Color? cardColor = isFoundersClub 
+    final Color? cardColor = widget.isFoundersClub 
         ? AppColors.foundersClub 
-        : (isGolden ? null : AppColors.primary);
+        : (widget.isGolden ? null : AppColors.primary);
     
-    final Gradient? cardGradient = isFoundersClub 
-        ? null // Solid color for Founders Club
-        : (isGolden ? goldGradient : null); // Primary uses user defined color but code above uses null+primary color fallbacks, wait standardGradient is defined but not used?
-        // Original code: color: isGolden ? null : AppColors.primary, gradient: isGolden ? goldGradient : null
-        
-    // Let's stick to the requested logic:
-    // If Founders -> #FF6A39
-    // If Golden -> Gold Gradient
-    // Else -> AppColors.primary
+    final Gradient? cardGradient = widget.isFoundersClub 
+        ? null 
+        : (widget.isGolden ? goldGradient : null);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: GestureDetector(
-        onTap: isGuest
-            ? () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const LoginScreen(),
-                  ),
-                );
-              }
-            : () {
-                Navigator.of(context).push(PageRouteBuilder(
-                  opaque: false,
-                  barrierDismissible: true,
-                  barrierColor: AppColors.textPrimary.withOpacity(0.87),
-                  transitionDuration: const Duration(milliseconds: 600),
-                  reverseTransitionDuration: const Duration(milliseconds: 500),
-                  pageBuilder: (context, animation, secondaryAnimation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: ParchiCardDetail(
-                        studentName: studentName,
-                        studentId: studentId,
-                        universityName: universityName,
-                        isGolden: isGolden,
-                        isFoundersClub: isFoundersClub, // [NEW] Pass deep
-                      ),
-                    );
-                  },
-                ));
-              },
-        child: Hero(
-          tag: isGolden ? 'gold-parchi-card' : 'parchi-card-hero',
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: cardColor, 
-                gradient: cardGradient,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: isGolden
-                    ? [
-                        BoxShadow(
-                          color: AppColors.goldShadow.withOpacity(0.6),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 5),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: isGuest
-                  ? const _GuestCardContent()
-                  : CardFrontContent(
-                      studentName: studentName,
-                      studentId: studentId,
-                      universityName: universityName,
-                      isGolden: isGolden,
-                      isFoundersClub: isFoundersClub, // [NEW]
-                      isLoading: isLoading,
-                    ),
+    return Container(
+      height: 200,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: cardColor, 
+        gradient: cardGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: widget.isGolden
+            ? [
+                BoxShadow(
+                  color: AppColors.goldShadow.withOpacity(0.6),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 5),
+                ),
+              ]
+            : null,
+      ),
+      child: CardFrontContent(
+        studentName: widget.studentName,
+        studentId: widget.studentId,
+        universityName: widget.universityName,
+        isGolden: widget.isGolden,
+        isFoundersClub: widget.isFoundersClub,
+        isLoading: widget.isLoading,
+      ),
+    );
+  }
+
+  Widget _buildBackFace() {
+    final goldGradient = const LinearGradient(
+      colors: [AppColors.goldStart, AppColors.goldMid],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    final Color? cardColor = widget.isFoundersClub
+        ? AppColors.foundersClub
+        : (widget.isGolden ? null : AppColors.primary);
+
+    final Gradient? cardGradient = widget.isFoundersClub
+        ? null
+        : (widget.isGolden ? goldGradient : null);
+
+    final Color borderColor = widget.isFoundersClub
+        ? Colors.white.withOpacity(0.5)
+        : (widget.isGolden
+            ? AppColors.goldShadow
+            : AppColors.primary.withOpacity(0.5));
+
+    return Container(
+      height: 200,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: cardColor,
+        gradient: cardGradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: _buildBackContent(),
+      ),
+    );
+  }
+
+  Widget _buildBackContent() {
+    final statsAsync = ref.watch(redemptionStatsProvider);
+
+    if (statsAsync.hasValue) {
+      final stats = statsAsync.value!;
+      return _buildStatsContent(stats);
+    } else if (statsAsync.isLoading) {
+      return _buildLoadingStats();
+    } else if (statsAsync.hasError) {
+      return Center(
+          child: Text("Error loading stats",
+              style: TextStyle(color: AppColors.error, fontSize: 12)));
+    } else {
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildStatsContent(RedemptionStats stats) {
+    final dividerColor = widget.isGolden
+        ? AppColors.textPrimary.withOpacity(0.1)
+        : Colors.white.withOpacity(0.2);
+
+    return Center(
+      child: IntrinsicHeight(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildSingleStat(
+              value: "${stats.totalRedemptions}",
+              label: "Visits",
+              subLabel: "Lifetime",
             ),
-          ),
+            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+            _buildSingleStat(
+              value: "${stats.bonusesUnlocked}",
+              label: "Rewards",
+              subLabel: "Earned",
+            ),
+            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+            _buildSingleStat(
+              value: stats.leaderboardPosition > 0 ? "#${stats.leaderboardPosition}" : "-",
+              label: "Rank",
+              subLabel: "Nationwide",
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSingleStat({
+    required String value,
+    required String label,
+    required String subLabel,
+  }) {
+    final valueColor = widget.isGolden ? AppColors.textPrimary : Colors.white;
+    final labelColor = widget.isGolden ? AppColors.primary : const Color(0xFFE3E935);
+    final subLabelColor = widget.isGolden 
+        ? AppColors.textPrimary.withOpacity(0.5) 
+        : Colors.white.withOpacity(0.6);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 28, 
+            fontWeight: FontWeight.w900,
+            height: 1.0, 
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            color: labelColor,
+            fontSize: 10, 
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subLabel,
+          style: TextStyle(
+            color: subLabelColor,
+            fontSize: 9, 
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingStats() {
+    final dividerColor = widget.isGolden
+        ? AppColors.textPrimary.withOpacity(0.1)
+        : Colors.white.withOpacity(0.2);
+    final skeletonBaseColor = widget.isGolden
+        ? Colors.black.withOpacity(0.1)
+        : Colors.white.withOpacity(0.3);
+
+    return Center(
+      child: IntrinsicHeight(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildSkeletonColumn(skeletonBaseColor),
+            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+            _buildSkeletonColumn(skeletonBaseColor),
+            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+            _buildSkeletonColumn(skeletonBaseColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonColumn(Color baseColor) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        BlinkingSkeleton(width: 40, height: 28, baseColor: baseColor),
+        const SizedBox(height: 6),
+        BlinkingSkeleton(width: 50, height: 10, baseColor: baseColor),
+        const SizedBox(height: 2),
+        BlinkingSkeleton(width: 30, height: 9, baseColor: baseColor),
+      ],
     );
   }
 }
@@ -173,399 +388,6 @@ class _GuestCardContent extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// =========================================================
-// 2. DETAIL VIEW
-// =========================================================
-class ParchiCardDetail extends ConsumerStatefulWidget {
-  final String studentName;
-  final String studentId;
-  final String universityName;
-  final bool isGolden;
-  final bool isFoundersClub; // [NEW]
-
-  const ParchiCardDetail({
-    super.key,
-    required this.studentName,
-    required this.studentId,
-    required this.universityName,
-    this.isGolden = false,
-    this.isFoundersClub = false, // [NEW]
-  });
-
-  @override
-  ConsumerState<ParchiCardDetail> createState() => _ParchiCardDetailState();
-}
-
-// enum BackFaceView removed as we only show current month
-
-class _ParchiCardDetailState extends ConsumerState<ParchiCardDetail>
-    with TickerProviderStateMixin {
-  late AnimationController _flipController;
-  late Animation<double> _flipAnimation;
-
-  late AnimationController _hoverController;
-  late Animation<double> _hoverAnimation;
-
-  bool _isFront = true;
-
-  @override
-  void initState() {
-    super.initState();
-    // Refresh stats when card is opened (Silent Refresh)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.invalidate(redemptionStatsProvider);
-    });
-
-    _flipController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _flipAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-      parent: _flipController,
-      curve: Curves.easeInOutBack,
-    ));
-
-    _hoverController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    // Delay hover start until after the Hero transition completes (~600ms)
-    // so it doesn't compete with the flip/open animation.
-    _hoverAnimation =
-        Tween<double>(begin: -5, end: 5).animate(CurvedAnimation(
-      parent: _hoverController,
-      curve: Curves.easeInOutSine,
-    ));
-    // Start hover only after the card has settled into view.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _hoverController.repeat(reverse: true);
-    });
-  }
-
-  void _flipCard() {
-    if (_isFront) {
-      _flipController.forward();
-    } else {
-      _flipController.reverse();
-    }
-    _isFront = !_isFront;
-  }
-
-  // Swipe handler removed
-
-  Future<void> _handleClose() async {
-    if (!_isFront) {
-      _flipCard();
-      await Future.delayed(const Duration(milliseconds: 600));
-    }
-    if (mounted) {
-      Navigator.pop(context);
-    }
-  }
-
-  @override
-  void dispose() {
-    _flipController.dispose();
-    _hoverController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleClose,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
-          child: GestureDetector(
-            onTap: _flipCard,
-            child: AnimatedBuilder(
-              animation: Listenable.merge([_flipAnimation, _hoverAnimation]),
-              builder: (context, child) {
-                final angle = _flipAnimation.value * pi;
-                final flipTransform = Matrix4.identity()
-                  ..setEntry(3, 2, 0.001)
-                  ..rotateY(angle);
-
-                return Transform.translate(
-                  offset: Offset(0, _hoverAnimation.value),
-                  child: Transform(
-                    transform: flipTransform,
-                    alignment: Alignment.center,
-                    child: Hero(
-                      tag: widget.isGolden
-                          ? 'gold-parchi-card'
-                          : 'parchi-card-hero',
-                      child: Material(
-                        color: Colors.transparent,
-                        child: angle < pi / 2
-                            ? _buildFrontFace()
-                            : Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.identity()..rotateY(pi),
-                                child: _buildBackFace(),
-                              ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFrontFace() {
-    final standardGradient = const LinearGradient(
-      colors: [AppColors.backgroundDark, AppColors.primary],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-
-    final goldGradient = const LinearGradient(
-      colors: [AppColors.goldStart, AppColors.goldMid, AppColors.goldEnd],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-
-    // [NEW] Founders Club styling
-    final Color? cardColor = widget.isFoundersClub
-        ? AppColors.foundersClub
-        : (widget.isGolden ? null : AppColors.primary);
-
-    final Gradient? cardGradient = widget.isFoundersClub
-        ? null
-        : (widget.isGolden ? goldGradient : null);
-
-    return Container(
-      height: 200,
-      width: MediaQuery.sizeOf(context).width - 32, // Match horizontal padding of 16 * 2
-      decoration: BoxDecoration(
-        color: cardColor,
-        gradient: cardGradient,
-        borderRadius: BorderRadius.circular(20),
-        // Glow removed
-      ),
-      child: CardFrontContent(
-        studentName: widget.studentName,
-        studentId: widget.studentId,
-        universityName: widget.universityName,
-        isGolden: widget.isGolden,
-        isFoundersClub: widget.isFoundersClub, // [NEW]
-      ),
-    );
-  }
-
-  Widget _buildBackFace() {
-    // [NEW] Founders Club styling
-    final Color? cardColor = widget.isFoundersClub
-        ? AppColors.foundersClub
-        : (widget.isGolden ? null : AppColors.primary);
-
-    final Gradient? cardGradient = widget.isFoundersClub
-        ? null
-        : (widget.isGolden
-            ? const LinearGradient(
-                colors: [AppColors.goldStart, AppColors.goldMid],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null);
-
-    final Color borderColor = widget.isFoundersClub
-        ? Colors.white.withOpacity(0.5) // Or similar contrast
-        : (widget.isGolden
-            ? AppColors.goldShadow
-            : AppColors.primary.withOpacity(0.5));
-
-    return Container(
-      height: 200,
-      width: MediaQuery.sizeOf(context).width - 32, // Match horizontal padding of 16 * 2
-      decoration: BoxDecoration(
-        color: cardColor, // Primary BG
-        gradient: cardGradient,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: borderColor,
-            width: 1),
-        // Glow removed
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          child: _buildBackContent(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBackContent() {
-    return _buildCurrentMonthStats();
-  }
-
-  Widget _buildCurrentMonthStats() {
-    final statsAsync = ref.watch(redemptionStatsProvider);
-
-    // [SILENT REFRESH LOGIC]
-    if (statsAsync.hasValue) {
-      final stats = statsAsync.value!;
-      return _buildStatsContent(stats);
-    } else if (statsAsync.isLoading) {
-      return _buildLoadingStats();
-    } else if (statsAsync.hasError) {
-      return Center(
-          child: Text("Error loading stats",
-              style: TextStyle(color: AppColors.error)));
-    } else {
-      return const SizedBox.shrink();
-    }
-  }
-
-  Widget _buildStatsContent(RedemptionStats stats) {
-    // Dynamic divider color based on card mode
-    final dividerColor = widget.isGolden
-        ? AppColors.textPrimary.withOpacity(0.1)
-        : Colors.white.withOpacity(0.2);
-
-    return Center(
-      child: IntrinsicHeight( // Ensures dividers match the height of the content
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // 1. Total Visits
-            _buildSingleStat(
-              value: "${stats.totalRedemptions}",
-              label: "Visits",
-              subLabel: "Lifetime",
-            ),
-            
-            // Vertical Divider
-            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
-
-            // 2. Rewards
-            _buildSingleStat(
-              value: "${stats.bonusesUnlocked}",
-              label: "Rewards",
-              subLabel: "Earned",
-            ),
-
-            // Vertical Divider
-            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
-
-            // 3. Leaderboard
-            _buildSingleStat(
-              value: stats.leaderboardPosition > 0 ? "#${stats.leaderboardPosition}" : "-",
-              label: "Rank",
-              subLabel: "Nationwide",
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSingleStat({
-    required String value,
-    required String label,
-    required String subLabel,
-  }) {
-    // Smart Color Logic: Dark text for Gold card, White text for Standard
-    final valueColor = widget.isGolden ? AppColors.textPrimary : Colors.white;
-    final labelColor = widget.isGolden ? AppColors.primary : const Color(0xFFE3E935);
-    // Made sublabel subtle (opacity) so it doesn't compete with the main label
-    final subLabelColor = widget.isGolden 
-        ? AppColors.textPrimary.withOpacity(0.5) 
-        : Colors.white.withOpacity(0.6);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 1. The Big Number
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor,
-            fontSize: 32, 
-            fontWeight: FontWeight.w900, // Extra Bold
-            height: 1.0, 
-          ),
-        ),
-        const SizedBox(height: 6),
-        
-        // 2. The Category Label
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            color: labelColor,
-            fontSize: 11, 
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2, // Wide spacing for clean look
-          ),
-        ),
-        const SizedBox(height: 2),
-        
-        // 3. The Context Label
-        Text(
-          subLabel,
-          style: TextStyle(
-            color: subLabelColor,
-            fontSize: 10, 
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoadingStats() {
-    // Dynamic colors for skeletons
-    final dividerColor = widget.isGolden
-        ? AppColors.textPrimary.withOpacity(0.1)
-        : Colors.white.withOpacity(0.2);
-    final skeletonBaseColor = widget.isGolden
-        ? Colors.black.withOpacity(0.1)
-        : Colors.white.withOpacity(0.3);
-
-    return Center(
-      child: IntrinsicHeight(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _buildSkeletonColumn(skeletonBaseColor),
-            VerticalDivider(
-                color: dividerColor, indent: 10, endIndent: 10, width: 1),
-            _buildSkeletonColumn(skeletonBaseColor),
-            VerticalDivider(
-                color: dividerColor, indent: 10, endIndent: 10, width: 1),
-            _buildSkeletonColumn(skeletonBaseColor),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSkeletonColumn(Color baseColor) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        BlinkingSkeleton(width: 40, height: 32, baseColor: baseColor),
-        const SizedBox(height: 6),
-        BlinkingSkeleton(width: 50, height: 11, baseColor: baseColor),
-        const SizedBox(height: 2),
-        BlinkingSkeleton(width: 30, height: 10, baseColor: baseColor),
-      ],
     );
   }
 }
