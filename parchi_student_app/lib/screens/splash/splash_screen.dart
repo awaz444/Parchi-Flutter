@@ -41,9 +41,8 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
           child: Image.asset(
-            'assets/parchi-app-icon.png',
-            width: 60, // Reduced size
-            height: 60,
+            'assets/parchi_splash_icon.png',
+            width: 150, // Padded asset makes inner logo look refined
           ),
         ),
       ),

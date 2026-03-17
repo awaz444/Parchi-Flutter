@@ -50,9 +50,9 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#0069db"
-  image: assets/parchi-app-icon.png
+  image: assets/parchi_splash_icon.png
   android_12:
-    image: assets/parchi-app-icon.png
+    image: assets/parchi_splash_icon.png
     icon_background_color: "#0069db"
   web: false
 
@@ -61,6 +61,7 @@ flutter:
   assets:
     - .env
     - assets/parchi-icon.png
+    - assets/parchi_splash_icon.png
     - assets/ParchiFullText.svg
     - assets/parchi-icon.svg
     - assets/parchi-icon-new.svg
