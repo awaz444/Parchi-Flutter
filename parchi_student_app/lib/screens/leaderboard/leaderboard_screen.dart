@@ -22,11 +22,24 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     with AutomaticKeepAliveClientMixin {
   bool _isRefreshing = false;
+  late final ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
-    // Data loading is handled by the provider's constructor init
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.extentAfter < 200) {
+      _loadMore();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadMore() async {
@@ -34,7 +47,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Future<void> _refresh() async {
-    // Start the refresh sequence immediately — no artificial delay.
     _startRefreshSequence();
   }
 
@@ -54,7 +66,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
     return Scaffold(
       backgroundColor: AppColors.lightCanvas,
       appBar: AppBar(
@@ -79,38 +91,29 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   Widget _buildBody() {
     final state = ref.watch(leaderboardProvider);
 
-    // 1. Get Loading State & Items
-    // 1. Get Loading State & Items
     final bool showSkeleton = _isRefreshing || (state.isLoading && state.items.isEmpty);
     final bool hasError = state.error != null && state.items.isEmpty && !showSkeleton;
     final bool isEmpty = state.items.isEmpty && !showSkeleton && !hasError;
 
-    // 2. Determine Current User Info
     final userState = ref.watch(userProfileProvider);
     final user = userState.value;
 
-    // 3. Check if user is in the list
     bool isUserInList = false;
     if (user != null) {
       isUserInList = state.items.any((item) {
-        // Match by ID, Parchi ID, or Name fallback
         if (item.userId != null && item.userId == user.id) return true;
-        if (item.parchiId != null && item.parchiId == user.parchiId)
-          return true;
-        // Basic name fallback if IDs missing
-        if (user.firstName != null && item.name.contains(user.firstName!))
-          return true;
+        if (item.parchiId != null && item.parchiId == user.parchiId) return true;
+        if (user.firstName != null && item.name.contains(user.firstName!)) return true;
         return false;
       });
     }
 
     return Stack(
       children: [
-        // --- MAIN LIST CONTENT ---
         if (showSkeleton)
           _buildLeaderboardListSkeleton()
         else if (hasError)
-          _buildLeaderboardListSkeleton() // Skeleton on error
+          _buildLeaderboardListSkeleton()
         else if (isEmpty)
           _buildEmptyView()
         else
@@ -131,6 +134,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                           child: ParchiLoader(
                             isLoading: controller.isLoading,
                             progress: controller.value,
+                            size: 50,
+                            color: const Color(0xFFFFF700),
                           ),
                         ),
                       );
@@ -144,10 +149,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               );
             },
             child: ListView.separated(
+              controller: _scrollController,
               padding: EdgeInsets.only(
-                  bottom: !isUserInList && user != null
-                      ? 100
-                      : 0), // Pad for sticky bar
+                  bottom: !isUserInList && user != null ? 100 : 0),
               itemCount: state.items.length + (state.hasMore ? 1 : 0),
               separatorBuilder: (context, index) {
                 if (index < state.items.length - 1 ||
@@ -179,12 +183,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
           ),
 
-        // --- STICKY BOTTOM BAR (If user not in list) ---
         if (!showSkeleton && !hasError && !isUserInList && user != null)
           Positioned(
             left: 16,
             right: 16,
-            bottom: 24, // Floating above bottom
+            bottom: 24,
             child: _buildStickyUserBar(user),
           ),
       ],
@@ -195,30 +198,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     if (user == null) return false;
     if (item.userId != null && item.userId == user.id) return true;
     if (item.parchiId != null && item.parchiId == user.parchiId) return true;
-    if (user.firstName != null && item.name.contains(user.firstName!))
-      return true;
+    if (user.firstName != null && item.name.contains(user.firstName!)) return true;
     return false;
-  }
-
-  Widget _buildErrorView(String error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline,
-              size: 64, color: AppColors.textSecondary),
-          const SizedBox(height: 16),
-          Text(
-            error,
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(onPressed: _refresh, child: const Text('Retry')),
-        ],
-      ),
-    );
   }
 
   Widget _buildEmptyView() {
@@ -256,7 +237,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       ),
       child: Row(
         children: [
-          // Rank Placeholder
           SizedBox(
             width: 40,
             child: statsAsync.when(
@@ -286,9 +266,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   "You",
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -307,7 +287,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
           ),
 
-          // Stats
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
@@ -346,20 +325,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     if (!state.hasMore) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 32),
       alignment: Alignment.center,
-      child: state.isLoadingMore
-          ? const CircularProgressIndicator()
-          : GestureDetector(
-              onTap: _loadMore,
-              child: const Text(
-                'Load More',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 16,
-                ),
-              ),
-            ),
+      child: const ParchiLoader(
+        isLoading: true,
+        progress: 1.0,
+        size: 25,
+        color: Color(0xFFFFF700),
+      ),
     );
   }
 
@@ -371,12 +344,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     required bool isCurrentUser,
   }) {
     return Container(
-      color: isCurrentUser ? AppColors.primary : AppColors.lightSurface, // Highlight BG vs Surface tile
+      color: isCurrentUser ? AppColors.primary : AppColors.lightSurface,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Rank
           SizedBox(
             width: 40,
             child: Text(
@@ -389,7 +361,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
           ),
           const SizedBox(width: 8),
-          // Name & University
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,7 +387,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
           ),
           const SizedBox(width: 16),
-          // Total Redemptions
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -446,9 +416,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   Widget _buildLeaderboardListSkeleton() {
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: 100),
-      itemCount: 15, // Show plenty of items
-      physics:
-          const NeverScrollableScrollPhysics(), // Or allow scrolling? Usually static for skeleton
+      itemCount: 15,
+      physics: const NeverScrollableScrollPhysics(),
       separatorBuilder: (context, index) => const Divider(
         height: 1,
         thickness: 1.0,
@@ -464,7 +433,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Rank
           BlinkingSkeleton(
               width: 30,
               height: 20,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // [NEW] Import Riverpod
@@ -12,6 +13,7 @@ import 'utils/colours.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
 import 'screens/profile/redemption_history/redemption_history_screen.dart'; // [NEW] History Screen
+import 'screens/splash/splash_screen.dart'; // [NEW] Splash Screen
 import 'screens/auth/login_screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/navigation_service.dart'; // [NEW] Use generic navigation service
@@ -23,7 +25,8 @@ import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   await dotenv.load(fileName: ".env");
 
@@ -344,11 +347,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _checkAuthState() async {
     try {
-      final isStudentAuth = await authService.isStudentAuthenticated();
+      // Start both auth logic and a minimum 2-second delay
+      final results = await Future.wait([
+        authService.isStudentAuthenticated(),
+        Future.delayed(const Duration(seconds: 2)),
+      ]);
+
+      final isStudentAuth = results[0] as bool;
+
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        // Remove native splash once Flutter builds its first frame
+        FlutterNativeSplash.remove();
       }
 
       if (!isStudentAuth) {
@@ -362,6 +374,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         setState(() {
           _isLoading = false;
         });
+        FlutterNativeSplash.remove();
       }
     }
   }
@@ -369,11 +382,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const SplashScreen();
     }
 
     // Always show MainScreen — guests can browse restaurants freely.

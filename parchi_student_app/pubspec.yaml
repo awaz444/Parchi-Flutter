@@ -46,6 +46,15 @@ dev_dependencies:
   riverpod_generator: ^2.4.0
   custom_refresh_indicator: ^3.0.0
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
+
+flutter_native_splash:
+  color: "#0069db"
+  image: assets/parchi-app-icon.png
+  android_12:
+    image: assets/parchi-app-icon.png
+    icon_background_color: "#0069db"
+  web: false
 
 flutter:
   uses-material-design: true
@@ -54,6 +63,8 @@ flutter:
     - assets/parchi-icon.png
     - assets/ParchiFullText.svg
     - assets/parchi-icon.svg
+    - assets/parchi-icon-new.svg
+    - assets/parchi-app-icon.png
     - assets/Parchi-Icon-with-new-blue.png
     - assets/ParchiFullTextYellow.svg 
     - assets/history-svgrepo-com.svg
@@ -69,4 +80,4 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/Parchi-Icon-with-new-blue.png"
+  image_path: "assets/parchi-app-icon.png"

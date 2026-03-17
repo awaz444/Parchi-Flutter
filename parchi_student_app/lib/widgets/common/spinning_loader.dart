@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // [NEW] Import SVG
 import 'dart:math' as math;
 
 class SpinningLoader extends StatefulWidget {
@@ -37,12 +38,13 @@ class _SpinningLoaderState extends State<SpinningLoader>
       builder: (context, child) {
         return Transform.rotate(
           angle: _controller.value * 2 * math.pi,
-          child: Image.asset(
-            'assets/parchi-icon.png',
+          child: SvgPicture.asset(
+            'assets/parchi-icon-new.svg',
             width: widget.size,
             height: widget.size,
-            // If the icon needs tinting, we can add color here, but usually the icon is full color.
-            // color: widget.color, 
+            colorFilter: widget.color != null 
+                ? ColorFilter.mode(widget.color!, BlendMode.srcIn)
+                : null,
           ),
         );
       },
