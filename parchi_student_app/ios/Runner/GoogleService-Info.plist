@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.parchi.student.app</string>
+	<string>com.parchi.studentapp</string>
 	<key>PROJECT_ID</key>
 	<string>parchi-efbbd</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:232497829289:ios:10f3f89a5afe48196aa0b8</string>
+	<string>1:232497829289:ios:242693adf05d75a66aa0b8</string>
 </dict>
 </plist>

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -22,25 +23,23 @@ class NotificationHandlerService {
         badge: true,
         sound: true,
       );
-
-      // Subscribe to the Broadcast Topic
-      // This connects this device to your "students_all" blasts
-      // Wrapped in try-catch for iOS Simulator which fails to get APNS token
-      await _fcm.subscribeToTopic('students_all');
-      print("Subscribed to student broadcasts!");
     } catch (e) {
-      print("FCM Subscription failed (Known issue on Simulator): $e");
+      print("FCM permission request failed: $e");
     }
+
+    // Subscribe to the Broadcast Topic
+    // Wrapped in try-catch; iOS Simulator has no APNS token so we guard against it
+    await _subscribeToTopics();
 
     // Setup Local Notifications (for foreground display)
     // Make sure 'ic_launcher' exists in android/app/src/main/res/drawable or mipmap
-    const AndroidInitializationSettings androidSettings = 
-        AndroidInitializationSettings('@mipmap/ic_launcher'); 
-    
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
     // For iOS (Darwin)
     const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
 
-    const InitializationSettings initSettings = 
+    const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings, iOS: iosSettings);
 
     await _localNotifications.initialize(initSettings);
@@ -56,8 +55,32 @@ class NotificationHandlerService {
 
     // Handle Background Message Open
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        print('Message clicked!');
+      print('Message clicked!');
     });
+  }
+
+  // 2. Subscribe to FCM topics — guarded for iOS Simulator (no APNS token)
+  Future<void> _subscribeToTopics() async {
+    try {
+      // On iOS/macOS, wait for the APNS token before subscribing to topics.
+      // The Simulator never gets an APNS token — we skip gracefully.
+      if (Platform.isIOS || Platform.isMacOS) {
+        String? apnsToken;
+        for (int i = 0; i < 5; i++) {
+          apnsToken = await _fcm.getAPNSToken();
+          if (apnsToken != null) break;
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+        if (apnsToken == null) {
+          print("FCM: No APNS token (Simulator or missing push entitlement). Skipping topic subscription.");
+          return;
+        }
+      }
+      await _fcm.subscribeToTopic('students_all');
+      print("FCM: Subscribed to students_all topic.");
+    } catch (e) {
+      print("FCM: Topic subscription failed (expected on Simulator): $e");
+    }
   }
 
   // 3. Trigger the Local Notification
@@ -68,8 +91,8 @@ class NotificationHandlerService {
       importance: Importance.max,
       priority: Priority.high,
     );
-    
-    const NotificationDetails platformDetails = 
+
+    const NotificationDetails platformDetails =
         NotificationDetails(android: androidDetails);
 
     await _localNotifications.show(
@@ -78,11 +101,11 @@ class NotificationHandlerService {
       message.notification?.body,
       platformDetails,
       // Pass the DB ID so we can mark it read later if needed
-      payload: message.data['notification_id'], 
+      payload: message.data['notification_id'],
     );
   }
-  
-  // 4. Get FCM Token (Optional: send this to your backend if you want user-specific notifs later)
+
+  // 4. Get FCM Token (for user-specific notifications)
   Future<String?> getToken() async {
     return await _fcm.getToken();
   }
