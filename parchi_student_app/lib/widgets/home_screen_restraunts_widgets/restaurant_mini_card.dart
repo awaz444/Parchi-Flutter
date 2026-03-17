@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/colours.dart';
 import '../common/blinking_skeleton.dart';
 
@@ -12,21 +13,18 @@ class RestaurantMiniCard extends StatelessWidget {
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              "https://placehold.co/100x100/png",
+            child: CachedNetworkImage(
+              imageUrl: "https://placehold.co/100x100/png",
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return BlinkingSkeleton(
-                  width: double.infinity,
-                  height: double.infinity,
-                  borderRadius: 12,
-                  baseColor: AppColors.textSecondary.withOpacity(0.1),
-                );
-              },
-              errorBuilder: (ctx, err, stack) => Container(
+              placeholder: (context, url) => BlinkingSkeleton(
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: 12,
+                baseColor: AppColors.textSecondary.withOpacity(0.1),
+              ),
+              errorWidget: (ctx, url, err) => Container(
                 color: AppColors.textSecondary.withOpacity(0.1),
                 child: const Center(
                   child: Icon(Icons.broken_image, size: 20, color: AppColors.textSecondary),

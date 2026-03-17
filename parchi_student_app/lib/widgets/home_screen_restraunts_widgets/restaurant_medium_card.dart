@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/colours.dart';
 import '../common/blinking_skeleton.dart';
 
@@ -41,21 +42,18 @@ class RestaurantMediumCard extends StatelessWidget {
               ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Image.network(
-                  image,
+                child: CachedNetworkImage(
+                  imageUrl: image,
                   height: 100,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return BlinkingSkeleton(
-                      width: double.infinity,
-                      height: 100,
-                      borderRadius: 12,
-                      baseColor: AppColors.textSecondary.withOpacity(0.1),
-                    );
-                  },
-                  errorBuilder: (ctx, err, stack) => Container(
+                  placeholder: (context, url) => BlinkingSkeleton(
+                    width: double.infinity,
+                    height: 100,
+                    borderRadius: 12,
+                    baseColor: AppColors.textSecondary.withOpacity(0.1),
+                  ),
+                  errorWidget: (ctx, url, err) => Container(
                     height: 100,
                     color: AppColors.textSecondary.withOpacity(0.3),
                     child: const Center(

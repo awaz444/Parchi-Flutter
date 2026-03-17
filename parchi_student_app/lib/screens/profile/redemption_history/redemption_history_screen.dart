@@ -22,7 +22,7 @@ class RedemptionHistoryScreen extends ConsumerStatefulWidget {
 
 class _RedemptionHistoryScreenState
     extends ConsumerState<RedemptionHistoryScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
@@ -48,10 +48,11 @@ class _RedemptionHistoryScreenState
     _expandProgress.value = progress.clamp(0.0, 1.0);
   }
 
+  @override
+  bool get wantKeepAlive => true; // Keep alive across tab switches
+
   Future<void> _refresh() async {
-    // 1. Force spinner for 1 second
-    await Future.delayed(const Duration(seconds: 1));
-    // 2. Start sequence (fire and forget from perspective of RefreshIndicator)
+    // Start the refresh sequence immediately — no artificial delay.
     _startRefreshSequence();
   }
 
@@ -84,6 +85,7 @@ class _RedemptionHistoryScreenState
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required by AutomaticKeepAliveClientMixin
     // [GUEST] Show login prompt if user is not authenticated
     final userAsync = ref.watch(userProfileProvider);
     final bool isGuest = userAsync.maybeWhen(

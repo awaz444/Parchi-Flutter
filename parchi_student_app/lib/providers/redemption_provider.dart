@@ -101,7 +101,10 @@ class RedemptionHistoryNotifier
 
 final redemptionHistoryProvider = StateNotifierProvider<
     RedemptionHistoryNotifier, RedemptionHistoryState>(
-  (_) => RedemptionHistoryNotifier(),
+  (ref) {
+    ref.keepAlive(); // Persist across tab switches — prevents re-fetch on every navigation
+    return RedemptionHistoryNotifier();
+  },
 );
 
 // ---------------------------------------------------------------------------

@@ -59,9 +59,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   // [NEW] Wrapper for CustomRefreshIndicator
   Future<void> _handleRefresh() async {
-    // 1. Force spinner
-    await Future.delayed(const Duration(seconds: 1));
-    // 2. Start sequence
+    // Start sequence immediately — no artificial delay.
     _startRefreshSequence();
   }
 

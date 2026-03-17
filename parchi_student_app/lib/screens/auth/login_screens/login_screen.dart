@@ -68,9 +68,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenHeight = MediaQuery.sizeOf(context).height;
 
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final isKeyboardOpen = keyboardHeight > 0;
 
     double containerHeight;

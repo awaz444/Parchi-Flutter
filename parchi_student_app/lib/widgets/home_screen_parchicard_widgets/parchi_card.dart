@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:math';
 import '../../utils/colours.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/redemption_provider.dart';
 import '../../models/redemption_model.dart';
 import '../common/blinking_skeleton.dart';
+import '../../screens/auth/login_screens/login_screen.dart';
 
 // =========================================================
 // 1. ENTRY POINT
@@ -18,6 +20,7 @@ class ParchiCard extends StatelessWidget {
   final bool isGolden; // Gold Mode Flag
   final bool isFoundersClub; // [NEW] Founders Club Flag
   final bool isLoading;
+  final bool isGuest; // [GUEST] Show sign-in prompt instead of card content
 
   const ParchiCard({
     super.key,
@@ -27,6 +30,7 @@ class ParchiCard extends StatelessWidget {
     this.isGolden = false,
     this.isFoundersClub = false, // [NEW]
     this.isLoading = false,
+    this.isGuest = false, // [GUEST]
   });
 
   @override
@@ -68,27 +72,35 @@ class ParchiCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: GestureDetector(
-        onTap: () {
-          Navigator.of(context).push(PageRouteBuilder(
-            opaque: false,
-            barrierDismissible: true,
-            barrierColor: AppColors.textPrimary.withOpacity(0.87),
-            transitionDuration: const Duration(milliseconds: 600),
-            reverseTransitionDuration: const Duration(milliseconds: 500),
-            pageBuilder: (context, animation, secondaryAnimation) {
-              return FadeTransition(
-                opacity: animation,
-                child: ParchiCardDetail(
-                  studentName: studentName,
-                  studentId: studentId,
-                  universityName: universityName,
-                  isGolden: isGolden,
-                  isFoundersClub: isFoundersClub, // [NEW] Pass deep
-                ),
-              );
-            },
-          ));
-        },
+        onTap: isGuest
+            ? () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                );
+              }
+            : () {
+                Navigator.of(context).push(PageRouteBuilder(
+                  opaque: false,
+                  barrierDismissible: true,
+                  barrierColor: AppColors.textPrimary.withOpacity(0.87),
+                  transitionDuration: const Duration(milliseconds: 600),
+                  reverseTransitionDuration: const Duration(milliseconds: 500),
+                  pageBuilder: (context, animation, secondaryAnimation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ParchiCardDetail(
+                        studentName: studentName,
+                        studentId: studentId,
+                        universityName: universityName,
+                        isGolden: isGolden,
+                        isFoundersClub: isFoundersClub, // [NEW] Pass deep
+                      ),
+                    );
+                  },
+                ));
+              },
         child: Hero(
           tag: isGolden ? 'gold-parchi-card' : 'parchi-card-hero',
           child: Material(
@@ -111,17 +123,55 @@ class ParchiCard extends StatelessWidget {
                       ]
                     : null,
               ),
-              child: CardFrontContent(
-                studentName: studentName,
-                studentId: studentId,
-                universityName: universityName,
-                isGolden: isGolden,
-                isFoundersClub: isFoundersClub, // [NEW]
-                isLoading: isLoading,
-              ),
+              child: isGuest
+                  ? const _GuestCardContent()
+                  : CardFrontContent(
+                      studentName: studentName,
+                      studentId: studentId,
+                      universityName: universityName,
+                      isGolden: isGolden,
+                      isFoundersClub: isFoundersClub, // [NEW]
+                      isLoading: isLoading,
+                    ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// =========================================================
+// 1b. GUEST CARD CONTENT (shown inside ParchiCard when isGuest == true)
+// =========================================================
+class _GuestCardContent extends StatelessWidget {
+  const _GuestCardContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.credit_card_rounded, color: Colors.white70, size: 36),
+          SizedBox(height: 10),
+          Text(
+            'Sign in to get your Parchi card',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Tap to create a free account',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -182,13 +232,18 @@ class _ParchiCardDetailState extends ConsumerState<ParchiCardDetail>
     _hoverController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
+    );
+    // Delay hover start until after the Hero transition completes (~600ms)
+    // so it doesn't compete with the flip/open animation.
     _hoverAnimation =
         Tween<double>(begin: -5, end: 5).animate(CurvedAnimation(
       parent: _hoverController,
       curve: Curves.easeInOutSine,
     ));
+    // Start hover only after the card has settled into view.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _hoverController.repeat(reverse: true);
+    });
   }
 
   void _flipCard() {
@@ -290,7 +345,7 @@ class _ParchiCardDetailState extends ConsumerState<ParchiCardDetail>
 
     return Container(
       height: 200,
-      width: MediaQuery.of(context).size.width - 32, // Match horizontal padding of 16 * 2
+      width: MediaQuery.sizeOf(context).width - 32, // Match horizontal padding of 16 * 2
       decoration: BoxDecoration(
         color: cardColor,
         gradient: cardGradient,
@@ -331,7 +386,7 @@ class _ParchiCardDetailState extends ConsumerState<ParchiCardDetail>
 
     return Container(
       height: 200,
-      width: MediaQuery.of(context).size.width - 32, // Match horizontal padding of 16 * 2
+      width: MediaQuery.sizeOf(context).width - 32, // Match horizontal padding of 16 * 2
       decoration: BoxDecoration(
         color: cardColor, // Primary BG
         gradient: cardGradient,
@@ -815,10 +870,10 @@ class CompactParchiHeader extends StatelessWidget {
                                 ),
                                 child: ClipOval(
                                   child: profilePicture != null
-                                      ? Image.network(
-                                          profilePicture!,
+                                      ? CachedNetworkImage(
+                                          imageUrl: profilePicture!,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) =>
+                                          errorWidget: (context, url, error) =>
                                               Center(
                                             child: Text(
                                               studentInitials,

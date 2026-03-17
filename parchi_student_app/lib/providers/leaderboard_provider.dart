@@ -98,5 +98,6 @@ class LeaderboardNotifier extends StateNotifier<LeaderboardState> {
 }
 
 final leaderboardProvider = StateNotifierProvider<LeaderboardNotifier, LeaderboardState>((ref) {
+  ref.keepAlive(); // Persist across tab switches — prevents re-fetch on every navigation
   return LeaderboardNotifier(leaderboardService);
 });

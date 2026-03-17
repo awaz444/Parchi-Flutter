@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../utils/colours.dart';
 import '../../services/auth_service.dart';
 import '../../providers/user_provider.dart';
-import '../auth/login_screens/login_screen.dart';
 import 'Change_password/change_password_screen.dart';
 import 'pfp_change/profile_picture_upload_screen.dart';
 import '../../widgets/common/spinning_loader.dart'; // [REQUIRED]
@@ -102,7 +101,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void _handleModalDragUpdate(DragUpdateDetails details) {
     // Normalize drag distance against screen height (~60% of screen)
     double delta =
-        details.primaryDelta! / (MediaQuery.of(context).size.height * 0.6);
+        details.primaryDelta! / (MediaQuery.sizeOf(context).height * 0.6);
     _modalController.value -= delta; // Drag down reduces value
   }
 
@@ -118,7 +117,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
-    final double topPadding = MediaQuery.of(context).padding.top;
+    final double topPadding = MediaQuery.paddingOf(context).top;
 
     // PopScope intercepts the Back Button
     return PopScope(
@@ -406,7 +405,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               onVerticalDragEnd: _handleModalDragEnd,
                               child: Padding(
                                 // Push content up when keyboard opens (Critical for Password field)
-                                padding: MediaQuery.of(context).viewInsets,
+                                padding: MediaQuery.viewInsetsOf(context),
                                 child: _activeSheetContent,
                               ),
                             ),
@@ -606,10 +605,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         await authService.logout();
         ref.read(userProfileProvider.notifier).clearUser();
         if (context.mounted) {
-          Navigator.of(context).pop();
-          Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-              (route) => false);
+          Navigator.of(context).pop(); // pops loading dialog
+          Navigator.of(context).pop(); // pops ProfileScreen → back to HomeScreen
         }
       } catch (e) {
         if (context.mounted) {

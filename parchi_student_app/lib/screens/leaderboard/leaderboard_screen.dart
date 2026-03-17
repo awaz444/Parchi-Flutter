@@ -34,9 +34,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Future<void> _refresh() async {
-    // 1. Force spinner for 1 second
-    await Future.delayed(const Duration(seconds: 1));
-    // 2. Start sequence (fire and forget from perspective of RefreshIndicator)
+    // Start the refresh sequence immediately — no artificial delay.
     _startRefreshSequence();
   }
 

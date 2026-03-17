@@ -61,11 +61,8 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
   // --- REFRESH LOGIC ---
   Future<void> _refreshData() async {
-    // 1. Force the spinner to show for at least 1 second (per requirement)
-    await Future.delayed(const Duration(seconds: 1));
-    
-    // 2. Trigger the Pulse -> Skeleton -> Data Fetch sequence
-    // We don't await this because we want the spinner to close while the rest happens
+    // Trigger the Skeleton -> Data Fetch sequence.
+    // We don't await this because we want the spinner to close while the rest happens.
     ref.read(homeUIProvider.notifier).startRefreshSequence();
   }
 

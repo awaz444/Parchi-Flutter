@@ -128,8 +128,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final double topPadding = MediaQuery.of(context).padding.top;
+    final double screenHeight = MediaQuery.sizeOf(context).height;
+    final double topPadding = MediaQuery.paddingOf(context).top;
 
     final double collapsedHeaderHeight = topPadding + 5.0 + 60.0;
     // Add extra height for the expanded student info part (~70px)
@@ -158,162 +158,148 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       orElse: () => false,
     );
 
-    return ValueListenableBuilder<double>(
-      valueListenable: _expandProgress,
-      builder: (context, progress, child) {
-        return Scaffold(
-          backgroundColor: AppColors.lightCanvas,
-          body: Stack(
-            children: [
-              // LAYER 1: Parchi Card (hidden for guests)
-              Positioned(
-                top: collapsedHeaderHeight,
-                left: 0,
-                right: 0,
-                child: Opacity(
-                  opacity: (1.0 - (progress * 3)).clamp(0.0, 1.0),
-                  child: isGuest
-                      // [GUEST] Show a sign-in teaser card instead of the Parchi card
-                      ? _GuestParchiCardTeaser(
-                          onSignInTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const LoginScreen(),
-                              ),
-                            );
-                          },
-                        )
-                      : userAsync.when(
-                          data: (user) {
-                            final fname = user?.firstName ?? "Student";
-                            final lname = user?.lastName ?? "";
-                            final fullName =
-                                "$fname $lname".trim().toUpperCase();
-                            final pId = user?.parchiId ?? "PENDING";
-                            final uni =
-                                user?.university ?? "Unknown University";
-
-                            return ParchiCard(
-                              studentName:
-                                  fullName.isEmpty ? "STUDENT" : fullName,
-                              studentId: pId,
-                              universityName: uni,
-                              isFoundersClub: user?.isFoundersClub ?? false,
-                              isLoading: homeUIState.isSkeletonLoading,
-                            );
-                          },
-                          loading: () => const ParchiCard(
-                              studentName: "",
-                              studentId: "",
-                              universityName: "",
-                              isLoading: true),
-                          error: (err, stack) => const ParchiCard(
-                              studentName: "",
-                              studentId: "",
-                              universityName: "",
-                              isLoading: true),
-                        ),
-                ),
+    return Scaffold(
+      backgroundColor: AppColors.lightCanvas,
+      body: Stack(
+        children: [
+          // LAYER 1: Parchi Card — only the Opacity listens to scroll progress
+          Positioned(
+            top: collapsedHeaderHeight,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _expandProgress,
+              builder: (context, progress, child) => AnimatedOpacity(
+                opacity: (1.0 - (progress * 3)).clamp(0.0, 1.0),
+                duration: Duration.zero,
+                child: child,
               ),
+              child: userAsync.when(
+                data: (user) {
+                  if (isGuest) {
+                    return const ParchiCard(isGuest: true);
+                  }
+                  final fname = user?.firstName ?? "Student";
+                  final lname = user?.lastName ?? "";
+                  final fullName = "$fname $lname".trim().toUpperCase();
+                  final pId = user?.parchiId ?? "PENDING";
+                  final uni = user?.university ?? "Unknown University";
 
-              // LAYER 2: Draggable Sheet
-              DraggableScrollableSheet(
-                controller: _sheetController,
-                initialChildSize: _minSheetSize,
-                minChildSize: _minSheetSize,
-                maxChildSize: _maxSheetSize,
-                snap: true,
-                builder:
-                    (BuildContext context, ScrollController scrollController) {
-                  return HomeSheetContent(
-                    scrollController: scrollController,
-                    searchQuery: _searchQuery, // Pass search query
+                  return ParchiCard(
+                    studentName: fullName.isEmpty ? "STUDENT" : fullName,
+                    studentId: pId,
+                    universityName: uni,
+                    isFoundersClub: user?.isFoundersClub ?? false,
+                    isLoading: homeUIState.isSkeletonLoading,
                   );
                 },
+                loading: () => const ParchiCard(
+                    studentName: "",
+                    studentId: "",
+                    universityName: "",
+                    isLoading: true),
+                error: (err, stack) => const ParchiCard(
+                    studentName: "",
+                    studentId: "",
+                    universityName: "",
+                    isLoading: true),
               ),
-
-              // LAYER 3: Fixed Header (Unified Search & Compact Parchi Card)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: isGuest
-                    // [GUEST] Minimal header: no profile avatar, just a Sign In button
-                    ? _GuestCompactHeader(
-                        scrollProgress: progress,
-                        onNotificationTap: _openNotifications,
-                        onSearchChanged: (val) {
-                          setState(() {
-                            _searchQuery = val;
-                          });
-                        },
-                        onSignInTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                          );
-                        },
-                      )
-                    : userAsync.when(
-                        data: (user) {
-                          final fname = user?.firstName ?? "Student";
-                          final lname = user?.lastName ?? "";
-                          final fullName =
-                              "$fname $lname".trim().toUpperCase();
-                          final pId = user?.parchiId ?? "PENDING";
-                          final uni = user?.university ?? "Unknown University";
-
-                          final initials =
-                              (fname.isNotEmpty ? fname[0] : "") +
-                                  (lname.isNotEmpty ? lname[0] : "");
-
-                          return CompactParchiHeader(
-                            studentName:
-                                fullName.isEmpty ? "STUDENT" : fullName,
-                            studentId: pId,
-                            universityName: uni,
-                            scrollProgress: progress,
-                            onNotificationTap: _openNotifications,
-                            profilePicture: user?.profilePicture,
-                            studentInitials: initials.toUpperCase(),
-                            onProfileTap: _navigateToProfile,
-                            onSearchChanged: (val) {
-                              setState(() {
-                                _searchQuery = val;
-                              });
-                            },
-                            isLoading: homeUIState.isSkeletonLoading,
-                            hasUnreadNotifications:
-                                user?.hasUnreadNotifications ?? false,
-                          );
-                        },
-                        loading: () => CompactParchiHeader(
-                          studentName: "",
-                          studentId: "",
-                          universityName: "",
-                          scrollProgress: progress,
-                          onNotificationTap: _openNotifications,
-                          studentInitials: "",
-                          onProfileTap: _navigateToProfile,
-                          isLoading: true,
-                        ),
-                        error: (err, stack) => CompactParchiHeader(
-                          studentName: "",
-                          studentId: "",
-                          universityName: "",
-                          scrollProgress: progress,
-                          onNotificationTap: _openNotifications,
-                          studentInitials: "",
-                          onProfileTap: _navigateToProfile,
-                          isLoading: true,
-                        ),
-                      ),
-              ),
-            ],
+            ),
           ),
-        );
-      },
+
+          // LAYER 2: Draggable Sheet — never needs to rebuild on scroll progress
+          DraggableScrollableSheet(
+            controller: _sheetController,
+            initialChildSize: _minSheetSize,
+            minChildSize: _minSheetSize,
+            maxChildSize: _maxSheetSize,
+            snap: true,
+            builder:
+                (BuildContext context, ScrollController scrollController) {
+              return HomeSheetContent(
+                scrollController: scrollController,
+                searchQuery: _searchQuery,
+              );
+            },
+          ),
+
+          // LAYER 3: Fixed Header — only the header content listens to scroll progress
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _expandProgress,
+              builder: (context, progress, child) {
+                if (isGuest) {
+                  return _GuestCompactHeader(
+                    scrollProgress: progress,
+                    onNotificationTap: _openNotifications,
+                    onSearchChanged: (val) {
+                      setState(() => _searchQuery = val);
+                    },
+                    onSignInTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LoginScreen(),
+                        ),
+                      );
+                    },
+                  );
+                }
+                return userAsync.when(
+                  data: (user) {
+                    final fname = user?.firstName ?? "Student";
+                    final lname = user?.lastName ?? "";
+                    final fullName = "$fname $lname".trim().toUpperCase();
+                    final pId = user?.parchiId ?? "PENDING";
+                    final uni = user?.university ?? "Unknown University";
+                    final initials = (fname.isNotEmpty ? fname[0] : "") +
+                        (lname.isNotEmpty ? lname[0] : "");
+
+                    return CompactParchiHeader(
+                      studentName: fullName.isEmpty ? "STUDENT" : fullName,
+                      studentId: pId,
+                      universityName: uni,
+                      scrollProgress: progress,
+                      onNotificationTap: _openNotifications,
+                      profilePicture: user?.profilePicture,
+                      studentInitials: initials.toUpperCase(),
+                      onProfileTap: _navigateToProfile,
+                      onSearchChanged: (val) {
+                        setState(() => _searchQuery = val);
+                      },
+                      isLoading: homeUIState.isSkeletonLoading,
+                      hasUnreadNotifications:
+                          user?.hasUnreadNotifications ?? false,
+                    );
+                  },
+                  loading: () => CompactParchiHeader(
+                    studentName: "",
+                    studentId: "",
+                    universityName: "",
+                    scrollProgress: progress,
+                    onNotificationTap: _openNotifications,
+                    studentInitials: "",
+                    onProfileTap: _navigateToProfile,
+                    isLoading: true,
+                  ),
+                  error: (err, stack) => CompactParchiHeader(
+                    studentName: "",
+                    studentId: "",
+                    universityName: "",
+                    scrollProgress: progress,
+                    onNotificationTap: _openNotifications,
+                    studentInitials: "",
+                    onProfileTap: _navigateToProfile,
+                    isLoading: true,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -422,68 +408,3 @@ class _GuestCompactHeader extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Guest Parchi card teaser: prompts the user to sign in
-// ─────────────────────────────────────────────────────────────────────────────
-class _GuestParchiCardTeaser extends StatelessWidget {
-  final VoidCallback onSignInTap;
-
-  const _GuestParchiCardTeaser({required this.onSignInTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTap: onSignInTap,
-        child: Container(
-          height: 180,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.primary,
-                AppColors.primary.withOpacity(0.7),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.credit_card_rounded,
-                    color: Colors.white70, size: 36),
-                SizedBox(height: 10),
-                Text(
-                  'Sign in to get your Parchi card',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Tap to create a free account',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

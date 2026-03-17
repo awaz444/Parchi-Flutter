@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/colours.dart';
 import '../common/blinking_skeleton.dart';
 
@@ -33,21 +34,18 @@ class BrandCard extends StatelessWidget {
           // Logo Box
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Image.network(
-              image,
+            child: CachedNetworkImage(
+              imageUrl: image,
               height: 50,
               width: 50,
               fit: BoxFit.contain,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return BlinkingSkeleton(
-                  width: 50,
-                  height: 50,
-                  borderRadius: 8,
-                  baseColor: AppColors.textSecondary.withOpacity(0.1),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) =>
+              placeholder: (context, url) => BlinkingSkeleton(
+                width: 50,
+                height: 50,
+                borderRadius: 8,
+                baseColor: AppColors.textSecondary.withOpacity(0.1),
+              ),
+              errorWidget: (context, url, error) =>
                   const Icon(Icons.restaurant, color: AppColors.textSecondary),
             ),
           ),

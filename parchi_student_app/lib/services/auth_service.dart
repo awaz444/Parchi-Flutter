@@ -6,7 +6,6 @@ import '../config/api_config.dart';
 import '../models/auth_models.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'navigation_service.dart'; // [NEW]
 
 class AuthService {
   static const String _accessTokenKey = 'access_token';
@@ -622,19 +621,10 @@ class AuthService {
       // Always remove tokens locally
       await removeToken();
 
-      // [NEW] 3. Navigate to Login via Global Key
-      // Wrap in microtask to avoid "Navigator operation requested with a context that does not include a Navigator"
-      // or silent failures if called mid-frame.
-      Future.microtask(() {
-        NavigationService.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
-      });
+      // Navigation after logout is handled by the calling UI layer (ProfileScreen),
+      // NOT here — so guests can continue browsing on the home screen.
     } finally {
-      // [UPDATED] Do NOT reset _isLoggingOut manually.
-      // It should remain true until the app is restarted or a fresh login occurs.
-      // This prevents "second wave" logout storms.
+      _isLoggingOut = false; // Reset so a fresh logout can run after re-login
     }
   }
   // --- STANDARDIZED API METHODS ---

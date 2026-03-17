@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/merchant_detail_model.dart';
 import '../../utils/colours.dart';
 import '../../widgets/common/parchi_refresh_loader.dart';
@@ -48,10 +49,10 @@ class MerchantDetailsScreen extends ConsumerWidget {
               ),
               flexibleSpace: FlexibleSpaceBar(
                 background: merchant.bannerUrl != null
-                    ? Image.network(
-                        merchant.bannerUrl!,
+                    ? CachedNetworkImage(
+                        imageUrl: merchant.bannerUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
+                        errorWidget: (context, url, error) =>
                             Container(color: AppColors.surfaceVariant),
                       )
                     : Container(color: AppColors.surfaceVariant),
@@ -123,10 +124,10 @@ class MerchantDetailsScreen extends ConsumerWidget {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: merchant.logoPath != null
-                                  ? Image.network(
-                                      merchant.logoPath!,
+                                  ? CachedNetworkImage(
+                                      imageUrl: merchant.logoPath!,
                                       fit: BoxFit.contain,
-                                      errorBuilder: (ctx, err, stack) =>
+                                      errorWidget: (ctx, url, err) =>
                                           const Icon(Icons.store,
                                               size: 30,
                                               color: AppColors.textSecondary),
