@@ -17,10 +17,10 @@ class ParchiCard extends ConsumerStatefulWidget {
   final String studentName;
   final String studentId;
   final String universityName;
-  final bool isGolden; 
-  final bool isFoundersClub; 
+  final bool isGolden;
+  final bool isFoundersClub;
   final bool isLoading;
-  final bool isGuest; 
+  final bool isGuest;
 
   const ParchiCard({
     super.key,
@@ -37,7 +37,8 @@ class ParchiCard extends ConsumerStatefulWidget {
   ConsumerState<ParchiCard> createState() => _ParchiCardState();
 }
 
-class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProviderStateMixin {
+class _ParchiCardState extends ConsumerState<ParchiCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _flipController;
   late Animation<double> _flipAnimation;
   bool _isFront = true;
@@ -54,7 +55,6 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
       curve: Curves.easeInOutBack,
     ));
 
-    // Refresh stats when card is initialized (Silent Refresh)
     if (!widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.invalidate(redemptionStatsProvider);
@@ -74,16 +74,12 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
     } else {
       _flipController.reverse();
     }
-    setState(() {
-      _isFront = !_isFront;
-    });
+    setState(() => _isFront = !_isFront);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.isGuest) {
-      return _buildGuestCard();
-    }
+    if (widget.isGuest) return _buildGuestCard();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -118,18 +114,15 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: GestureDetector(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const LoginScreen(),
-            ),
-          );
-        },
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        ),
         child: Container(
           height: 200,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: widget.isFoundersClub ? AppColors.foundersClub : AppColors.primary,
+            color:
+                widget.isFoundersClub ? AppColors.foundersClub : AppColors.primary,
             borderRadius: BorderRadius.circular(20),
           ),
           child: const _GuestCardContent(),
@@ -146,19 +139,19 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
       stops: [0.1, 0.5, 0.9],
     );
 
-    final Color? cardColor = widget.isFoundersClub 
-        ? AppColors.foundersClub 
+    final Color? cardColor = widget.isFoundersClub
+        ? AppColors.foundersClub
         : (widget.isGolden ? null : AppColors.primary);
-    
-    final Gradient? cardGradient = widget.isFoundersClub 
-        ? null 
+
+    final Gradient? cardGradient = widget.isFoundersClub
+        ? null
         : (widget.isGolden ? goldGradient : null);
 
     return Container(
       height: 200,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: cardColor, 
+        color: cardColor,
         gradient: cardGradient,
         borderRadius: BorderRadius.circular(20),
         boxShadow: widget.isGolden
@@ -224,8 +217,7 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
     final statsAsync = ref.watch(redemptionStatsProvider);
 
     if (statsAsync.hasValue) {
-      final stats = statsAsync.value!;
-      return _buildStatsContent(stats);
+      return _buildStatsContent(statsAsync.value!);
     } else if (statsAsync.isLoading) {
       return _buildLoadingStats();
     } else if (statsAsync.hasError) {
@@ -249,22 +241,23 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildSingleStat(
-              value: "${stats.totalRedemptions}",
-              label: "Visits",
-              subLabel: "Lifetime",
-            ),
-            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+                value: "${stats.totalRedemptions}",
+                label: "Visits",
+                subLabel: "Lifetime"),
+            VerticalDivider(
+                color: dividerColor, indent: 10, endIndent: 10, width: 1),
             _buildSingleStat(
-              value: "${stats.bonusesUnlocked}",
-              label: "Rewards",
-              subLabel: "Earned",
-            ),
-            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+                value: "${stats.bonusesUnlocked}",
+                label: "Rewards",
+                subLabel: "Earned"),
+            VerticalDivider(
+                color: dividerColor, indent: 10, endIndent: 10, width: 1),
             _buildSingleStat(
-              value: stats.leaderboardPosition > 0 ? "#${stats.leaderboardPosition}" : "-",
-              label: "Rank",
-              subLabel: "Nationwide",
-            ),
+                value: stats.leaderboardPosition > 0
+                    ? "#${stats.leaderboardPosition}"
+                    : "-",
+                label: "Rank",
+                subLabel: "Nationwide"),
           ],
         ),
       ),
@@ -276,43 +269,36 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
     required String label,
     required String subLabel,
   }) {
-    final valueColor = widget.isGolden ? AppColors.textPrimary : Colors.white;
-    final labelColor = widget.isGolden ? AppColors.primary : const Color(0xFFE3E935);
-    final subLabelColor = widget.isGolden 
-        ? AppColors.textPrimary.withOpacity(0.5) 
+    final valueColor =
+        widget.isGolden ? AppColors.textPrimary : Colors.white;
+    final labelColor =
+        widget.isGolden ? AppColors.primary : const Color(0xFFE3E935);
+    final subLabelColor = widget.isGolden
+        ? AppColors.textPrimary.withOpacity(0.5)
         : Colors.white.withOpacity(0.6);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor,
-            fontSize: 28, 
-            fontWeight: FontWeight.w900,
-            height: 1.0, 
-          ),
-        ),
+        Text(value,
+            style: TextStyle(
+                color: valueColor,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                height: 1.0)),
         const SizedBox(height: 6),
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            color: labelColor,
-            fontSize: 10, 
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-          ),
-        ),
+        Text(label.toUpperCase(),
+            style: TextStyle(
+                color: labelColor,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
         const SizedBox(height: 2),
-        Text(
-          subLabel,
-          style: TextStyle(
-            color: subLabelColor,
-            fontSize: 9, 
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(subLabel,
+            style: TextStyle(
+                color: subLabelColor,
+                fontSize: 9,
+                fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -332,9 +318,11 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildSkeletonColumn(skeletonBaseColor),
-            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+            VerticalDivider(
+                color: dividerColor, indent: 10, endIndent: 10, width: 1),
             _buildSkeletonColumn(skeletonBaseColor),
-            VerticalDivider(color: dividerColor, indent: 10, endIndent: 10, width: 1),
+            VerticalDivider(
+                color: dividerColor, indent: 10, endIndent: 10, width: 1),
             _buildSkeletonColumn(skeletonBaseColor),
           ],
         ),
@@ -357,7 +345,7 @@ class _ParchiCardState extends ConsumerState<ParchiCard> with SingleTickerProvid
 }
 
 // =========================================================
-// 1b. GUEST CARD CONTENT (shown inside ParchiCard when isGuest == true)
+// 1b. GUEST CARD CONTENT
 // =========================================================
 class _GuestCardContent extends StatelessWidget {
   const _GuestCardContent();
@@ -373,18 +361,14 @@ class _GuestCardContent extends StatelessWidget {
           Text(
             'Sign in to get your Parchi card',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700),
           ),
           SizedBox(height: 4),
           Text(
             'Tap to create a free account',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
         ],
       ),
@@ -400,7 +384,7 @@ class CardFrontContent extends StatelessWidget {
   final String studentId;
   final String universityName;
   final bool isGolden;
-  final bool isFoundersClub; // [NEW]
+  final bool isFoundersClub;
   final bool isLoading;
 
   const CardFrontContent({
@@ -409,13 +393,12 @@ class CardFrontContent extends StatelessWidget {
     required this.studentId,
     required this.universityName,
     required this.isGolden,
-    this.isFoundersClub = false, // [NEW]
+    this.isFoundersClub = false,
     this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Adjust colors for Gold Background readability
     final textColor = isGolden
         ? AppColors.textPrimary.withOpacity(0.87)
         : AppColors.textOnPrimary;
@@ -428,13 +411,13 @@ class CardFrontContent extends StatelessWidget {
 
     return Stack(
       children: [
-       Positioned(
+        Positioned(
           right: -90,
-          top: -80,  
+          top: -80,
           child: isGolden
               ? Icon(Icons.emoji_events, size: 150, color: iconColor)
               : Transform.flip(
-                  flipX: true, // This horizontally flips the child
+                  flipX: true,
                   child: SvgPicture.asset(
                     'assets/parchi-icon.svg',
                     height: 300,
@@ -460,8 +443,6 @@ class CardFrontContent extends StatelessWidget {
                     colorFilter: const ColorFilter.mode(
                         Color(0xFFE3E935), BlendMode.srcIn),
                   ),
-
-                  // [NEW] Founders Club Label
                   if (isFoundersClub)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -491,32 +472,27 @@ class CardFrontContent extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // 2. Student Name
                         isLoading
                             ? BlinkingSkeleton(
                                 width: 150,
                                 height: 24,
-                                baseColor: Colors.white.withOpacity(0.3),
-                              )
+                                baseColor: Colors.white.withOpacity(0.3))
                             : Text(
                                 studentName,
-                                maxLines: 2, // Allow 2 lines if too long (requested behavior)
-                                overflow: TextOverflow.ellipsis, 
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                              color: textColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold, // Bold
-                              letterSpacing: 0.1),
+                                    color: textColor,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.1),
                               ),
                         const SizedBox(height: 2),
-
-                        // 3. University Name
                         isLoading
                             ? BlinkingSkeleton(
                                 width: 100,
                                 height: 10,
-                                baseColor: Colors.white.withOpacity(0.3),
-                              )
+                                baseColor: Colors.white.withOpacity(0.3))
                             : Text(
                                 universityName.toUpperCase(),
                                 maxLines: 1,
@@ -524,25 +500,23 @@ class CardFrontContent extends StatelessWidget {
                                 style: TextStyle(
                                     color: secondaryTextColor,
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w600, // Semi-bold
+                                    fontWeight: FontWeight.w600,
                                     letterSpacing: 0.1),
                               ),
                       ],
                     ),
                   ),
-                  // 1. Parchi ID (Most Important)
                   isLoading
                       ? BlinkingSkeleton(
                           width: 80,
                           height: 24,
-                          baseColor: Colors.white.withOpacity(0.3),
-                        )
+                          baseColor: Colors.white.withOpacity(0.3))
                       : Text(
                           studentId,
                           style: TextStyle(
                               color: textColor,
-                              fontSize: 24, // Larger
-                              fontWeight: FontWeight.w900, // Boldest
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
                               letterSpacing: 1.0),
                         ),
                 ],
@@ -558,34 +532,65 @@ class CardFrontContent extends StatelessWidget {
 // =========================================================
 // 4. COMPACT HEADER (Sticky)
 // =========================================================
+
+/// The transition design:
+///
+/// The big ParchiCard (primary-colored rounded rect) and this header share
+/// the same background color (AppColors.primary). As the user scrolls, the
+/// card physically scrolls up and disappears beneath the header — the header
+/// simultaneously materialises from the top. Because both surfaces are the
+/// same color, the visual effect is that the card "melts" into the header
+/// rather than two separate widgets fading over each other.
+///
+/// On top of that physical scroll we add:
+///   • The card's content fades out quickly (handled in HomeSheetContent
+///     via scroll-position-based opacity).
+///   • The header's content fades + slides in from a slight upward offset,
+///     using [scrollProgress] driven animations — no separate AnimationController
+///     needed, the scroll IS the animation timeline.
+///
+/// Search mode:
+///   • When [isSearching] is true, profile avatar slides out to the left and
+///     is replaced by a cancel (✕) circle via AnimatedSwitcher.
+///   • Notification bell also hides so the search bar can use full width.
 class CompactParchiHeader extends StatelessWidget {
   final String studentName;
   final String studentId;
-  final String universityName; // [NEW]
+  final String universityName;
   final bool isGolden;
-  final String? profilePicture; // [NEW]
-  final String studentInitials; // [NEW]
-  final VoidCallback onProfileTap; // [NEW]
-  final ValueChanged<String>? onSearchChanged; // [NEW]
+  final String? profilePicture;
+  final String studentInitials;
+  final VoidCallback onProfileTap;
   final double scrollProgress;
   final VoidCallback onNotificationTap;
-  final bool isLoading; // [NEW]
-  final bool hasUnreadNotifications; // [NEW]
+  final bool isLoading;
+  final bool hasUnreadNotifications;
+
+  // Search
+  final TextEditingController searchController;
+  final FocusNode searchFocus;
+  final bool isSearching;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onCancelSearch;
 
   const CompactParchiHeader({
     super.key,
     required this.studentName,
     required this.studentId,
-    required this.universityName, // [NEW]
+    required this.universityName,
     this.isGolden = false,
     required this.scrollProgress,
     required this.onNotificationTap,
-    this.profilePicture, // [NEW]
-    required this.studentInitials, // [NEW]
-    required this.onProfileTap, // [NEW]
-    this.onSearchChanged, // [NEW]
-    this.isLoading = false, // [NEW]
-    this.hasUnreadNotifications = false, // [NEW]
+    this.profilePicture,
+    required this.studentInitials,
+    required this.onProfileTap,
+    required this.searchController,
+    required this.searchFocus,
+    required this.isSearching,
+    required this.onSearchChanged,
+    required this.onCancelSearch,
+    this.isLoading = false,
+    this.hasUnreadNotifications = false,
   });
 
   @override
@@ -597,13 +602,24 @@ class CompactParchiHeader extends StatelessWidget {
         ? AppColors.textPrimary.withOpacity(0.54)
         : AppColors.textOnPrimary.withOpacity(0.7);
 
-    // Interpolate background color
-    // Start transparent (or minimal) -> End at Primary/Gold
+    // ── Background color ──────────────────────────────────────────────────
+    // At progress=0 the header is completely transparent (you see the card
+    // sitting below it in the scroll view). As the card scrolls up and
+    // progress→1 the header fades to fully opaque primary — but because
+    // the card beneath is also primary, there is never a visible seam.
     final backgroundColor = Color.lerp(
       Colors.transparent,
       isGolden ? AppColors.goldStart : AppColors.primary,
       scrollProgress,
     );
+
+    // ── Content slide-in ──────────────────────────────────────────────────
+    // The student info row (name, uni, ID) in the expanded header slides
+    // down from -8px to 0 as progress goes 0→1. This removes the "pop-in"
+    // feeling and makes it feel like it flows out of the card.
+    // Curve it so most of the motion happens in the second half of the scroll.
+    final double contentSlide =
+        (1.0 - Curves.easeOut.transform(scrollProgress.clamp(0.0, 1.0))) * -8.0;
 
     final iconColor = isGolden
         ? AppColors.textOnPrimary.withOpacity(0.3)
@@ -618,7 +634,7 @@ class CompactParchiHeader extends StatelessWidget {
             ? LinearGradient(
                 colors: [
                   AppColors.goldStart.withOpacity(scrollProgress),
-                  AppColors.goldMid.withOpacity(scrollProgress)
+                  AppColors.goldMid.withOpacity(scrollProgress),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -627,20 +643,20 @@ class CompactParchiHeader extends StatelessWidget {
         boxShadow: scrollProgress > 0.1
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1 * scrollProgress),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(0.12 * scrollProgress),
+                  blurRadius: 8 * scrollProgress,
+                  offset: const Offset(0, 3),
                 ),
               ]
             : null,
       ),
       child: Stack(
         children: [
-          // 0. Background Icon (Same as Main Card)
+          // Decorative background icon — fades in with scroll
           if (scrollProgress > 0.1)
             Positioned(
               right: -110,
-              top: -90, // Adjusted for compact view to sit behind search bar
+              top: -90,
               child: Opacity(
                 opacity: scrollProgress.clamp(0.0, 1.0),
                 child: isGolden
@@ -664,217 +680,319 @@ class CompactParchiHeader extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1. Search Bar & Notification Row
+                // ── Row 1: profile / search / notifications ─────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), // Removed bottom padding
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Row(
                     children: [
-                      // [NEW] Profile Button (Left)
-                      isLoading
-                          ? Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: BlinkingSkeleton(
-                                width: 35,
-                                height: 35,
-                                borderRadius: 17.5, // Circular
-                                baseColor: AppColors.lightSurface,  
-                              ),
-                            )
-                          : GestureDetector(
-                              onTap: onProfileTap,
-                              child: Container(
-                                width: 35,
-                                height: 35,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.surfaceVariant,
-                                  shape: BoxShape.circle,
+                      // Left button: profile avatar OR cancel (when searching)
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, anim) {
+                          // Slide from left when switching in, slide to left when out
+                          final offsetAnim = Tween<Offset>(
+                            begin: const Offset(-0.5, 0),
+                            end: Offset.zero,
+                          ).animate(anim);
+                          return SlideTransition(
+                            position: offsetAnim,
+                            child: FadeTransition(opacity: anim, child: child),
+                          );
+                        },
+                        child: isSearching
+                            ? GestureDetector(
+                                key: const ValueKey('cancel_btn'),
+                                onTap: onCancelSearch,
+                                child: Container(
+                                  width: 35,
+                                  height: 35,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(
+                                        scrollProgress > 0.5 ? 0.2 : 0.9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: scrollProgress > 0.5
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                  ),
                                 ),
-                                child: ClipOval(
-                                  child: profilePicture != null
-                                      ? CachedNetworkImage(
-                                          imageUrl: profilePicture!,
-                                          fit: BoxFit.cover,
-                                          errorWidget: (context, url, error) =>
-                                              Center(
-                                            child: Text(
-                                              studentInitials,
-                                              style: const TextStyle(
-                                                color: AppColors.textSecondary,
-                                                fontWeight: FontWeight.bold,
+                              )
+                            : isLoading
+                                ? Padding(
+                                    key: const ValueKey('skeleton_btn'),
+                                    padding:
+                                        const EdgeInsets.only(right: 8.0),
+                                    child: BlinkingSkeleton(
+                                      width: 35,
+                                      height: 35,
+                                      borderRadius: 17.5,
+                                      baseColor: AppColors.lightSurface,
+                                    ),
+                                  )
+                                : GestureDetector(
+                                    key: const ValueKey('profile_btn'),
+                                    onTap: onProfileTap,
+                                    child: Container(
+                                      width: 35,
+                                      height: 35,
+                                      margin:
+                                          const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
+                                        color: scrollProgress > 0.3
+                                            ? Colors.white.withOpacity(0.2)
+                                            : AppColors.surfaceVariant,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: ClipOval(
+                                        child: profilePicture != null
+                                            ? CachedNetworkImage(
+                                                imageUrl: profilePicture!,
+                                                fit: BoxFit.cover,
+                                                errorWidget: (context, url,
+                                                        error) =>
+                                                    Center(
+                                                      child: Text(
+                                                        studentInitials,
+                                                        style: TextStyle(
+                                                          color: scrollProgress >
+                                                                  0.3
+                                                              ? Colors.white
+                                                              : AppColors
+                                                                  .textSecondary,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ),
+                                              )
+                                            : Center(
+                                                child: Text(
+                                                  studentInitials,
+                                                  style: TextStyle(
+                                                    color: scrollProgress > 0.3
+                                                        ? Colors.white
+                                                        : AppColors
+                                                            .textSecondary,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
-                                        )
-                                      : Center(
-                                          child: Text(
-                                            studentInitials,
-                                            style: const TextStyle(
-                                              color: AppColors.textSecondary,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
+                                      ),
+                                    ),
+                                  ),
+                      ),
+
+                      // Search bar
                       Expanded(
                         child: Container(
                           height: 35,
                           decoration: BoxDecoration(
-                            color: AppColors.lightSurface,
+                            color: scrollProgress > 0.5
+                                ? Colors.white
+                                : AppColors.lightSurface,
                             borderRadius: BorderRadius.circular(25),
                           ),
                           child: TextField(
+                            controller: searchController,
+                            focusNode: searchFocus,
                             onChanged: onSearchChanged,
-                            decoration: InputDecoration(
-                              hintText: "Search restaurants...",
-                              hintStyle: TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 13),
-                              prefixIcon: Padding(
-                                padding: EdgeInsets.only(left: 8.0),
-                                child: Icon(
-                                  Icons.search,
+                              textAlignVertical: TextAlignVertical.center,
+                              decoration: InputDecoration(
+                                hintText: "Search restaurants...",
+                                hintStyle: TextStyle(
                                   color: AppColors.textSecondary,
-                                  size: 20,
+                                  fontSize: 13,
                                 ),
-                              ),
-                              prefixIconConstraints:
-                                  BoxConstraints(minWidth: 35),
-                              border: InputBorder.none,
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: Icon(
+                                    Icons.search,
+                                    color: AppColors.textSecondary,
+                                    size: 20,
+                                  ),
+                                ),
+                                prefixIconConstraints:
+                                    const BoxConstraints(minWidth: 35),
+                                border: InputBorder.none,
                               contentPadding:
-                                  EdgeInsets.only(bottom: 17), // Lifted text further up
-                            ),
+                                  const EdgeInsets.only(bottom: 18),
+                              ),
                           ),
                         ),
                       ),
 
-                      const SizedBox(width: 8),
-                      Stack(
-                        children: [
-                          Container(
-                            width: 35, // Fixed smaller width
-                            height: 35, // Fixed smaller height
-                            decoration: const BoxDecoration(
-                              color: AppColors.lightSurface,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              padding: EdgeInsets.zero, // Remove default padding
-                              icon: const Icon(Icons.notifications_none,
-                                  size: 20, // Smaller icon
-                                  color: AppColors.textSecondary),
-                              onPressed: onNotificationTap,
-                            ),
-                          ),
-                          if (hasUnreadNotifications)
-                            Positioned(
-                              right: 6,
-                              top: 6,
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2), // Add border for visibility
+                      // Notification bell — hidden when searching
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOutCubic,
+                        child: isSearching
+                            ? const SizedBox(width: 0, height: 35)
+                            : Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      width: 35,
+                                      height: 35,
+                                      decoration: BoxDecoration(
+                                        color: scrollProgress > 0.5
+                                            ? Colors.white.withOpacity(0.2)
+                                            : AppColors.lightSurface,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: IconButton(
+                                        padding: EdgeInsets.zero,
+                                        icon: Icon(
+                                          Icons.notifications_none,
+                                          size: 20,
+                                          color: scrollProgress > 0.5
+                                              ? Colors.white
+                                              : AppColors.textSecondary,
+                                        ),
+                                        onPressed: onNotificationTap,
+                                      ),
+                                    ),
+                                    if (hasUnreadNotifications)
+                                      Positioned(
+                                        right: 6,
+                                        top: 6,
+                                        child: Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: scrollProgress > 0.5
+                                                ? Colors.white
+                                                : AppColors.primary,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: scrollProgress > 0.5
+                                                  ? AppColors.primary
+                                                  : Colors.white,
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                            ),
-                        ],
                       ),
                     ],
                   ),
                 ),
 
-                // 2. Student Info (Animated Slide Down)
+                // ── Row 2: Student info — slides + fades in ──────────────
+                // Uses ClipRect + Align heightFactor trick (existing approach)
+                // plus a translate for the smooth slide.
                 ClipRect(
                   child: Align(
                     alignment: Alignment.topCenter,
-                    heightFactor: scrollProgress,
-                    child: Opacity(
-                      opacity: scrollProgress,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20), // Reverted to original
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Name, Uni & ID
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  SizedBox(
-                                    width: 180, // Set width limit as requested
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 5),
-                                        isLoading
-                                            ? BlinkingSkeleton(
-                                                width: 120,
-                                                height: 16,
-                                                baseColor:
-                                                    Colors.white.withOpacity(0.3),
-                                              )
-                                            : Text(
-                                                studentName,
-                                                maxLines: 2, // Allow 2 lines
-                                                overflow: TextOverflow.ellipsis, 
-                                                style: TextStyle(
-                                                  color: textColor,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w900,
+                    heightFactor:
+                        scrollProgress.clamp(0.0, 1.0),
+                    child: Transform.translate(
+                      offset: Offset(0, contentSlide),
+                      child: Opacity(
+                        opacity: scrollProgress.clamp(0.0, 1.0),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                          child: Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.end,
+                                  children: [
+                                    SizedBox(
+                                      width: 180,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const SizedBox(height: 5),
+                                          isLoading
+                                              ? BlinkingSkeleton(
+                                                  width: 120,
+                                                  height: 16,
+                                                  baseColor: Colors.white
+                                                      .withOpacity(0.3),
+                                                )
+                                              : Text(
+                                                  studentName,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: textColor,
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.w900,
+                                                  ),
                                                 ),
-                                              ),
-                                        const SizedBox(height: 1),
-                                        isLoading
-                                            ? Padding(
-                                                padding: const EdgeInsets.only(
-                                                    top: 4.0),
-                                                child: BlinkingSkeleton(
-                                                  width: 80,
-                                                  height: 10,
-                                                  baseColor:
-                                                      Colors.white.withOpacity(0.3),
+                                          const SizedBox(height: 1),
+                                          isLoading
+                                              ? Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 4.0),
+                                                  child: BlinkingSkeleton(
+                                                    width: 80,
+                                                    height: 10,
+                                                    baseColor: Colors.white
+                                                        .withOpacity(0.3),
+                                                  ),
+                                                )
+                                              : Text(
+                                                  universityName
+                                                      .toUpperCase(),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color:
+                                                        secondaryTextColor,
+                                                    fontSize: 10,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                  ),
                                                 ),
-                                              )
-                                            : Text(
-                                                universityName.toUpperCase(),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: secondaryTextColor,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  isLoading
-                                      ? BlinkingSkeleton(
-                                          width: 60,
-                                          height: 20,
-                                          baseColor:
-                                              Colors.white.withOpacity(0.3),
-                                        )
-                                      : Text(
-                                          studentId,
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w900,
+                                    isLoading
+                                        ? BlinkingSkeleton(
+                                            width: 60,
+                                            height: 20,
+                                            baseColor: Colors.white
+                                                .withOpacity(0.3),
+                                          )
+                                        : Text(
+                                            studentId,
+                                            style: TextStyle(
+                                              color: textColor,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                            ),
                                           ),
-                                        ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            // Mini Icon (Kept as requested)
-                           
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

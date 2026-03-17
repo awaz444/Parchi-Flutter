@@ -16,17 +16,34 @@ import '../../screens/home/merchant_details_screen.dart';
 import '../../models/merchant_detail_model.dart';
 import '../../models/student_merchant_model.dart';
 
-import '../../providers/home_ui_provider.dart'; // [NEW]
-import '../../providers/user_provider.dart'; // [NEW] Added for explicit refresh if needed
+import '../../providers/home_ui_provider.dart';
+import '../../providers/user_provider.dart';
 
 class HomeSheetContent extends ConsumerStatefulWidget {
   final ScrollController scrollController;
   final String searchQuery;
 
+  /// Height of the collapsed header bar — used as top spacer so content
+  /// starts below the fixed header overlay.
+  final double headerSpacerHeight;
+
+  /// The fully-built ParchiCard widget, constructed in HomeScreen and passed
+  /// down so this widget stays provider-agnostic for the card.
+  final Widget parchiCardWidget;
+
+  /// True when the user has typed something in the search bar.
+  /// When true: card, brands, offers, and the "All Restaurants" header are
+  /// hidden — only the search bar (in the fixed header) and the filtered
+  /// restaurant cards remain visible.
+  final bool isSearching;
+
   const HomeSheetContent({
     super.key,
     required this.scrollController,
+    required this.headerSpacerHeight,
+    required this.parchiCardWidget,
     this.searchQuery = "",
+    this.isSearching = false,
   });
 
   @override
@@ -59,26 +76,33 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
     return currentScroll >= (maxScroll * 0.9);
   }
 
-  // --- REFRESH LOGIC ---
+  // ── Refresh ────────────────────────────────────────────────────────────────
+
   Future<void> _refreshData() async {
-    // Trigger the Skeleton -> Data Fetch sequence.
-    // We don't await this because we want the spinner to close while the rest happens.
     ref.read(homeUIProvider.notifier).startRefreshSequence();
   }
 
-  // --- NAVIGATION LOGIC ---
+  // ── Navigation ─────────────────────────────────────────────────────────────
 
+  void _onMerchantTap(BuildContext context, String merchantId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            _MerchantDetailsScreenWrapper(merchantId: merchantId),
+      ),
+    );
+  }
 
+  // ── Skeleton helpers ───────────────────────────────────────────────────────
 
-
-  // --- SKELETON LOADERS ---
   Widget _buildBrandSkeleton() {
     return Column(
       children: [
         BlinkingSkeleton(
           width: 70,
           height: 70,
-          borderRadius: 12, // Squared
+          borderRadius: 12,
           baseColor: AppColors.textSecondary.withOpacity(0.1),
         ),
         const SizedBox(height: 8),
@@ -102,20 +126,24 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
         children: [
           BlinkingSkeleton(
               width: double.infinity,
-              height: 80, // Reduced to prevent overflow (100 -> 80)
+              height: 80,
               borderRadius: 12,
               baseColor: Colors.grey.withOpacity(0.15)),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: BlinkingSkeleton(
-                width: 140, height: 16, baseColor: Colors.grey.withOpacity(0.15)),
+                width: 140,
+                height: 16,
+                baseColor: Colors.grey.withOpacity(0.15)),
           ),
           const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: BlinkingSkeleton(
-                width: 80, height: 10, baseColor: Colors.grey.withOpacity(0.15)),
+                width: 80,
+                height: 10,
+                baseColor: Colors.grey.withOpacity(0.15)),
           ),
         ],
       ),
@@ -162,7 +190,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                 ),
                 const SizedBox(height: 8),
                 BlinkingSkeleton(
-                    width: 100, height: 12, baseColor: Colors.grey.withOpacity(0.15)),
+                    width: 100,
+                    height: 12,
+                    baseColor: Colors.grey.withOpacity(0.15)),
               ],
             ),
           )
@@ -171,75 +201,95 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
     );
   }
 
-  void _onMerchantTap(BuildContext context, String merchantId) {
-    // Navigate to merchant details screen which will fetch data using the provider
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _MerchantDetailsScreenWrapper(merchantId: merchantId),
-      ),
-    );
-  }
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final homeUIState = ref.watch(homeUIProvider);
     final isSkeletonLoading = homeUIState.isSkeletonLoading;
 
-    // effective data providers (force loading if sequence dictates)
-    // We don't change the actual provider state, we just ignore data and show skeleton
-    
     final offersAsync = ref.watch(featuredOffersProvider);
     final merchantState = ref.watch(studentMerchantsProvider);
+
+    // Pull-to-refresh indicator height
     const double indicatorSize = 100.0;
 
-    final isSearching = widget.searchQuery.isNotEmpty;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.lightCanvas,
-      ),
-      child: CustomRefreshIndicator(
-        onRefresh: _refreshData,
-        offsetToArmed: indicatorSize,
-        builder: (BuildContext context, Widget child,
-            IndicatorController controller) {
-          return Stack(
-            children: <Widget>[
-              // 1. The Animated Custom Loader (Stays at the top)
-              AnimatedBuilder(
-                animation: controller,
-                builder: (context, _) {
-                  return SizedBox(
-                    height: controller.value * indicatorSize,
-                    width: double.infinity,
-                    child: Center(
-                      child: ParchiLoader(
-                        isLoading: controller.isLoading,
-                        progress: controller.value,
+    return CustomRefreshIndicator(
+      onRefresh: _refreshData,
+      offsetToArmed: indicatorSize,
+      builder: (BuildContext context, Widget child,
+          IndicatorController controller) {
+        return Stack(
+          children: <Widget>[
+            // ── The pull-to-refresh loader ────────────────────────────────
+            // Because the card is now part of the scroll content, this loader
+            // renders between the fixed header and the card — exactly the right
+            // place visually (right above the card when you pull).
+            AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                return SizedBox(
+                  // Positioned just below the header spacer so it lands
+                  // snugly between the search bar and the card.
+                  height: widget.headerSpacerHeight +
+                      controller.value * indicatorSize,
+                  width: double.infinity,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      height: controller.value * indicatorSize,
+                      child: Center(
+                        child: ParchiLoader(
+                          isLoading: controller.isLoading,
+                          progress: controller.value,
+                        ),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
+            ),
 
-              // 2. The Main Content (Pushes down as you drag)
-              Transform.translate(
-                offset: Offset(0.0, controller.value * indicatorSize),
-                child: child,
-              ),
-            ],
-          );
-        },
-        child: CustomScrollView(
-          controller: widget.scrollController,
-          physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics()),
-          slivers: [
-            const SliverToBoxAdapter(child: SizedBox(height: 14)),
+            // ── Main content (pushed down by indicator) ───────────────────
+            Transform.translate(
+              offset: Offset(0.0, controller.value * indicatorSize),
+              child: child,
+            ),
+          ],
+        );
+      },
+      child: CustomScrollView(
+        controller: widget.scrollController,
+        physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics()),
+        slivers: [
+          // ── Spacer: behind the fixed header ──────────────────────────────
+          SliverToBoxAdapter(
+            child: SizedBox(height: widget.headerSpacerHeight),
+          ),
 
-            // --- SECTION 1: TOP BRANDS (GRID) ---
-            if (!isSearching)
+          // ── Parchi Card ───────────────────────────────────────────────────
+          // Hidden when user is searching. AnimatedSize collapses it smoothly
+          // so the restaurant list slides straight up to the header.
+          SliverToBoxAdapter(
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              child: widget.isSearching
+                  ? const SizedBox.shrink()
+                    : Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+                      child: widget.parchiCardWidget,
+                    ),
+            ),
+          ),
+
+          // ── Gap between card and first section ───────────────────────────
+          if (!widget.isSearching)
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+          // ── SECTION 1: TOP BRANDS ─────────────────────────────────────────
+          if (!widget.isSearching)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 18.0),
@@ -253,15 +303,43 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
               ),
             ),
 
+          if (!widget.isSearching)
+            const SliverToBoxAdapter(child: SizedBox(height: 18)),
 
-            if (!isSearching) const SliverToBoxAdapter(child: SizedBox(height: 18)),
-
-            if (!isSearching)
+          if (!widget.isSearching)
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 240, // Height for 2 rows of items
-                        child: ref.watch(brandsProvider).when(
-                      loading: () => GridView.builder(
+                height: 240,
+                child: ref.watch(brandsProvider).when(
+                  loading: () => GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 1.05,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (context, index) => _buildBrandSkeleton(),
+                  ),
+                  error: (err, stack) => GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 1.05,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (context, index) => _buildBrandSkeleton(),
+                  ),
+                  data: (brands) {
+                    if (isSkeletonLoading) {
+                      return GridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate:
@@ -272,84 +350,49 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                           mainAxisSpacing: 12,
                         ),
                         itemCount: 6,
-                        itemBuilder: (context, index) {
-                          return _buildBrandSkeleton();
-                        },
-                      ),
-                      error: (err, stack) => GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 1.05,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: 6,
-                        itemBuilder: (context, index) {
-                          return _buildBrandSkeleton();
-                        },
-                      ),
-                      data: (brands) {
-                        if (isSkeletonLoading) {
-                           return GridView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              childAspectRatio: 1.05,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                            ),
-                            itemCount: 6, // Show 6 dummy skeletons
-                            itemBuilder: (context, index) {
-                              return _buildBrandSkeleton();
-                            },
-                          );
-                        }
+                        itemBuilder: (context, index) =>
+                            _buildBrandSkeleton(),
+                      );
+                    }
 
-                        if (brands.isEmpty) {
-                          return const Center(
-                              child: Text("No brands available"));
-                        }
-                        // Take first 6 brands for 2x3 grid
-                        final displayBrands = brands.take(6).toList();
+                    if (brands.isEmpty) {
+                      return const Center(
+                          child: Text("No brands available"));
+                    }
 
-                        return GridView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            childAspectRatio: 1.05,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                    final displayBrands = brands.take(6).toList();
+
+                    return GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 1.05,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: displayBrands.length,
+                      itemBuilder: (context, index) {
+                        final brand = displayBrands[index];
+                        return GestureDetector(
+                          onTap: () =>
+                              _onMerchantTap(context, brand.id),
+                          child: BrandCard(
+                            name: brand.businessName,
+                            image: brand.logoPath ??
+                                "https://placehold.co/100x100/png?text=No+Image",
                           ),
-                          itemCount: displayBrands.length,
-                          itemBuilder: (context, index) {
-                            final brand = displayBrands[index];
-                            return GestureDetector(
-                              onTap: () => _onMerchantTap(
-                                context,
-                                brand.id,
-                              ),
-                              child: BrandCard(
-                                name: brand.businessName,
-                                image: brand.logoPath ??
-                                    "https://placehold.co/100x100/png?text=No+Image",
-                              ),
-                            );
-                          },
                         );
                       },
-                    ),
+                    );
+                  },
+                ),
               ),
             ),
 
-            // --- SECTION 2: ACTIVE OFFERS (CAROUSEL) ---
-            if (!isSearching)
+          // ── SECTION 2: FEATURED OFFERS ────────────────────────────────────
+          if (!widget.isSearching)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(18, 12, 18, 18),
@@ -363,13 +406,12 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary),
                     ),
-                    
                   ],
                 ),
               ),
             ),
 
-            if (!isSearching)
+          if (!widget.isSearching)
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 158,
@@ -378,27 +420,25 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     scrollDirection: Axis.horizontal,
                     itemCount: 3,
-                    itemBuilder: (context, index) {
-                      return _buildOfferSkeleton();
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildOfferSkeleton(),
                   ),
                   error: (err, stack) => ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     scrollDirection: Axis.horizontal,
                     itemCount: 3,
-                    itemBuilder: (context, index) {
-                      return _buildOfferSkeleton();
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildOfferSkeleton(),
                   ),
                   data: (offers) {
                     if (isSkeletonLoading) {
-                        return ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      return ListView.builder(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16),
                         scrollDirection: Axis.horizontal,
                         itemCount: 3,
-                        itemBuilder: (context, index) {
-                          return _buildOfferSkeleton();
-                        },
+                        itemBuilder: (context, index) =>
+                            _buildOfferSkeleton(),
                       );
                     }
 
@@ -406,29 +446,36 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                       return const Center(
                         child: Text(
                           "No active offers right now.",
-                          style: TextStyle(color: AppColors.textSecondary),
+                          style:
+                              TextStyle(color: AppColors.textSecondary),
                         ),
                       );
                     }
 
                     return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16),
                       scrollDirection: Axis.horizontal,
                       itemCount: offers.length,
                       itemBuilder: (context, index) {
                         final offer = offers[index];
-                        final String displayImage = offer.merchant?.bannerUrl ??
-                            offer.imageUrl ??
-                            "https://placehold.co/600x300/png?text=No+Image";
+                        final String displayImage =
+                            offer.merchant?.bannerUrl ??
+                                offer.imageUrl ??
+                                "https://placehold.co/600x300/png?text=No+Image";
 
-                        final branchNames = offer.branches != null && offer.branches!.isNotEmpty
-                            ? offer.branches!.map((b) => b.branchName).join(', ')
+                        final branchNames = offer.branches != null &&
+                                offer.branches!.isNotEmpty
+                            ? offer.branches!
+                                .map((b) => b.branchName)
+                                .join(', ')
                             : (offer.branchName ?? "All Branches");
 
                         return GestureDetector(
                           onTap: () {
                             if (offer.merchant != null) {
-                              _onMerchantTap(context, offer.merchant!.id);
+                              _onMerchantTap(
+                                  context, offer.merchant!.id);
                             }
                           },
                           child: RestaurantMediumCard(
@@ -445,7 +492,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
               ),
             ),
 
-            // --- SECTION 3: ALL RESTAURANTS HEADER ---
+          // ── SECTION 3: ALL RESTAURANTS header ────────────────────────────
+          // Hidden when searching — we go straight to cards.
+          if (!widget.isSearching)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(18, 24, 18, 18),
@@ -459,39 +508,48 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
               ),
             ),
 
-            // --- ALL RESTAURANTS LIST ---
-            // --- FAKE ASYNC HANDLING FOR NEW STATE ---
-            if (isSkeletonLoading || (merchantState.isLoading && merchantState.items.isEmpty))
-               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      return _buildRestaurantListItemSkeleton();
-                    },
-                    childCount: 4,
-                  ),
+          // When searching, add a small top gap so cards don't appear right
+          // against the header bar.
+          if (widget.isSearching)
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+          // ── Restaurant list (always shown, filtered when searching) ───────
+          if (isSkeletonLoading ||
+              (merchantState.isLoading && merchantState.items.isEmpty))
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) =>
+                      _buildRestaurantListItemSkeleton(),
+                  childCount: 4,
                 ),
-              )
-            else if (merchantState.error != null && merchantState.items.isEmpty)
-               SliverToBoxAdapter(
-                 child: Padding(
-                   padding: const EdgeInsets.all(20),
-                   child: Center(child: Text("Error: ${merchantState.error}")),
-                 ),
-               )
-            else
-               Builder(
-                builder: (context) {
+              ),
+            )
+          else if (merchantState.error != null &&
+              merchantState.items.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                    child: Text("Error: ${merchantState.error}")),
+              ),
+            )
+          else
+            Builder(
+              builder: (context) {
                 final merchants = merchantState.items;
-                // [FILTERING LOGIC]
                 final filteredMerchants = widget.searchQuery.isEmpty
                     ? merchants
                     : merchants.where((m) {
-                        final query = widget.searchQuery.toLowerCase();
-                        final name = (m.businessName).toLowerCase();
-                        final cat = (m.category ?? "").toLowerCase();
-                        return name.contains(query) || cat.contains(query);
+                        final query =
+                            widget.searchQuery.toLowerCase();
+                        final name =
+                            (m.businessName).toLowerCase();
+                        final cat =
+                            (m.category ?? "").toLowerCase();
+                        return name.contains(query) ||
+                            cat.contains(query);
                       }).toList();
 
                 if (filteredMerchants.isEmpty) {
@@ -503,7 +561,8 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                           widget.searchQuery.isNotEmpty
                               ? "No results found for '${widget.searchQuery}'"
                               : "No restaurants available yet.",
-                          style: const TextStyle(color: AppColors.textSecondary),
+                          style: const TextStyle(
+                              color: AppColors.textSecondary),
                         ),
                       ),
                     ),
@@ -511,52 +570,58 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                 }
 
                 return SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         if (index == filteredMerchants.length) {
-                           // Load More Indicator
-                           if (merchantState.isLoadingMore) {
-                             return const Padding(
-                               padding: EdgeInsets.all(16.0),
-                               child: Center(
-                                 child: SizedBox(
-                                   height: 60,
-                                   width: 60,
-                                   child: ParchiLoader(isLoading: true, progress: 0),
-                                 ),
-                               ),
-                             );
-                           }
-                           return const SizedBox(height: 50); // Bottom padding
+                          if (merchantState.isLoadingMore) {
+                            return const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(
+                                child: SizedBox(
+                                  height: 60,
+                                  width: 60,
+                                  child: ParchiLoader(
+                                      isLoading: true, progress: 0),
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox(height: 50);
                         }
                         final merchant = filteredMerchants[index];
                         return GestureDetector(
-                          onTap: () => _onMerchantTap(context, merchant.id),
+                          onTap: () =>
+                              _onMerchantTap(context, merchant.id),
                           child: RestaurantBigCard(
                             name: merchant.businessName,
                             image: merchant.bannerUrl ??
                                 "https://placehold.co/600x300/png?text=No+Image",
-                            category: merchant.category ?? "General",
+                            category:
+                                merchant.category ?? "General",
                           ),
                         );
                       },
-                      childCount: filteredMerchants.length + (widget.searchQuery.isEmpty ? 1 : 0),
+                      childCount: filteredMerchants.length +
+                          (widget.searchQuery.isEmpty ? 1 : 0),
                     ),
                   ),
                 );
               },
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
-          ],
-        ),
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+        ],
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Filter header delegate (unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
 class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback onFilterTap;
 
@@ -579,12 +644,13 @@ class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
           GestureDetector(
             onTap: onFilterTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.lightSurface,
                 borderRadius: BorderRadius.circular(20),
-                border:
-                    Border.all(color: AppColors.textSecondary.withOpacity(0.3)),
+                border: Border.all(
+                    color: AppColors.textSecondary.withOpacity(0.3)),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.textPrimary.withOpacity(0.05),
@@ -612,10 +678,13 @@ class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _FilterHeaderDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _FilterHeaderDelegate oldDelegate) =>
+      false;
 }
 
-// --- CUSTOM LOADER WIDGET ---
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom loader widget (unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
 class ParchiLoader extends StatefulWidget {
   final bool isLoading;
   final double progress;
@@ -635,7 +704,7 @@ class _ParchiLoaderState extends State<ParchiLoader>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 1), // Adjust speed here if needed
+      duration: const Duration(seconds: 1),
       vsync: this,
     );
   }
@@ -662,8 +731,6 @@ class _ParchiLoaderState extends State<ParchiLoader>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        // Rotation Logic:
-        // Spin continuously if loading, or rotate based on pull distance
         final double rotationValue = widget.isLoading
             ? _controller.value * 2 * math.pi
             : widget.progress * 2 * math.pi;
@@ -681,7 +748,9 @@ class _ParchiLoaderState extends State<ParchiLoader>
   }
 }
 
-// Wrapper widget to handle loading and error states for merchant details
+// ─────────────────────────────────────────────────────────────────────────────
+// Merchant details wrapper (unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
 class _MerchantDetailsScreenWrapper extends ConsumerWidget {
   final String merchantId;
 
@@ -699,7 +768,8 @@ class _MerchantDetailsScreenWrapper extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.surface,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon:
+                const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text(
@@ -719,9 +789,9 @@ class _MerchantDetailsScreenWrapper extends ConsumerWidget {
                   color: AppColors.textSecondary,
                 ),
                 const SizedBox(height: 16),
-                Text(
+                const Text(
                   'Failed to load merchant details',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
