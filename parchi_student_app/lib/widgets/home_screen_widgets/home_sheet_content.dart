@@ -306,65 +306,50 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           if (!widget.isSearching)
             const SliverToBoxAdapter(child: SizedBox(height: 18)),
 
+          // Brands grid — SliverGrid measures its own height, no fixed SizedBox needed.
           if (!widget.isSearching)
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 300,
-                child: ref.watch(brandsProvider).when(
-                  loading: () => GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 0.85,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 18,
-                    ),
-                    itemCount: 6,
-                    itemBuilder: (context, index) => _buildBrandSkeleton(),
+            ref.watch(brandsProvider).when(
+              loading: () => SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverGrid(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildBrandSkeleton(),
+                    childCount: 6,
                   ),
-                  error: (err, stack) => GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 0.85,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 18,
-                    ),
-                    itemCount: 6,
-                    itemBuilder: (context, index) => _buildBrandSkeleton(),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.85,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 18,
                   ),
-                  data: (brands) {
-                    if (isSkeletonLoading) {
-                      return GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.85,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 18,
-                        ),
-                        itemCount: 6,
-                        itemBuilder: (context, index) =>
-                            _buildBrandSkeleton(),
-                      );
-                    }
-
-                    if (brands.isEmpty) {
-                      return const Center(
-                          child: Text("No brands available"));
-                    }
-
-                    final displayBrands = brands.take(6).toList();
-
-                    return GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      physics: const NeverScrollableScrollPhysics(),
+                ),
+              ),
+              error: (err, stack) => SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverGrid(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildBrandSkeleton(),
+                    childCount: 6,
+                  ),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.85,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 18,
+                  ),
+                ),
+              ),
+              data: (brands) {
+                if (isSkeletonLoading) {
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverGrid(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildBrandSkeleton(),
+                        childCount: 6,
+                      ),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
@@ -372,12 +357,29 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 18,
                       ),
-                      itemCount: displayBrands.length,
-                      itemBuilder: (context, index) {
+                    ),
+                  );
+                }
+
+                if (brands.isEmpty) {
+                  return const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text("No brands available"),
+                    ),
+                  );
+                }
+
+                final displayBrands = brands.take(6).toList();
+
+                return SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverGrid(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
                         final brand = displayBrands[index];
                         return GestureDetector(
-                          onTap: () =>
-                              _onMerchantTap(context, brand.id),
+                          onTap: () => _onMerchantTap(context, brand.id),
                           child: BrandCard(
                             name: brand.businessName,
                             image: brand.logoPath ??
@@ -385,10 +387,18 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                           ),
                         );
                       },
-                    );
-                  },
-                ),
-              ),
+                      childCount: displayBrands.length,
+                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 0.85,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 18,
+                    ),
+                  ),
+                );
+              },
             ),
 
           // ── SECTION 2: FEATURED OFFERS ────────────────────────────────────
@@ -414,7 +424,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           if (!widget.isSearching)
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 158,
+                // Proportional to screen width so it scales across all devices.
+                // 0.42 gives ~158px on a 375px-wide phone and ~180px on wider phones.
+                height: MediaQuery.sizeOf(context).width * 0.42,
                 child: offersAsync.when(
                   loading: () => ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -497,7 +509,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           if (!widget.isSearching)
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(18, 24, 18, 18),
+                padding: EdgeInsets.fromLTRB(18, 18, 18, 18),
                 child: Text(
                   "All Restaurants",
                   style: TextStyle(

@@ -44,17 +44,17 @@ class RestaurantMediumCard extends StatelessWidget {
                     const BorderRadius.vertical(top: Radius.circular(12)),
                 child: CachedNetworkImage(
                   imageUrl: image,
-                  height: 100,
+                  height: 105,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => BlinkingSkeleton(
                     width: double.infinity,
-                    height: 100,
+                    height: 105,
                     borderRadius: 12,
                     baseColor: AppColors.textSecondary.withOpacity(0.1),
                   ),
                   errorWidget: (ctx, url, err) => Container(
-                    height: 100,
+                    height: 105,
                     color: AppColors.textSecondary.withOpacity(0.3),
                     child: const Center(
                         child: Icon(Icons.broken_image,
