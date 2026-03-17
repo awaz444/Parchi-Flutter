@@ -49,10 +49,16 @@ class OfferModel {
 
   // Helper to format the discount text for the UI
   String get formattedDiscount {
-    if (discountType == 'percentage') {
+    if (discountValue <= 0) {
+      return 'SPECIAL OFFER';
+    }
+    
+    if (discountType.toLowerCase() == 'percentage') {
       return '${discountValue.toStringAsFixed(0)}% OFF';
+    } else if (discountType.toLowerCase() == 'fixed' || discountType.toLowerCase() == 'pkr') {
+      return 'RS ${discountValue.toStringAsFixed(0)} OFF';
     } else {
-      return 'Rs. ${discountValue.toStringAsFixed(0)} OFF';
+      return 'SPECIAL OFFER';
     }
   }
 }

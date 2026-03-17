@@ -55,10 +55,17 @@ class BranchOffer {
     // Calculate formatted discount if not provided
     String formattedDiscount = json['formattedDiscount'] ?? '';
     if (formattedDiscount.isEmpty) {
-      if (json['discountType'] == 'percentage') {
-        formattedDiscount = '${json['discountValue']}% OFF';
+      final num val = json['discountValue'] ?? json['discount_value'] ?? 0;
+      final String type = (json['discountType'] ?? json['discount_type'] ?? 'percentage').toString().toLowerCase();
+      
+      if (val <= 0) {
+        formattedDiscount = 'SPECIAL OFFER';
+      } else if (type == 'percentage') {
+        formattedDiscount = '${val.toStringAsFixed(0)}% OFF';
+      } else if (type == 'fixed' || type == 'pkr') {
+        formattedDiscount = 'RS ${val.toStringAsFixed(0)} OFF';
       } else {
-        formattedDiscount = 'Rs. ${json['discountValue']} OFF';
+        formattedDiscount = 'SPECIAL OFFER';
       }
     }
 
