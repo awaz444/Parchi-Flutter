@@ -11,6 +11,7 @@ import 'screens/auth/reset_password/reset_password_screen.dart';
 import 'config/supabase_config.dart';
 import 'utils/colours.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/home/merchant_deep_link_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
 import 'screens/profile/redemption_history/redemption_history_screen.dart'; // [NEW] History Screen
 import 'screens/splash/splash_screen.dart'; // [NEW] Splash Screen
@@ -23,6 +24,9 @@ import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
+
+// Global pending deep link — set before navigator is ready, consumed by AuthWrapper
+final ValueNotifier<Uri?> pendingDeepLink = ValueNotifier(null);
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +65,8 @@ class ParchiApp extends StatefulWidget {
 class _ParchiAppState extends State<ParchiApp> {
   late AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
+  Uri? _pendingInitialUri; // stored so onGenerateRoute can inspect the full URI
+  Uri? _lastDeepLinkUri; // tracks the most recent deep link (warm or cold start)
 
   @override
   void initState() {
@@ -77,17 +83,33 @@ class _ParchiAppState extends State<ParchiApp> {
   Future<void> _initDeepLinkListener() async {
     _appLinks = AppLinks();
 
-    // Check initial link checks are now handled by onGenerateRoute to avoid double navigation
-    // and "Failed to handle route" errors.
-    // However, for pure AppLinks support (if onGenerateRoute fails), we can keep the listener.
+    // Handle cold-start / initial link (app launched via deep link)
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        _pendingInitialUri = initialUri;
+        // Defer until the navigator is ready
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleDeepLink(initialUri);
+          _pendingInitialUri = null;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error getting initial link: $e");
+    }
 
-    // Listen for new links
+    // Handle warm-start links (app already running)
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
       _handleDeepLink(uri);
     });
   }
 
   void _handleDeepLink(Uri uri) {
+    debugPrint("_handleDeepLink: $uri  host=${uri.host}  path=${uri.path}  segments=${uri.pathSegments}");
+    // Always cache the full URI so onGenerateRoute can reconstruct host/path
+    // even when Flutter strips the scheme+host (warm-start on iOS).
+    _lastDeepLinkUri = uri;
+
     // Check if the route is related to auth-callback OR contains an access token fragment
     // Note: Supabase magic links often come as https://project.supabase.co/auth/v1/verify?token=...&type=signup&redirect_to=parchi://auth-callback
     // Or simpler: parchi://auth-callback#access_token=...
@@ -130,6 +152,25 @@ class _ParchiAppState extends State<ParchiApp> {
           ),
         ),
       );
+    } else if (uri.host == 'merchant' ||
+        uri.path.contains('/merchant/')) {
+      // Deep link: parchi://merchant/<merchantId>
+      final merchantId = uri.pathSegments.isNotEmpty
+          ? uri.pathSegments.first
+          : uri.host == 'merchant'
+              ? uri.queryParameters['id'] ?? ''
+              : '';
+      if (merchantId.isNotEmpty) {
+        final nav = NavigationService.navigatorKey.currentState;
+        if (nav != null) {
+          nav.push(MaterialPageRoute(
+            builder: (context) => MerchantDeepLinkScreen(merchantId: merchantId),
+          ));
+        } else {
+          // Navigator not ready yet (cold start during splash) — queue it
+          pendingDeepLink.value = uri;
+        }
+      }
     } else if (uri.path.contains('auth-callback') ||
         uri.host.contains('auth-callback') ||
         type == 'signup' ||
@@ -187,9 +228,28 @@ class _ParchiAppState extends State<ParchiApp> {
       home: const AuthWrapper(),
       onGenerateRoute: (settings) {
         debugPrint("onGenerateRoute: ${settings.name}");
-        // [NEW] Restore onGenerateRoute to handle "Cold Start" deep links directly
-        // This prevents "Failed to handle route information" error
-        final uri = Uri.tryParse(settings.name ?? '');
+        // Flutter strips scheme+host on iOS cold start and passes just the path.
+        // Prefer the full URI captured from getInitialLink() when available.
+        // For warm-start links, fall back to _lastDeepLinkUri set by _handleDeepLink.
+        final parsedUri = Uri.tryParse(settings.name ?? '');
+        final uri = _pendingInitialUri ??
+            (parsedUri != null && parsedUri.host.isEmpty
+                ? _lastDeepLinkUri
+                : parsedUri);
+
+        // --- Merchant deep link: parchi://merchant/<merchantId> ---
+        if (uri != null &&
+            (uri.host == 'merchant' || uri.path.contains('/merchant/'))) {
+          final merchantId = uri.pathSegments.isNotEmpty
+              ? uri.pathSegments.first
+              : uri.queryParameters['id'] ?? '';
+          if (merchantId.isNotEmpty) {
+            return MaterialPageRoute(
+              builder: (context) =>
+                  MerchantDeepLinkScreen(merchantId: merchantId),
+            );
+          }
+        }
 
         if (uri != null &&
             (uri.path.contains('auth-callback') ||
@@ -369,12 +429,38 @@ class _AuthWrapperState extends State<AuthWrapper> {
           await authService.logout();
         }
       }
+
+      // Consume any deep link that arrived before the navigator was ready.
+      // Defer by one frame so MainScreen is fully mounted first.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _consumePendingDeepLink();
+      });
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
         FlutterNativeSplash.remove();
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _consumePendingDeepLink();
+      });
+    }
+  }
+
+  void _consumePendingDeepLink() {
+    final uri = pendingDeepLink.value;
+    if (uri == null) return;
+    pendingDeepLink.value = null;
+
+    if (uri.host == 'merchant' || uri.path.contains('/merchant/')) {
+      final merchantId = uri.pathSegments.isNotEmpty
+          ? uri.pathSegments.first
+          : uri.queryParameters['id'] ?? '';
+      if (merchantId.isNotEmpty && mounted) {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => MerchantDeepLinkScreen(merchantId: merchantId),
+        ));
       }
     }
   }

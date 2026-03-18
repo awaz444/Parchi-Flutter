@@ -39,6 +39,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="parchi" android:host="auth-callback" />
                 <data android:scheme="parchi" android:host="reset-password" />
+                <data android:scheme="parchi" android:host="merchant" />
             </intent-filter>
             <!-- App Links for Supabase -->
             <intent-filter android:autoVerify="true">
