@@ -19,37 +19,12 @@ import '../../providers/merchants_provider.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class MerchantDetailsScreen extends ConsumerWidget {
-  final MerchantDetailModel? merchant;
-  final String? merchantId;
+  final MerchantDetailModel merchant;
 
-  const MerchantDetailsScreen({
-    super.key,
-    this.merchant,
-    this.merchantId,
-  });
+  const MerchantDetailsScreen({super.key, required this.merchant});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // If we have the full model from navigation, use it.
-    // Otherwise, watch the provider if we only have an ID.
-    if (merchant == null && merchantId != null) {
-      final merchantAsync = ref.watch(merchantDetailsProvider(merchantId!));
-
-      return merchantAsync.when(
-        data: (loadedMerchant) => _buildContent(context, ref, loadedMerchant),
-        loading: () => const MerchantDetailsSkeleton(),
-        error: (err, stack) => Scaffold(
-          appBar: AppBar(title: const Text("Error")),
-          body: Center(child: Text("Could not load merchant: $err")),
-        ),
-      );
-    }
-
-    return _buildContent(context, ref, merchant!);
-  }
-
-  Widget _buildContent(
-      BuildContext context, WidgetRef ref, MerchantDetailModel merchant) {
     final visibleBranches =
         merchant.branches.where((b) => b.offers.isNotEmpty).toList();
 

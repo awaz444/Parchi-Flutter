@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_links/app_links.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // [NEW] Import Riverpod
+import 'package:app_links/app_links.dart'; // [NEW] Import AppLinks
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'screens/auth/reset_password/reset_password_screen.dart';
@@ -12,18 +12,17 @@ import 'config/supabase_config.dart';
 import 'utils/colours.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
-import 'screens/profile/redemption_history/redemption_history_screen.dart';
-import 'screens/splash/splash_screen.dart';
+import 'screens/profile/redemption_history/redemption_history_screen.dart'; // [NEW] History Screen
+import 'screens/splash/splash_screen.dart'; // [NEW] Splash Screen
 import 'screens/auth/login_screens/login_screen.dart';
 import 'services/auth_service.dart';
-import 'services/navigation_service.dart';
+import 'services/navigation_service.dart'; // [NEW] Use generic navigation service
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_handler_service.dart';
-import 'firebase_options.dart';
-import 'screens/auth/sign_up_screens/signup_verification_screen.dart';
-import 'providers/user_provider.dart';
-import 'widgets/common/guest_login_prompt.dart';
-import 'screens/home/merchant_details_screen.dart'; // [FIXED] Correct path
+import 'firebase_options.dart'; // [NEW] Import generated options
+import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
+import 'providers/user_provider.dart'; // [NEW] For guest detection
+import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -31,10 +30,12 @@ void main() async {
 
   await dotenv.load(fileName: ".env");
 
+  // [NEW] Initialize Firebase with generated options
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // [NEW] Initialize Notification Service (Subscribes to 'students_all')
   await NotificationHandlerService().initialize();
 
   await Supabase.initialize(
@@ -43,6 +44,7 @@ void main() async {
   );
 
   runApp(
+    // [NEW] Wrap entire app in ProviderScope
     const ProviderScope(
       child: ParchiApp(),
     ),
@@ -75,37 +77,27 @@ class _ParchiAppState extends State<ParchiApp> {
   Future<void> _initDeepLinkListener() async {
     _appLinks = AppLinks();
 
-    // Listen for new links while app is in memory (Warm Start)
+    // Check initial link checks are now handled by onGenerateRoute to avoid double navigation
+    // and "Failed to handle route" errors.
+    // However, for pure AppLinks support (if onGenerateRoute fails), we can keep the listener.
+
+    // Listen for new links
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
       _handleDeepLink(uri);
     });
   }
 
   void _handleDeepLink(Uri uri) {
-    debugPrint("Handling Deep Link: $uri");
+    // Check if the route is related to auth-callback OR contains an access token fragment
+    // Note: Supabase magic links often come as https://project.supabase.co/auth/v1/verify?token=...&type=signup&redirect_to=parchi://auth-callback
+    // Or simpler: parchi://auth-callback#access_token=...
 
-    // [NEW] Merchant Deep Link Logic 
-    // Supports: parchi://merchant/ID or https://parchipakistan.com/merchant/ID
-    if (uri.host == 'merchant' || uri.path.startsWith('/merchant')) {
-      final merchantId = uri.host == 'merchant' 
-          ? (uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null)
-          : (uri.pathSegments.length >= 2 ? uri.pathSegments[1] : null);
-
-      if (merchantId != null) {
-        NavigationService.navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (context) => MerchantDetailsScreen(merchantId: merchantId),
-          ),
-        );
-        return;
-      }
-    }
-
-    // Existing Auth Logic (Magic Links / Reset Password)
+    // We need to parse fragment parameters primarily
     String? accessToken;
     String? refreshToken;
     String? type;
 
+    // 1. Try extracting from fragment (typical for implicit flow / magic link redirects)
     if (uri.fragment.isNotEmpty) {
       try {
         final queryParams = Uri.splitQueryString(uri.fragment);
@@ -117,12 +109,16 @@ class _ParchiAppState extends State<ParchiApp> {
       }
     }
 
+    // 2. Try extracting from query parameters (if not in fragment)
     if (accessToken == null) {
       accessToken = uri.queryParameters['access_token'];
       refreshToken = uri.queryParameters['refresh_token'];
       type = uri.queryParameters['type'];
     }
 
+    // Identify if it's a reset password or signup verification
+    // Sometimes 'type' param tells us.
+    // Also check path/host
     if (uri.path.contains('reset-password') ||
         uri.host.contains('reset-password') ||
         type == 'recovery') {
@@ -152,17 +148,23 @@ class _ParchiAppState extends State<ParchiApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: NavigationService.navigatorKey,
-      scaffoldMessengerKey: NavigationService.messengerKey,
+      navigatorKey:
+          NavigationService.navigatorKey, // [NEW] Global Navigator Key
+      scaffoldMessengerKey:
+          NavigationService.messengerKey, // [NEW] Global Messenger Key
       debugShowCheckedModeBanner: false,
       title: 'Parchi',
       routes: {
-        '/login': (context) => const LoginScreen(),
+        '/login': (context) =>
+            const LoginScreen(), // [NEW] Named route for global navigation
       },
       theme: ThemeData(
         textTheme: GoogleFonts.outfitTextTheme(),
         primaryColor: AppColors.primary,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        // [NEW] Enforce Blue Color Scheme to remove default Purple
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+        ),
         useMaterial3: true,
         scaffoldBackgroundColor: AppColors.backgroundLight,
         appBarTheme: const AppBarTheme(
@@ -175,6 +177,7 @@ class _ParchiAppState extends State<ParchiApp> {
           ),
           iconTheme: IconThemeData(color: AppColors.textPrimary),
         ),
+        // [NEW] Global Cursor & Selection Color
         textSelectionTheme: TextSelectionThemeData(
           cursorColor: AppColors.primary,
           selectionColor: AppColors.primary.withOpacity(0.3),
@@ -184,73 +187,66 @@ class _ParchiAppState extends State<ParchiApp> {
       home: const AuthWrapper(),
       onGenerateRoute: (settings) {
         debugPrint("onGenerateRoute: ${settings.name}");
+        // [NEW] Restore onGenerateRoute to handle "Cold Start" deep links directly
+        // This prevents "Failed to handle route information" error
         final uri = Uri.tryParse(settings.name ?? '');
 
-        if (uri != null) {
-          // [NEW] Cold Start handling for Merchant QR codes
-          // Supports: parchi://merchant/ID or https://parchipakistan.com/merchant/ID
-          if (uri.host == 'merchant' || uri.path.startsWith('/merchant')) {
-            final merchantId = uri.host == 'merchant' 
-                ? (uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null)
-                : (uri.pathSegments.length >= 2 ? uri.pathSegments[1] : null);
+        if (uri != null &&
+            (uri.path.contains('auth-callback') ||
+                uri.host.contains('auth-callback') ||
+                uri.path.contains('reset-password') ||
+                uri.host.contains('reset-password') ||
+                uri.path.contains('verify') ||
+                // [NEW] Check for tokens in fragment (implicit flow) or query
+                uri.fragment.contains('access_token') ||
+                uri.queryParameters.containsKey('access_token'))) {
+          String? accessToken;
+          String? refreshToken;
+          String? type;
 
-            if (merchantId != null) {
-              return MaterialPageRoute(
-                builder: (context) => MerchantDetailsScreen(merchantId: merchantId),
-              );
+          // 1. Fragment parsing (primary for Supabase)
+          // We treat settings.name as a full URI or path
+          try {
+            // Retrieve fragment directly if possible, or parse logic
+            // If settings.name is just `/auth-callback#...`, Uri.tryParse handles it.
+            if (uri.fragment.isNotEmpty) {
+              final queryParams = Uri.splitQueryString(uri.fragment);
+              accessToken = queryParams['access_token'];
+              refreshToken = queryParams['refresh_token'];
+              type = queryParams['type'];
             }
+          } catch (e) {
+            debugPrint("Error parsing fragment in generateRoute: $e");
           }
 
-          // Cold Start handling for Auth links
-          if (uri.path.contains('auth-callback') ||
-              uri.host.contains('auth-callback') ||
-              uri.path.contains('reset-password') ||
+          // 2. Query param parsing
+          if (accessToken == null) {
+            accessToken = uri.queryParameters['access_token'];
+            refreshToken = uri.queryParameters['refresh_token'];
+            type = uri.queryParameters['type'];
+          }
+
+          // Determine screen
+          if (uri.path.contains('reset-password') ||
               uri.host.contains('reset-password') ||
-              uri.path.contains('verify') ||
-              uri.fragment.contains('access_token') ||
-              uri.queryParameters.containsKey('access_token')) {
-            
-            String? accessToken;
-            String? refreshToken;
-            String? type;
-
-            try {
-              if (uri.fragment.isNotEmpty) {
-                final queryParams = Uri.splitQueryString(uri.fragment);
-                accessToken = queryParams['access_token'];
-                refreshToken = queryParams['refresh_token'];
-                type = queryParams['type'];
-              }
-            } catch (e) {
-              debugPrint("Error parsing fragment in generateRoute: $e");
-            }
-
-            if (accessToken == null) {
-              accessToken = uri.queryParameters['access_token'];
-              refreshToken = uri.queryParameters['refresh_token'];
-              type = uri.queryParameters['type'];
-            }
-
-            if (uri.path.contains('reset-password') ||
-                uri.host.contains('reset-password') ||
-                type == 'recovery') {
-              return MaterialPageRoute(
-                builder: (context) => ResetPasswordScreen(
-                  accessToken: accessToken,
-                  refreshToken: refreshToken,
-                ),
-              );
-            } else {
-              return MaterialPageRoute(
-                builder: (context) => SignupVerificationScreen(
-                  accessToken: accessToken,
-                  refreshToken: refreshToken,
-                ),
-              );
-            }
+              type == 'recovery') {
+            return MaterialPageRoute(
+              builder: (context) => ResetPasswordScreen(
+                accessToken: accessToken,
+                refreshToken: refreshToken,
+              ),
+            );
+          } else {
+            return MaterialPageRoute(
+              builder: (context) => SignupVerificationScreen(
+                accessToken: accessToken,
+                refreshToken: refreshToken,
+              ),
+            );
           }
         }
 
+        // [Fix] Default fallback to AuthWrapper instead of null to prevent "Failed to handle route" crash
         return MaterialPageRoute(
           builder: (context) => const AuthWrapper(),
         );
