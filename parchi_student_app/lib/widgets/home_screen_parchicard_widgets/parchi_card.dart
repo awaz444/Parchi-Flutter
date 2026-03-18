@@ -248,7 +248,7 @@ class _ParchiCardState extends ConsumerState<ParchiCard>
                 color: dividerColor, indent: 10, endIndent: 10, width: 1),
             _buildSingleStat(
                 value: "${stats.bonusesUnlocked}",
-                label: "Rewards",
+                label: "Bonuses",
                 subLabel: "Earned"),
             VerticalDivider(
                 color: dividerColor, indent: 10, endIndent: 10, width: 1),
