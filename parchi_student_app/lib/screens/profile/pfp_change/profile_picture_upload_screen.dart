@@ -8,6 +8,7 @@ import '../../../services/auth_service.dart';
 import '../../../widgets/common/spinning_loader.dart';
 import '../../../providers/user_provider.dart';
 
+
 class ProfilePictureUploadSheet extends ConsumerStatefulWidget {
   /* 
    * [UX IMPROVEMENT]: Callbacks to notify parent (ProfileScreen) about upload state.
@@ -50,7 +51,7 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
     if (_selectedImage == null) return;
 
     setState(() => _isUploading = true);
-    widget.onLoadingStateChanged?.call(true); // Notify Parent
+    widget.onLoadingStateChanged?.call(true);
 
     try {
       final user = ref.read(userProfileProvider).value;
@@ -61,10 +62,9 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
       await ref.refresh(userProfileProvider.future);
 
       if (mounted) {
-        widget.onClose(); 
-        
+        widget.onClose();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Profile updated!", style: TextStyle(color: AppColors.primary)), 
+          content: Text("Profile updated!", style: TextStyle(color: AppColors.primary)),
           backgroundColor: Colors.white,
           behavior: SnackBarBehavior.floating,
         ));
@@ -72,7 +72,7 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Upload failed: $e"), 
+          content: Text("Upload failed: $e"),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ));
@@ -80,7 +80,43 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
     } finally {
       if (mounted) {
         setState(() => _isUploading = false);
-        widget.onLoadingStateChanged?.call(false); // Notify Parent
+        widget.onLoadingStateChanged?.call(false);
+      }
+    }
+  }
+
+  Future<void> _handleRemovePhoto() async {
+    final user = ref.read(userProfileProvider).value;
+    if (user?.profilePicture == null) return; // No photo to remove
+
+    setState(() => _isUploading = true);
+    widget.onLoadingStateChanged?.call(true);
+
+    try {
+      // Update backend with empty string to clear the picture
+      await authService.updateProfilePicture('');
+      await ref.refresh(userProfileProvider.future);
+
+      if (mounted) {
+        widget.onClose();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Photo removed", style: TextStyle(color: AppColors.primary)),
+          backgroundColor: Colors.white,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Failed to remove photo: $e"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        widget.onLoadingStateChanged?.call(false);
       }
     }
   }
@@ -118,8 +154,19 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildOptionButton(Icons.camera_alt_rounded, "Camera", () => _pickImage(ImageSource.camera)),
-                _buildOptionButton(Icons.photo_library_rounded, "Gallery", () => _pickImage(ImageSource.gallery)),
+                Consumer(builder: (context, ref, _) {
+                  final user = ref.watch(userProfileProvider).value;
+                  final hasPhoto = user?.profilePicture != null && user!.profilePicture!.isNotEmpty;
+                  return _buildOptionButton(
+                    Icons.delete_outline_rounded,
+                    "Remove",
+                    hasPhoto ? _handleRemovePhoto : null,
+                    destructive: true,
+                    disabled: !hasPhoto,
+                  );
+                }),
+                _buildOptionButton(Icons.camera_alt_rounded, "Retake", () => _pickImage(ImageSource.camera)),
+                _buildOptionButton(Icons.photo_library_rounded, "Upload", () => _pickImage(ImageSource.gallery)),
               ],
             ),
 
@@ -147,19 +194,36 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
     );
   }
 
-  Widget _buildOptionButton(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildOptionButton(
+    IconData icon,
+    String label,
+    VoidCallback? onTap, {
+    bool destructive = false,
+    bool disabled = false,
+  }) {
+    final isDisabled = _isUploading || disabled || onTap == null;
+    final color = destructive ? AppColors.error : AppColors.textSecondary;
     return InkWell(
-      onTap: _isUploading ? null : onTap,
+      onTap: isDisabled ? null : onTap,
       borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 100,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
+      child: Opacity(
+        opacity: (disabled || _isUploading) ? 0.35 : 1.0,
+        child: Container(
+          width: 90,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: destructive ? AppColors.error.withOpacity(0.06) : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: destructive ? AppColors.error.withOpacity(0.2) : Colors.grey.shade200,
+            ),
+          ),
+          child: Column(children: [
+            Icon(icon, size: 26, color: color),
+            const SizedBox(height: 6),
+            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+          ]),
         ),
-        child: Column(children: [Icon(icon, size: 28), const SizedBox(height: 8), Text(label)]),
       ),
     );
   }

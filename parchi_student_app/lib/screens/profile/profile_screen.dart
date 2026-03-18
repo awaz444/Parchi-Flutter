@@ -40,8 +40,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     // Initialize the shared modal animation controller
     _modalController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
-      reverseDuration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 200),
+      reverseDuration: const Duration(milliseconds: 180),
     );
   }
 
@@ -360,42 +360,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         // Only render this if it's the PFP sheet (_showFocusedAvatar == true)
                         if (_showFocusedAvatar)
                           Positioned(
-                            top: topPadding + 54, // Adjusted for layout alignment
+                            top: topPadding + 54,
                             left: 0,
                             right: 0,
                             child: Opacity(
-                              opacity:
-                                  _modalController.value, // Fade in with drag
-                              child: Column(
-                                children: [
-                                  // The Bright, Sharp Avatar
-                                  buildAvatar(isInteractive: false),
-                                  // [UX IMPROVEMENT]: Loader Overlay
-                                  if (_isUploadingPfp)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 20.0),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.5),
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            SpinningLoader(size: 20, color: Colors.white),
-                                            SizedBox(width: 8),
-                                            Text("Uploading...",
-                                                style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                              opacity: _modalController.value,
+                              child: buildAvatar(isInteractive: false),
                             ),
                           ),
 
