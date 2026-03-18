@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Required on Android 13+ (API 33+) to post/show notifications with sound -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Allows notifications to vibrate the device -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     
     <application
         android:label="Parchi"

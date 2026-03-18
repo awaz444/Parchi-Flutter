@@ -322,7 +322,7 @@ class _GuestCompactHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Row(
             children: [
               Expanded(
@@ -338,19 +338,25 @@ class _GuestCompactHeader extends StatelessWidget {
                       onChanged: onSearchChanged,
                       textAlignVertical: TextAlignVertical.center,
                       decoration: InputDecoration(
-                        hintText: "Search restaurants...",
-                        hintStyle: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13),
-                        prefixIcon: const Padding(
-                          padding: EdgeInsets.only(left: 8.0),
-                          child: Icon(Icons.search,
-                              color: AppColors.textSecondary, size: 20),
-                        ),
-                        prefixIconConstraints:
-                            const BoxConstraints(minWidth: 35),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.only(top: 2),
-                      ),
+                                hintText: "Search restaurants...",
+                                hintStyle: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: Icon(
+                                    Icons.search,
+                                    color: AppColors.textSecondary,
+                                    size: 20,
+                                  ),
+                                ),
+                                prefixIconConstraints:
+                                    const BoxConstraints(minWidth: 35),
+                                border: InputBorder.none,
+                              contentPadding:
+                                  const EdgeInsets.only(bottom: 18),
+                              ),
                     ),
                 ),
               ),
