@@ -135,7 +135,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                             isLoading: controller.isLoading,
                             progress: controller.value,
                             size: 50,
-                            color: const Color(0xFFFFF700),
+                            color: AppColors.secondary,
                           ),
                         ),
                       );
@@ -331,7 +331,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         isLoading: true,
         progress: 1.0,
         size: 25,
-        color: Color(0xFFFFF700),
+        color: AppColors.secondary,
       ),
     );
   }

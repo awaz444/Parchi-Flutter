@@ -38,7 +38,7 @@ class MerchantDetailsScreen extends ConsumerWidget {
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 220.0,
+              expandedHeight: 180.0,
               floating: false,
               pinned: true,
               backgroundColor: AppColors.primary,

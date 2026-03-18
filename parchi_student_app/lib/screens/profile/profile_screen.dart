@@ -586,29 +586,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           children: [
             Icon(Icons.logout, color: AppColors.primary),
             SizedBox(width: 10),
-            Text('Logout',
-                style: TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.bold)),
+            Text(
+              'Logout',
+              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
-        content: const Text('Are you sure you want to logout?',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        content: const Text(
+          'Are you sure you want to logout of your Parchi account?',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.parchiGold, // Parchi Yellow
-                  foregroundColor: AppColors.primary, // Dark Text on Yellow
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10))),
-              child: const Text('Logout',
-                  style: TextStyle(fontWeight: FontWeight.bold))),
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );

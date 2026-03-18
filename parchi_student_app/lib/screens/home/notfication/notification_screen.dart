@@ -194,6 +194,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     child: ParchiLoader(
                       isLoading: controller.isLoading,
                       progress: controller.value,
+                      color: AppColors.secondary,
                     ),
                   ),
                 );

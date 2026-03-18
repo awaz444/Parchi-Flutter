@@ -151,7 +151,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
                       borderRadius: BorderRadius.circular(30)),
                 ),
                 child: _isLoading
-                    ? const SpinningLoader(size: 30)
+                    ? const SpinningLoader(size: 30, color: AppColors.secondary)
                     : const Text("Sign In",
                         style: TextStyle(
                             color: AppColors.textOnPrimary,

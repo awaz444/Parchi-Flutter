@@ -61,10 +61,10 @@ class _RedemptionHistoryScreenState
     setState(() => _isRefreshing = true);
 
     try {
-      final statsFuture = ref.refresh(redemptionStatsProvider.future);
       await Future.wait([
-        statsFuture,
+        ref.refresh(redemptionStatsProvider.future),
         ref.read(redemptionHistoryProvider.notifier).refresh(),
+        ref.refresh(userProfileProvider.future),
       ]);
     } catch (e) {
       debugPrint("Redemption refresh error: $e");
@@ -212,6 +212,7 @@ class _RedemptionHistoryScreenState
                               child: ParchiLoader(
                                 isLoading: controller.isLoading,
                                 progress: controller.value,
+                                color: AppColors.secondary,
                               ),
                             ),
                           );
@@ -241,7 +242,11 @@ class _RedemptionHistoryScreenState
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Center(
-                            child: CircularProgressIndicator(strokeWidth: 2)),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.secondary,
+                          ),
+                        ),
                       );
                     }
                     return _buildRedemptionNotificationItem(items[index]);
