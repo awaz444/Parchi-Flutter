@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../models/auth_models.dart';
+import 'notification_handler_service.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -15,7 +16,11 @@ class AuthService {
 
   bool _isLoggingOut = false; // Logout lock (instance-level, not static)
 
-  final _secureStorage = const FlutterSecureStorage();
+  final _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
 
   // ── Persistent HTTP client — reuses TCP+TLS connections across requests ──
   // This eliminates per-request TLS handshake overhead (saves 200–800ms on
@@ -434,6 +439,10 @@ class AuthService {
         await setTokenExpiry(authResponse.session.expiresAt);
         await setUser(authResponse.user);
 
+        // Register FCM token with the backend so personal push notifications work
+        // Fire-and-forget: don't block login if this fails
+        _registerFcmToken(authResponse.session.accessToken);
+
         return authResponse;
       } else {
         final error = ApiError.fromJson(responseData);
@@ -444,6 +453,36 @@ class AuthService {
         rethrow;
       }
       throw Exception('Login failed: ${e.toString()}');
+    }
+  }
+
+  /// Get the device FCM token and send it to the backend.
+  /// Called after login and whenever the token is refreshed by Firebase.
+  Future<void> _registerFcmToken(String accessToken) async {
+    try {
+      // On iOS this requires an APNS token — will be null on Simulator
+      final String? fcmToken = await NotificationHandlerService().getToken();
+      if (fcmToken == null) {
+        print('FCM: No token available (Simulator or permissions denied), skipping registration.');
+        return;
+      }
+
+      final response = await _httpClient.patch(
+        Uri.parse(ApiConfig.updateFcmTokenEndpoint),
+        headers: {
+          ..._baseHeaders,
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'token': fcmToken}),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        print('FCM: Token registered with backend successfully.');
+      } else {
+        print('FCM: Failed to register token — ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('FCM: Error registering token: $e');
     }
   }
 

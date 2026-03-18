@@ -7,6 +7,7 @@ import '../../../utils/colours.dart';
 import '../../../services/supabase_storage_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../models/auth_models.dart'; // [NEW] For ConflictException
+import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
 import 'signup_verification_screen.dart';
 import 'verification_success_screen.dart'; // [NEW]
 
@@ -236,11 +237,15 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final containerHeight = screenHeight * 0.75; // Matching LoginScreen signup state
+    // Account for Android bottom insets (gesture nav bar) so the container
+    // doesn't clip the submit button on devices with tall navigation bars.
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final containerHeight = (screenHeight * 0.75).clamp(0.0, screenHeight - bottomInset - 80);
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      body: Stack(
+    return TapToDismissKeyboard(
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        body: Stack(
         children: [
           // 1. BACKGROUND (Solid color like LoginScreen)
           Container(
@@ -319,7 +324,12 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                     // --- CONTENT SCROLLABLE AREA ---
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        padding: EdgeInsets.fromLTRB(
+                          24,
+                          0,
+                          24,
+                          24 + MediaQuery.of(context).padding.bottom,
+                        ),
                         physics: const ClampingScrollPhysics(),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,6 +490,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
           ),
         ],
       ),
+    ),
     );
   }
 

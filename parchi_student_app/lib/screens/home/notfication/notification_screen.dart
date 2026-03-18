@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../utils/colours.dart';
 import '../../../services/student_notifications_service.dart';
 import '../../../models/notification_model.dart';
@@ -94,10 +95,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
       await _api.markAsRead(notif.id);
     }
 
-    // 3. Handle Navigation (Deep Linking placeholder)
+    // 3. Handle Navigation — open linkUrl in browser on Android & iOS
     if (notif.linkUrl != null && notif.linkUrl!.isNotEmpty) {
-       // Deep linking logic would go here
-       print("Navigating to: ${notif.linkUrl}");
+      final uri = Uri.tryParse(notif.linkUrl!);
+      if (uri != null) {
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {
+          // silently ignore if the URL can't be opened
+        }
+      }
     }
   }
 

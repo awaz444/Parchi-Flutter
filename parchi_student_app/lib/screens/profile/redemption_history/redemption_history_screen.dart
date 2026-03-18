@@ -121,6 +121,9 @@ class _RedemptionHistoryScreenState
         centerTitle: true,
       ),
       body: NestedScrollView(
+        // clipBehavior prevents the white rounded corner from "bleeding" past
+        // the primary scroll area on Android during overscroll.
+        clipBehavior: Clip.antiAlias,
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return <Widget>[
             // 1. STATS HEADER (Primary Background) - Now in Sliver

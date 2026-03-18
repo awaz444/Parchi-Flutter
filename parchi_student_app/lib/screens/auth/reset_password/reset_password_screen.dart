@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../utils/colours.dart';
 import '../../../widgets/common/spinning_loader.dart';
+import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
 import '../login_screens/login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -126,8 +127,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+    return TapToDismissKeyboard(
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text('Reset Password'),
         centerTitle: true,
@@ -290,6 +292,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

@@ -1,8 +1,7 @@
 name: parchi_student_app
 description: "A student discount app."
 publish_to: 'none'
-version: 1.0.0+6
-
+version: 1.0.1+7
 environment:
   sdk: ^3.0.0 # Adjusted to ensure compatibility
 
@@ -81,4 +80,9 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   image_path: "assets/parchi-app-icon.png"
+  # Android adaptive icon — prevents clipping on all Android launchers
+  adaptive_icon_background: "#0069db"
+  adaptive_icon_foreground: "assets/Parchi-Icon-with-new-blue.png"
+  min_sdk_android: 23

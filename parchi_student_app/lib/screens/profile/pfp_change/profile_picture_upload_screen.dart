@@ -91,7 +91,13 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
       color: Colors.white,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        // Add bottom safe area padding for Android gesture navigation bar
+        padding: EdgeInsets.fromLTRB(
+          24,
+          16,
+          24,
+          40 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -153,7 +153,7 @@ class _ParchiAppState extends State<ParchiApp> {
       scaffoldMessengerKey:
           NavigationService.messengerKey, // [NEW] Global Messenger Key
       debugShowCheckedModeBanner: false,
-      title: 'Parchi MVP',
+      title: 'Parchi',
       routes: {
         '/login': (context) =>
             const LoginScreen(), // [NEW] Named route for global navigation
@@ -467,53 +467,71 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             enableFeedback: false, // Disables vibration/sound
             items: [
               BottomNavigationBarItem(
-                icon: SvgPicture.asset(
-                  'assets/home-svgrepo-com.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter: const ColorFilter.mode(
-                      AppColors.textSecondary, BlendMode.srcIn),
+                icon: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: SvgPicture.asset(
+                    'assets/home-svgrepo-com.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                        AppColors.textSecondary, BlendMode.srcIn),
+                  ),
                 ),
-                activeIcon: SvgPicture.asset(
-                  'assets/home-svgrepo-com.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter:
-                      const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                activeIcon: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: SvgPicture.asset(
+                    'assets/home-svgrepo-com.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                        AppColors.primary, BlendMode.srcIn),
+                  ),
                 ),
                 label: "Home",
               ),
               BottomNavigationBarItem(
-                icon: SvgPicture.asset(
-                  'assets/leaderboard-svgrepo-com.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter: const ColorFilter.mode(
-                      AppColors.textSecondary, BlendMode.srcIn),
+                icon: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: SvgPicture.asset(
+                    'assets/leaderboard-svgrepo-com.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                        AppColors.textSecondary, BlendMode.srcIn),
+                  ),
                 ),
-                activeIcon: SvgPicture.asset(
-                  'assets/leaderboard-svgrepo-com.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter:
-                      const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                activeIcon: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: SvgPicture.asset(
+                    'assets/leaderboard-svgrepo-com.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                        AppColors.primary, BlendMode.srcIn),
+                  ),
                 ),
                 label: "Leaderboard",
               ),
               BottomNavigationBarItem(
-                icon: SvgPicture.asset(
-                  'assets/history-svgrepo-com.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter: const ColorFilter.mode(
-                      AppColors.textSecondary, BlendMode.srcIn),
+                icon: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: SvgPicture.asset(
+                    'assets/history-svgrepo-com.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                        AppColors.textSecondary, BlendMode.srcIn),
+                  ),
                 ),
-                activeIcon: SvgPicture.asset(
-                  'assets/history-svgrepo-com.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter:
-                      const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                activeIcon: Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: SvgPicture.asset(
+                    'assets/history-svgrepo-com.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                        AppColors.primary, BlendMode.srcIn),
+                  ),
                 ),
                 label: "History",
               ),

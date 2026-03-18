@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../utils/colours.dart';
 import '../../../widgets/login_screen/login_form.dart';
 import '../../../widgets/signup_screen/sign_form.dart';
+import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
 import 'forgot_password/forgot_password_form.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -76,8 +77,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     double containerHeight;
     if (_currentPage == 2) {
       if (isKeyboardOpen) {
-        // Shrink to fit available space above keyboard
-        containerHeight = (screenHeight - keyboardHeight - 40).clamp(100.0, screenHeight * 0.75);
+        // Shrink to fit available space above keyboard; clamp to avoid going
+        // negative on short Android screens (e.g. 5" 480p budget phones).
+        containerHeight = (screenHeight - keyboardHeight - 40)
+            .clamp(200.0, screenHeight * 0.85);
       } else {
         containerHeight = screenHeight * 0.75;
       }
@@ -85,9 +88,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       containerHeight = screenHeight * 0.42;
     }
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true, // [FIXED] Allow screen to lift with keyboard
-      body: Stack(
+    return TapToDismissKeyboard(
+      child: Scaffold(
+        resizeToAvoidBottomInset: true, // [FIXED] Allow screen to lift with keyboard
+        body: Stack(
         children: [
           // 1. BACKGROUND
           Container(
@@ -172,6 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
         ],
       ),
+    ),
     );
   }
 }

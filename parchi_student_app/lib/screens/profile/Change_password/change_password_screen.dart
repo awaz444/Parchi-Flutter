@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../utils/colours.dart';
 import '../../../services/auth_service.dart';
 import '../../../widgets/common/spinning_loader.dart';
+import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
 
 class ChangePasswordSheet extends StatefulWidget {
   // Callback to let the parent ProfileScreen handle the closing animation
@@ -64,16 +65,21 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    // NOTE: The parent ProfileScreen wraps this sheet in
+    // Padding(padding: MediaQuery.viewInsetsOf(context)) to lift it above
+    // the keyboard. We must NOT also add viewInsets here — doing so on
+    // Android causes a double-shift where the sheet overshoots the keyboard.
+    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
     // We wrap in Material to give it the white sheet look
-    return Material(
-      color: AppColors.surface,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-      child: Container(
-        // Constrain height if needed, or let it grow.
-        // Using ~80% height for password sheet usually looks good.
-        constraints: BoxConstraints(
+    return TapToDismissKeyboard(
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        child: Container(
+          // Constrain height if needed, or let it grow.
+          // Using ~80% height for password sheet usually looks good.
+          constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
         child: Column(
@@ -107,7 +113,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
             // --- FORM CONTENT ---
             Flexible(
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(24, 24, 24, bottomPadding + 24),
+                padding: EdgeInsets.fromLTRB(24, 24, 24, bottomSafeArea + 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -166,6 +172,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
           ],
         ),
       ),
+    ),
     );
   }
 

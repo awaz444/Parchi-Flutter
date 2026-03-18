@@ -276,12 +276,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildActionTile(
+                            Expanded(child: _buildActionTile(
                               icon: Icons.lock_outline,
                               label: "Change\nPassword",
                               onTap: _openPasswordSheet,
-                            ),
-                            _buildActionTile(
+                            )),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildActionTile(
                               icon: Icons.help_outline,
                               label: "Help\nCenter",
                               onTap: () {
@@ -291,8 +292,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       builder: (context) => const HelpCenterScreen()),
                                 );
                               },
-                            ),
-                            _buildActionTile(
+                            )),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildActionTile(
                               icon: Icons.info_outline,
                               label: "About\nUs",
                               onTap: () {
@@ -302,13 +304,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                       builder: (context) => const AboutUsScreen()),
                                 );
                               },
-                            ),
-                            _buildActionTile(
+                            )),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildActionTile(
                               icon: Icons.delete_forever_outlined,
                               label: "Delete\nAccount",
                               onTap: () => _handleDeleteAccount(context),
                               isDestructive: true,
-                            ),
+                            )),
                           ],
                         ),
                         
@@ -332,19 +335,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     return Stack(
                       children: [
                         // A. BLURRED BACKGROUND
+                        // ClipRect is REQUIRED on Android — without it BackdropFilter
+                        // bleeds outside its bounds and causes graphical glitches on
+                        // Skia/Impeller. Opacity animates the fade; blur is kept at a
+                        // fixed sigma to avoid per-frame re-composition jank on Android.
                         Positioned.fill(
-                          child: GestureDetector(
-                            onTap: _closeModal, // Tap outside to close
-                            child: BackdropFilter(
-                              // Blur flows with the drag (0.0 -> 10.0)
-                              filter: ImageFilter.blur(
-                                  sigmaX: 10 * _modalController.value,
-                                  sigmaY: 10 * _modalController.value),
-                              child: Container(
-                                // Dim opacity flows with drag (0.0 -> 0.2)
-                                color: Colors.black.withOpacity(0.2 *
-                                    _modalController
-                                        .value), // Keep generic shadow/dim
+                          child: ClipRect(
+                            child: Opacity(
+                              opacity: _modalController.value.clamp(0.0, 1.0),
+                              child: GestureDetector(
+                                onTap: _closeModal,
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                  child: Container(
+                                    color: Colors.black.withOpacity(0.25),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -467,7 +473,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 80, // Slightly narrower to fit 4 tiles
+        // No fixed width — parent Expanded drives the size
         height: 90,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -543,17 +549,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     if (shouldProceed == true && context.mounted) {
       final uri = Uri.parse('https://www.parchipakistan.com/account-deletion');
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open the account deletion page. Please visit parchipakistan.com/account-deletion'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+      bool launched = false;
+      try {
+        // externalApplication is the most reliable mode on both Android & iOS
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        launched = false;
+      }
+      if (!launched) {
+        // Fallback: try platform default
+        try {
+          launched = await launchUrl(uri);
+        } catch (_) {
+          launched = false;
         }
+      }
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not open the browser. Please visit parchipakistan.com/account-deletion'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
