@@ -277,7 +277,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const SpinningLoader(size: 30)
+                      ? const SpinningLoader(size: 30, color: AppColors.secondary)
                       : const Text(
                           "Reset Password",
                           style: TextStyle(

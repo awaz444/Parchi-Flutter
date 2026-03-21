@@ -198,7 +198,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
                   elevation: 0,
                 ),
                 child: _isLoading
-                    ? const SpinningLoader(size: 30)
+                    ? const SpinningLoader(size: 30, color: AppColors.secondary)
                     : const Text(
                         "Send Reset Link",
                         style: TextStyle(

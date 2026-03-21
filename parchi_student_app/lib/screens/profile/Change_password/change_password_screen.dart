@@ -156,7 +156,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                                 borderRadius: BorderRadius.circular(30)),
                           ),
                           child: _isLoading
-                              ? const SpinningLoader(size: 30)
+                              ? const SpinningLoader(size: 30, color: AppColors.secondary)
                               : const Text("Update Password",
                                   style: TextStyle(
                                       color: AppColors.textOnPrimary,

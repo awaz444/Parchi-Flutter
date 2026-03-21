@@ -183,7 +183,7 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
                     foregroundColor: Colors.white,
                   ),
                   child: _isUploading 
-                      ? const SpinningLoader(size: 20, color: Colors.white)
+                      ? const SpinningLoader(size: 20, color: AppColors.secondary)
                       : const Text("Save Photo"),
                 ),
               ),

@@ -98,52 +98,87 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
   Widget _buildBrandSkeleton() {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        BlinkingSkeleton(
-          width: 70,
-          height: 70,
-          borderRadius: 12,
-          baseColor: AppColors.textSecondary.withOpacity(0.1),
+        // Match the Card boundary
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.backgroundLight),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.textSecondary.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: BlinkingSkeleton(
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: 12,
+                baseColor: AppColors.textSecondary.withOpacity(0.1),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
-        BlinkingSkeleton(
-            width: 50, height: 10, baseColor: Colors.grey.withOpacity(0.15)),
+        // Match the Brand Name formatting
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: BlinkingSkeleton(
+              width: double.infinity,
+              height: 11,
+              baseColor: Colors.grey.withOpacity(0.15)),
+        ),
       ],
     );
   }
 
   Widget _buildOfferSkeleton() {
     return Container(
-      width: 260,
+      width: 160,
       margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-          color: AppColors.lightCanvas,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.1))),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BlinkingSkeleton(
               width: double.infinity,
-              height: 80,
+              height: 105,
               borderRadius: 12,
               baseColor: Colors.grey.withOpacity(0.15)),
-          const SizedBox(height: 10),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: BlinkingSkeleton(
-                width: 140,
-                height: 16,
-                baseColor: Colors.grey.withOpacity(0.15)),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: BlinkingSkeleton(
-                width: 80,
-                height: 10,
-                baseColor: Colors.grey.withOpacity(0.15)),
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BlinkingSkeleton(
+                    width: 100,
+                    height: 14,
+                    baseColor: Colors.grey.withOpacity(0.15)),
+                const SizedBox(height: 4),
+                BlinkingSkeleton(
+                    width: 60,
+                    height: 12,
+                    baseColor: Colors.grey.withOpacity(0.15)),
+              ],
+            ),
           ),
         ],
       ),
@@ -152,25 +187,28 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
   Widget _buildRestaurantListItemSkeleton() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-          color: AppColors.lightCanvas,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4))
-          ]),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BlinkingSkeleton(
               width: double.infinity,
-              height: 160,
-              borderRadius: 20,
+              height: 180,
+              borderRadius: 16,
               baseColor: Colors.grey.withOpacity(0.15)),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -179,19 +217,19 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                   children: [
                     BlinkingSkeleton(
                         width: 150,
-                        height: 20,
+                        height: 16,
                         baseColor: Colors.grey.withOpacity(0.15)),
                     BlinkingSkeleton(
-                        width: 60,
-                        height: 24,
-                        borderRadius: 12,
+                        width: 16,
+                        height: 16,
+                        borderRadius: 4,
                         baseColor: Colors.grey.withOpacity(0.15)),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 BlinkingSkeleton(
-                    width: 100,
-                    height: 12,
+                    width: 80,
+                    height: 13,
                     baseColor: Colors.grey.withOpacity(0.15)),
               ],
             ),

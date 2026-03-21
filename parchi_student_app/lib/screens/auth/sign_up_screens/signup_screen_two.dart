@@ -469,7 +469,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                                       borderRadius: BorderRadius.circular(30)),
                                 ),
                                 child: _isUploading
-                                    ? const SpinningLoader(size: 30) // Use SpinningLoader
+                                    ? const SpinningLoader(size: 30, color: AppColors.secondary) // Use SpinningLoader
                                     : const Text("Submit Verification",
                                         style: TextStyle(
                                             color: AppColors.textOnPrimary,

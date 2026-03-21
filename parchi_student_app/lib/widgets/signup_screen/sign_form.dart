@@ -268,7 +268,7 @@ class _SignupFormState extends State<SignupForm> {
                         borderRadius: BorderRadius.circular(30)),
                   ),
                   child: _isLoading
-                      ? const SpinningLoader(size: 30)
+                      ? const SpinningLoader(size: 30, color: AppColors.secondary)
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -357,7 +357,7 @@ prefixIcon: prefixText == null
         child: _isLoadingInstitutes 
             ? const Center(child: Padding(
                 padding: EdgeInsets.all(8.0),
-                child: SpinningLoader(size: 20),
+                child: SpinningLoader(size: 20, color: AppColors.secondary),
               ))
             : DropdownButton<String>(
           value: _selectedUniversity,
