@@ -100,12 +100,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
     bool isUserInList = false;
     if (user != null) {
-      isUserInList = state.items.any((item) {
-        if (item.userId != null && item.userId == user.id) return true;
-        if (item.parchiId != null && item.parchiId == user.parchiId) return true;
-        if (user.firstName != null && item.name.contains(user.firstName!)) return true;
-        return false;
-      });
+      isUserInList = state.items.any((item) => _isCurrentUser(item, user));
     }
 
     return Stack(
@@ -194,13 +189,28 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     );
   }
 
-  bool _isCurrentUser(LeaderboardItem item, dynamic user) {
-    if (user == null) return false;
-    if (item.userId != null && item.userId == user.id) return true;
-    if (item.parchiId != null && item.parchiId == user.parchiId) return true;
-    if (user.firstName != null && item.name.contains(user.firstName!)) return true;
-    return false;
+ bool _isCurrentUser(LeaderboardItem item, dynamic user) {
+  if (user == null) return false;
+
+  // Convert both to Strings to ensure "String vs UUID" or "int vs String" 
+  // comparison doesn't fail silently.
+  final String? itemUserId = item.userId?.toString();
+  final String? sessionUserId = user.id?.toString();
+
+  if (itemUserId != null && sessionUserId != null) {
+    if (itemUserId == sessionUserId) return true;
   }
+
+  // Double-check the Parchi ID as a fallback
+  final String? itemParchiId = item.parchiId?.toString();
+  final String? sessionParchiId = user.parchiId?.toString();
+
+  if (itemParchiId != null && sessionParchiId != null) {
+    if (itemParchiId == sessionParchiId) return true;
+  }
+
+  return false;
+}
 
   Widget _buildEmptyView() {
     return Center(
@@ -217,6 +227,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         ],
       ),
     );
+  }
+
+  /// Returns the user's full name, falling back to their parchiId, then "You".
+  String _displayName(dynamic user) {
+    final first = (user?.firstName ?? '').toString().trim();
+    final last = (user?.lastName ?? '').toString().trim();
+    final full = [first, last].where((s) => s.isNotEmpty).join(' ');
+    if (full.isNotEmpty) return full;
+    if (user?.parchiId != null) return user.parchiId.toString();
+    return 'You';
   }
 
   Widget _buildStickyUserBar(dynamic user) {
@@ -266,13 +286,15 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  "You",
-                  style: TextStyle(
+                Text(
+                  _displayName(user),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   user.university ?? "Your University",
@@ -474,5 +496,3 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     );
   }
 }
-
-

@@ -21,8 +21,8 @@ class LeaderboardItem {
       name: json['name'] ?? '',
       university: json['university'] ?? '',
       redemptions: json['redemptions'] ?? 0,
-      userId: json['userId'] ?? json['user_id'],
-      parchiId: json['parchiId'] ?? json['parchi_id'],
+      userId: json['userId']?.toString() ?? json['user_id']?.toString(),
+      parchiId: json['parchiId']?.toString() ?? json['parchi_id']?.toString(),
     );
   }
 }
