@@ -137,10 +137,25 @@ class BonusSettingsModel {
   });
 
   factory BonusSettingsModel.fromJson(Map<String, dynamic> json) {
+    // Robust parsing for currentRedemptions which might come as String, int or num from raw SQL
+    int? current;
+    final value = json['currentRedemptions'] ?? json['current_redemptions'];
+    if (value != null) {
+      if (value is int) {
+        current = value;
+      } else if (value is String) {
+        current = int.tryParse(value);
+      } else if (value is num) {
+        current = value.toInt();
+      }
+    }
+
     return BonusSettingsModel(
-      redemptionsRequired: json['redemptionsRequired'] ?? json['redemptions_required'] ?? 0,
-      currentRedemptions: json['currentRedemptions'],
-      discountDescription: json['discountDescription'] ?? json['discount_description'] ?? '',
+      redemptionsRequired:
+          json['redemptionsRequired'] ?? json['redemptions_required'] ?? 0,
+      currentRedemptions: current,
+      discountDescription:
+          json['discountDescription'] ?? json['discount_description'] ?? '',
       isActive: json['isActive'] ?? json['is_active'] ?? true,
     );
   }

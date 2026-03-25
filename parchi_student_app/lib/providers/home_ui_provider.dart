@@ -4,6 +4,7 @@ import 'offers_provider.dart';
 import 'brands_provider.dart';
 import 'merchants_provider.dart';
 import 'user_provider.dart';
+import 'redemption_provider.dart';
 
 class HomeUIState {
   final bool isSkeletonLoading;
@@ -37,6 +38,7 @@ class HomeUINotifier extends StateNotifier<HomeUIState> {
         ref.refresh(userProfileProvider.future),
         ref.refresh(featuredOffersProvider.future),
         ref.refresh(brandsProvider.future),
+        ref.refresh(redemptionStatsProvider.future),
         ref.read(studentMerchantsProvider.notifier).refresh(),
       ]);
     } catch (e) {
