@@ -11,6 +11,7 @@ import 'screens/auth/reset_password/reset_password_screen.dart';
 import 'config/supabase_config.dart';
 import 'utils/colours.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/home/merchant_deep_link_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
 import 'screens/profile/redemption_history/redemption_history_screen.dart'; // [NEW] History Screen
 import 'screens/splash/splash_screen.dart'; // [NEW] Splash Screen
@@ -423,6 +424,70 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
+
+  // ── Deep-link handling (merchant) ─────────────────────────────────────────
+  final AppLinks _appLinks = AppLinks();
+  StreamSubscription<Uri>? _merchantLinkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initMerchantDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    _merchantLinkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initMerchantDeepLinks() async {
+    // 1. Cold-start: app was launched via a merchant deep link.
+    //    getInitialLink() is only called once here, so it won't re-fire.
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        // Defer by one frame so the widget is fully mounted and
+        // Navigator.of(context) is available.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleMerchantLink(initialUri);
+        });
+      }
+    } catch (e) {
+      debugPrint('MainScreen – error reading initial link: $e');
+    }
+
+    // 2. Warm-start: app was already running when the link was tapped.
+    _merchantLinkSubscription = _appLinks.uriLinkStream.listen(
+      _handleMerchantLink,
+      onError: (e) => debugPrint('MainScreen – link stream error: $e'),
+    );
+  }
+
+  void _handleMerchantLink(Uri uri) {
+    debugPrint('MainScreen _handleMerchantLink: $uri');
+
+    // Only act on parchi://merchant/<merchantId>
+    if (uri.scheme != 'parchi') return;
+    if (uri.host != 'merchant' && !uri.path.contains('/merchant/')) return;
+
+    // Extract merchantId: path segment takes priority, then query param.
+    final merchantId = uri.pathSegments.isNotEmpty
+        ? uri.pathSegments.first
+        : uri.queryParameters['id'] ?? '';
+
+    if (merchantId.isEmpty) return;
+
+    // Guard: widget must still be mounted before using context/Navigator.
+    if (!mounted) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MerchantDeepLinkScreen(merchantId: merchantId),
+      ),
+    );
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
