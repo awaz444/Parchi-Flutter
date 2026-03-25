@@ -128,6 +128,8 @@ class MerchantDetailsScreen extends ConsumerWidget {
                       child: ParchiLoader(
                         isLoading: controller.isLoading,
                         progress: controller.value,
+                        color: AppColors.secondary,
+                        size: 50,
                       ),
                     ),
                   ),
