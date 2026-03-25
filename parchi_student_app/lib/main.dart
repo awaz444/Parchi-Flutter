@@ -11,7 +11,6 @@ import 'screens/auth/reset_password/reset_password_screen.dart';
 import 'config/supabase_config.dart';
 import 'utils/colours.dart';
 import 'screens/home/home_screen.dart';
-import 'screens/home/merchant_deep_link_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
 import 'screens/profile/redemption_history/redemption_history_screen.dart'; // [NEW] History Screen
 import 'screens/splash/splash_screen.dart'; // [NEW] Splash Screen
@@ -24,9 +23,6 @@ import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
-
-// Global pending deep link — set before navigator is ready, consumed by AuthWrapper
-final ValueNotifier<Uri?> pendingDeepLink = ValueNotifier(null);
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -152,25 +148,6 @@ class _ParchiAppState extends State<ParchiApp> {
           ),
         ),
       );
-    } else if (uri.host == 'merchant' ||
-        uri.path.contains('/merchant/')) {
-      // Deep link: parchi://merchant/<merchantId>
-      final merchantId = uri.pathSegments.isNotEmpty
-          ? uri.pathSegments.first
-          : uri.host == 'merchant'
-              ? uri.queryParameters['id'] ?? ''
-              : '';
-      if (merchantId.isNotEmpty) {
-        final nav = NavigationService.navigatorKey.currentState;
-        if (nav != null) {
-          nav.push(MaterialPageRoute(
-            builder: (context) => MerchantDeepLinkScreen(merchantId: merchantId),
-          ));
-        } else {
-          // Navigator not ready yet (cold start during splash) — queue it
-          pendingDeepLink.value = uri;
-        }
-      }
     } else if (uri.path.contains('auth-callback') ||
         uri.host.contains('auth-callback') ||
         type == 'signup' ||
@@ -236,20 +213,6 @@ class _ParchiAppState extends State<ParchiApp> {
             (parsedUri != null && parsedUri.host.isEmpty
                 ? _lastDeepLinkUri
                 : parsedUri);
-
-        // --- Merchant deep link: parchi://merchant/<merchantId> ---
-        if (uri != null &&
-            (uri.host == 'merchant' || uri.path.contains('/merchant/'))) {
-          final merchantId = uri.pathSegments.isNotEmpty
-              ? uri.pathSegments.first
-              : uri.queryParameters['id'] ?? '';
-          if (merchantId.isNotEmpty) {
-            return MaterialPageRoute(
-              builder: (context) =>
-                  MerchantDeepLinkScreen(merchantId: merchantId),
-            );
-          }
-        }
 
         if (uri != null &&
             (uri.path.contains('auth-callback') ||
@@ -429,38 +392,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
           await authService.logout();
         }
       }
-
-      // Consume any deep link that arrived before the navigator was ready.
-      // Defer by one frame so MainScreen is fully mounted first.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _consumePendingDeepLink();
-      });
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
         FlutterNativeSplash.remove();
-      }
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _consumePendingDeepLink();
-      });
-    }
-  }
-
-  void _consumePendingDeepLink() {
-    final uri = pendingDeepLink.value;
-    if (uri == null) return;
-    pendingDeepLink.value = null;
-
-    if (uri.host == 'merchant' || uri.path.contains('/merchant/')) {
-      final merchantId = uri.pathSegments.isNotEmpty
-          ? uri.pathSegments.first
-          : uri.queryParameters['id'] ?? '';
-      if (merchantId.isNotEmpty && mounted) {
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => MerchantDeepLinkScreen(merchantId: merchantId),
-        ));
       }
     }
   }
