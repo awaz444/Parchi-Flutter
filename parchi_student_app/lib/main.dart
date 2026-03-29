@@ -395,10 +395,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkAuthState() async {
     try {
       // Start both auth logic and a minimum 2-second delay
+      // Add a 5 second timeout so the splash screen doesn't hang forever without internet
       final results = await Future.wait([
         authService.isStudentAuthenticated(),
         Future.delayed(const Duration(seconds: 2)),
-      ]);
+      ]).timeout(const Duration(seconds: 5));
 
       final isStudentAuth = results[0] as bool;
 
@@ -417,6 +418,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
       }
     } catch (e) {
+      // On timeout or SocketException, bypass the splash screen.
+      // Home screen providers will handle displaying the "No Internet" UI.
       if (mounted) {
         setState(() {
           _isLoading = false;

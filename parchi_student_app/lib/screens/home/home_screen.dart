@@ -167,7 +167,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       loading: () => const ParchiCard(
           studentName: "", studentId: "", universityName: "", isLoading: true),
       error: (err, stack) => const ParchiCard(
-          studentName: "", studentId: "", universityName: "", isLoading: true),
+          studentName: "", studentId: "", universityName: "", isLoading: false, hasError: true),
     );
 
     return Scaffold(
@@ -263,7 +263,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     isSearching: _isSearching,
                     onSearchChanged: _onSearchChanged,
                     onCancelSearch: _cancelSearch,
-                    isLoading: true,
+                    isLoading: false,
+                    hasError: true,
                   ),
                 );
               },

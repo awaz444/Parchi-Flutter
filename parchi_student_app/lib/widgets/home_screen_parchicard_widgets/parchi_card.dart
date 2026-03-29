@@ -21,6 +21,7 @@ class ParchiCard extends ConsumerStatefulWidget {
   final bool isFoundersClub;
   final bool isLoading;
   final bool isGuest;
+  final bool hasError;
 
   const ParchiCard({
     super.key,
@@ -31,6 +32,7 @@ class ParchiCard extends ConsumerStatefulWidget {
     this.isFoundersClub = false,
     this.isLoading = false,
     this.isGuest = false,
+    this.hasError = false,
   });
 
   @override
@@ -172,6 +174,7 @@ class _ParchiCardState extends ConsumerState<ParchiCard>
         isGolden: widget.isGolden,
         isFoundersClub: widget.isFoundersClub,
         isLoading: widget.isLoading,
+        hasError: widget.hasError,
       ),
     );
   }
@@ -386,6 +389,7 @@ class CardFrontContent extends StatelessWidget {
   final bool isGolden;
   final bool isFoundersClub;
   final bool isLoading;
+  final bool hasError;
 
   const CardFrontContent({
     super.key,
@@ -395,6 +399,7 @@ class CardFrontContent extends StatelessWidget {
     required this.isGolden,
     this.isFoundersClub = false,
     this.isLoading = false,
+    this.hasError = false,
   });
 
   @override
@@ -408,6 +413,31 @@ class CardFrontContent extends StatelessWidget {
     final iconColor = isGolden
         ? AppColors.textOnPrimary.withOpacity(0.3)
         : AppColors.surface.withOpacity(0.05);
+
+    if (hasError) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.sentiment_dissatisfied_rounded,
+                color: Colors.white70, size: 36),
+            const SizedBox(height: 10),
+            const Text(
+              'No Internet Connection',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Please check your network',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Stack(
       children: [
@@ -564,6 +594,7 @@ class CompactParchiHeader extends StatelessWidget {
   final double scrollProgress;
   final VoidCallback onNotificationTap;
   final bool isLoading;
+  final bool hasError;
   final bool hasUnreadNotifications;
 
   // Search
@@ -590,6 +621,7 @@ class CompactParchiHeader extends StatelessWidget {
     required this.onSearchChanged,
     required this.onCancelSearch,
     this.isLoading = false,
+    this.hasError = false,
     this.hasUnreadNotifications = false,
   });
 
