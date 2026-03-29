@@ -327,72 +327,74 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 // -------------------------------------------
                 // INTERACTIVE MODAL OVERLAY
                 // -------------------------------------------
-                AnimatedBuilder(
-                  animation: _modalController,
-                  builder: (context, child) {
-                    // Performance optimization: Don't render if closed
-                    if (_modalController.value == 0 ||
-                        _activeSheetContent == null)
-                      return const SizedBox.shrink();
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _modalController,
+                    builder: (context, child) {
+                      // Performance optimization: Don't render if closed
+                      if (_modalController.value == 0 ||
+                          _activeSheetContent == null)
+                        return const SizedBox.shrink();
 
-                    return Stack(
-                      children: [
-                        // A. BLURRED BACKGROUND
-                        // ClipRect is REQUIRED on Android — without it BackdropFilter
-                        // bleeds outside its bounds and causes graphical glitches on
-                        // Skia/Impeller. Opacity animates the fade; blur is kept at a
-                        // fixed sigma to avoid per-frame re-composition jank on Android.
-                        Positioned.fill(
-                          child: ClipRect(
-                            child: Opacity(
-                              opacity: _modalController.value.clamp(0.0, 1.0),
-                              child: GestureDetector(
-                                onTap: _closeModal,
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                  child: Container(
-                                    color: Colors.black.withOpacity(0.25),
+                      return Stack(
+                        children: [
+                          // A. BLURRED BACKGROUND
+                          // ClipRect is REQUIRED on Android — without it BackdropFilter
+                          // bleeds outside its bounds and causes graphical glitches on
+                          // Skia/Impeller. Opacity animates the fade; blur is kept at a
+                          // fixed sigma to avoid per-frame re-composition jank on Android.
+                          Positioned.fill(
+                            child: ClipRect(
+                              child: Opacity(
+                                opacity: _modalController.value.clamp(0.0, 1.0),
+                                child: GestureDetector(
+                                  onTap: _closeModal,
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                    child: Container(
+                                      color: Colors.black.withOpacity(0.25),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
 
-                        // B. FOCUSED AVATAR (Conditional)
-                        // Only render this if it's the PFP sheet (_showFocusedAvatar == true)
-                        if (_showFocusedAvatar)
-                          Positioned(
-                            top: topPadding + 54,
-                            left: 0,
-                            right: 0,
-                            child: Opacity(
-                              opacity: _modalController.value,
-                              child: buildAvatar(isInteractive: false),
+                          // B. FOCUSED AVATAR (Conditional)
+                          // Only render this if it's the PFP sheet (_showFocusedAvatar == true)
+                          if (_showFocusedAvatar)
+                            Positioned(
+                              top: topPadding + 54,
+                              left: 0,
+                              right: 0,
+                              child: Opacity(
+                                opacity: _modalController.value,
+                                child: buildAvatar(isInteractive: false),
+                              ),
                             ),
-                          ),
 
-                        // C. THE SHEET CONTENT
-                        Positioned(
-                          left: 0, right: 0, bottom: 0,
-                          // Slide up from bottom based on controller value
-                          child: FractionalTranslation(
-                            translation:
-                                Offset(0, 1.0 - _modalController.value),
-                            child: GestureDetector(
-                              onVerticalDragUpdate: _handleModalDragUpdate,
-                              onVerticalDragEnd: _handleModalDragEnd,
-                              child: Padding(
-                                // Push content up when keyboard opens (Critical for Password field)
-                                padding: MediaQuery.viewInsetsOf(context),
-                                child: _activeSheetContent,
+                          // C. THE SHEET CONTENT
+                          Positioned(
+                            left: 0, right: 0, bottom: 0,
+                            // Slide up from bottom based on controller value
+                            child: FractionalTranslation(
+                              translation:
+                                  Offset(0, 1.0 - _modalController.value),
+                              child: GestureDetector(
+                                onVerticalDragUpdate: _handleModalDragUpdate,
+                                onVerticalDragEnd: _handleModalDragEnd,
+                                child: Padding(
+                                  // Push content up when keyboard opens (Critical for Password field)
+                                  padding: MediaQuery.viewInsetsOf(context),
+                                  child: _activeSheetContent,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ],
             );
