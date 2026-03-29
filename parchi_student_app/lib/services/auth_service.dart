@@ -145,13 +145,31 @@ class AuthService {
     // Clear in-memory cache immediately
     _cachedAccessToken = null;
     _cachedExpiresAt = null;
-    final prefs = await SharedPreferences.getInstance();
-    // Remove user data from prefs
-    await prefs.remove(_userKey);
-    // Remove tokens from secure storage
-    await _secureStorage.delete(key: _accessTokenKey);
-    await _secureStorage.delete(key: _refreshTokenKey);
-    await _secureStorage.delete(key: _tokenExpiresAtKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Remove user data from prefs
+      await prefs.remove(_userKey);
+    } catch (e) {
+      print('Error removing user data: $e');
+    }
+    
+    // Remove tokens from secure storage gracefully
+    try {
+      await _secureStorage.delete(key: _accessTokenKey);
+    } catch (_) {}
+    
+    try {
+      await _secureStorage.delete(key: _refreshTokenKey);
+    } catch (_) {}
+    
+    try {
+      await _secureStorage.delete(key: _tokenExpiresAtKey);
+    } catch (_) {}
+    
+    // Attempt a full clear in case of Android keystore corruption
+    try {
+      await _secureStorage.deleteAll();
+    } catch (_) {}
   }
 
   // Check if user is authenticated
@@ -655,7 +673,13 @@ class AuthService {
     _isLoggingOut = true;
 
     try {
-      final token = await getToken();
+      String? token;
+      try {
+        token = await getToken();
+      } catch (e) {
+        // Suppress errors (like BadPaddingException) so we can proceed with local logout
+        print('Error reading token during logout: $e');
+      }
 
       if (token != null) {
         try {
@@ -676,6 +700,8 @@ class AuthService {
 
       // Navigation after logout is handled by the calling UI layer (ProfileScreen),
       // NOT here — so guests can continue browsing on the home screen.
+    } catch (e) {
+      print('Unexpected error during logout: $e');
     } finally {
       _isLoggingOut = false; // Reset so a fresh logout can run after re-login
     }
