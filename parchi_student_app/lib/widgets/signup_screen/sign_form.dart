@@ -346,33 +346,157 @@ prefixIcon: prefixText == null
     );
   }
 
+  void _showUniversityPicker(BuildContext context) {
+    if (_institutes.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.backgroundLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        String searchQuery = "";
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filtered = _institutes
+                .where((inst) =>
+                    inst.name.toLowerCase().contains(searchQuery.toLowerCase()))
+                .toList();
+            
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 16,
+                left: 24,
+                right: 24,
+                // Avoid keyboard overlay coverage
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.7,
+                child: Column(
+                  children: [
+                    // Handle Bar
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const Text(
+                      "Select University",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: "Search universities...",
+                        hintStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.7)),
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                        filled: true,
+                        fillColor: AppColors.textSecondary.withOpacity(0.1),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onChanged: (val) {
+                        setSheetState(() {
+                          searchQuery = val;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final inst = filtered[index];
+                          final isSelected = _selectedUniversity == inst.name;
+                          return InkWell(
+                            onTap: () {
+                              Navigator.pop(context);
+                              setState(() => _selectedUniversity = inst.name);
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppColors.primary.withOpacity(0.1) : null,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      inst.name,
+                                      style: TextStyle(
+                                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildUniversityDropdown() {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-          color: AppColors.textSecondary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16)),
-      child: DropdownButtonHideUnderline(
-        child: _isLoadingInstitutes 
-            ? const Center(child: Padding(
-                padding: EdgeInsets.all(8.0),
+    return GestureDetector(
+      onTap: _isLoadingInstitutes ? null : () => _showUniversityPicker(context),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+            color: AppColors.textSecondary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _selectedUniversity ?? "Select University",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: _selectedUniversity != null
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary.withOpacity(0.7),
+                ),
+              ),
+            ),
+            if (_isLoadingInstitutes)
+              const SizedBox(
+                width: 20,
+                height: 20,
                 child: SpinningLoader(size: 20, color: AppColors.secondary),
-              ))
-            : DropdownButton<String>(
-          value: _selectedUniversity,
-          hint: const Text("Select University",
-              style: TextStyle(color: AppColors.textSecondary)),
-          isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
-          items: _institutes
-              .map((institute) => DropdownMenuItem(
-                  value: institute.name, // Using name as the value
-                  child: Text(institute.name)))
-              .toList(),
-          onChanged: (v) => setState(() => _selectedUniversity = v),
-          dropdownColor: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+              )
+            else
+              const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+          ],
         ),
       ),
     );
