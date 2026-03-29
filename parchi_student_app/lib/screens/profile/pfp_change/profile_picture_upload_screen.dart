@@ -7,6 +7,7 @@ import '../../../services/supabase_storage_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../widgets/common/spinning_loader.dart';
 import '../../../providers/user_provider.dart';
+import '../../../utils/toast_utils.dart'; // [NEW] Added ToastUtils
 
 
 class ProfilePictureUploadSheet extends ConsumerStatefulWidget {
@@ -43,7 +44,7 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
         widget.onImageSelected?.call(_selectedImage); // [NEW] Notify Parent
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      if (mounted) ToastUtils.handleApiError(context, e);
     }
   }
 
@@ -71,11 +72,7 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Upload failed: $e"),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ));
+        ToastUtils.handleApiError(context, e);
       }
     } finally {
       if (mounted) {
@@ -107,11 +104,7 @@ class _ProfilePictureUploadSheetState extends ConsumerState<ProfilePictureUpload
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Failed to remove photo: $e"),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ));
+        ToastUtils.handleApiError(context, e);
       }
     } finally {
       if (mounted) {

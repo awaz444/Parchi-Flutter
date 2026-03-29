@@ -9,6 +9,7 @@ import '../../services/auth_service.dart';
 import '../../providers/user_provider.dart';
 import 'Change_password/change_password_screen.dart';
 import 'pfp_change/profile_picture_upload_screen.dart';
+import '../../utils/toast_utils.dart'; // [NEW] Added ToastUtils
 import '../../widgets/common/spinning_loader.dart'; // [REQUIRED]
 import 'about_us_screen.dart'; // [NEW]
 import 'help_center_screen.dart'; // [NEW]
@@ -147,7 +148,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
             // --- Reusable Avatar Builder ---
             Widget buildAvatar({required bool isInteractive}) {
-              return Stack(
+              return Center(
+                child: Stack(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(4),
@@ -185,6 +187,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     ),
                   ),
                 ],
+              ),
               );
             }
 
@@ -535,12 +538,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         }
       }
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Could not open the browser. Please visit parchipakistan.com/account-deletion'),
-            backgroundColor: AppColors.error,
-          ),
+        ToastUtils.showErrorToast(
+            context,
+            label: "Error",
+            message: 'Could not open the browser. Please visit parchipakistan.com/account-deletion'
         );
       }
     }
@@ -602,9 +603,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       } catch (e) {
         if (context.mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Logout failed: $e'),
-              backgroundColor: AppColors.error));
+          ToastUtils.handleApiError(context, e);
         }
       }
     }

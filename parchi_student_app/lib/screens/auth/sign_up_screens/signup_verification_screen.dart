@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../utils/colours.dart';
+import '../../../utils/toast_utils.dart'; // [NEW] Import ToastUtils
 import '../login_screens/login_screen.dart';
 import '../../../main.dart'; // To navigate to MainScreen (wrapped in AuthWrapper)
 import 'verification_success_screen.dart'; // [NEW]
@@ -179,12 +180,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
     } catch (e) {
       print("Resend failed: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ToastUtils.handleApiError(context, e);
       }
     } finally {
       if (mounted) {

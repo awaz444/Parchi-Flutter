@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'screens/auth/reset_password/reset_password_screen.dart';
 import 'config/supabase_config.dart';
 import 'utils/colours.dart';
+import 'utils/toast_utils.dart'; // [NEW] Error Toast Utilities
 import 'screens/home/home_screen.dart';
 import 'screens/home/merchant_deep_link_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
@@ -345,14 +346,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
         authService.onAuthError.listen((errorMessage) async {
       debugPrint('Auth error received: $errorMessage');
 
-      // Show the snackbar with the real reason (deactivated, rejected, etc.)
-      NavigationService.messengerKey.currentState?.showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      // Show the snackbar with the real reason using the custom Universal Toast
+      ToastUtils.handleApiError(null, errorMessage);
 
       // Navigate to login screen — tokens are already cleared by AuthService.logout()
       NavigationService.navigatorKey.currentState?.pushNamedAndRemoveUntil(

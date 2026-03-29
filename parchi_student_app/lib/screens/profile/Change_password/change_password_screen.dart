@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../utils/colours.dart';
 import '../../../services/auth_service.dart';
+import '../../../utils/toast_utils.dart'; // [NEW] Import ToastUtils
 import '../../../widgets/common/spinning_loader.dart';
 import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
 
@@ -53,10 +54,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
-        );
+        ToastUtils.handleApiError(context, e);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
