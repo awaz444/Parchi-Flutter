@@ -131,13 +131,23 @@ class Session {
        expiresAt = (DateTime.now().millisecondsSinceEpoch ~/ 1000) + expiresIn;
     }
 
+    // Supabase nests a GoTrue user under session.user (`aud`, `identities`, …).
+    // Our API user lives only on data.user — parse session.user only if it looks
+    // like the app schema (no Supabase `aud`).
+    final rawSessionUser = json['user'];
+    User? sessionUser;
+    if (rawSessionUser is Map<String, dynamic> &&
+        !rawSessionUser.containsKey('aud')) {
+      sessionUser = User.fromJson(rawSessionUser);
+    }
+
     return Session(
       accessToken: json['access_token'] as String,
       refreshToken: json['refresh_token'] as String,
       expiresAt: expiresAt,
       expiresIn: json['expires_in'] as int? ?? 3600,
       tokenType: json['token_type'] as String? ?? 'bearer',
-      user: json['user'] != null ? User.fromJson(json['user'] as Map<String, dynamic>) : null,
+      user: sessionUser,
     );
   }
 

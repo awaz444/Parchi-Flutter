@@ -280,6 +280,35 @@ class _ParchiAppState extends State<ParchiApp> {
   }
 }
 
+/// Aligns [authService] with Supabase GoTrue: access + refresh + JWT expiry.
+/// [fetchProfile] loads the user from your API on sign-in and on cold start
+/// ([AuthChangeEvent.initialSession]), not on [AuthChangeEvent.tokenRefreshed].
+Future<void> _syncAuthServiceWithSupabaseSession(
+  Session session, {
+  required bool fetchProfile,
+}) async {
+  if (session.accessToken.isEmpty) return;
+
+  await authService.setToken(session.accessToken);
+  final rt = session.refreshToken;
+  if (rt != null && rt.isNotEmpty) {
+    await authService.setRefreshToken(rt);
+  }
+
+  final exp = session.expiresAt ??
+      (DateTime.now().millisecondsSinceEpoch ~/ 1000) +
+          (session.expiresIn ?? 3600);
+  await authService.setTokenExpiry(exp);
+
+  if (fetchProfile) {
+    try {
+      await authService.getProfile();
+    } catch (e) {
+      debugPrint('Error syncing profile after Supabase session: $e');
+    }
+  }
+}
+
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -306,24 +335,23 @@ class _AuthWrapperState extends State<AuthWrapper> {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
 
-      if (event == AuthChangeEvent.signedIn && session != null) {
-        if (session.accessToken.isNotEmpty) {
-          try {
-            await authService.setToken(session.accessToken);
-            if (session.refreshToken != null) {
-              await authService.setRefreshToken(session.refreshToken!);
-            }
-
-            // Sync user profile from backend
-            await authService.getProfile();
-
-            if (mounted) {
-              // Re-check auth state to update UI
-              await _checkAuthState();
-            }
-          } catch (e) {
-            debugPrint("Error syncing auth state: $e");
+      if (session != null &&
+          session.accessToken.isNotEmpty &&
+          (event == AuthChangeEvent.signedIn ||
+              event == AuthChangeEvent.tokenRefreshed ||
+              event == AuthChangeEvent.initialSession)) {
+        try {
+          final fetchProfile = event == AuthChangeEvent.signedIn ||
+              event == AuthChangeEvent.initialSession;
+          await _syncAuthServiceWithSupabaseSession(
+            session,
+            fetchProfile: fetchProfile,
+          );
+          if (mounted) {
+            await _checkAuthState();
           }
+        } catch (e) {
+          debugPrint('Error syncing auth state: $e');
         }
       } else if (event == AuthChangeEvent.signedOut) {
         if (mounted) {

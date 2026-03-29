@@ -16,6 +16,10 @@ class AuthService {
 
   bool _isLoggingOut = false; // Logout lock (instance-level, not static)
 
+  /// Single in-flight refresh so concurrent callers share one HTTP refresh
+  /// (avoids refresh-token rotation races).
+  Future<void>? _refreshInFlight;
+
   final _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
@@ -198,9 +202,25 @@ class AuthService {
     return true;
   }
 
-  // Refresh Token
+  // Refresh Token (serialized: one in-flight refresh at a time)
   Future<void> refreshToken() async {
-    // [NEW] Lock check
+    if (_isLoggingOut) throw Exception('Session expired');
+
+    final existing = _refreshInFlight;
+    if (existing != null) return existing;
+
+    final future = _performTokenRefresh();
+    _refreshInFlight = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_refreshInFlight, future)) {
+        _refreshInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _performTokenRefresh() async {
     if (_isLoggingOut) throw Exception('Session expired');
 
     final refreshToken = await getRefreshToken();
