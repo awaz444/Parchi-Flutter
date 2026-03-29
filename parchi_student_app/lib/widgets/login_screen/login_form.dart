@@ -5,6 +5,7 @@ import '../../utils/colours.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
 import '../../providers/user_provider.dart';
+import '../../utils/toast_utils.dart';
 
 class LoginForm extends ConsumerStatefulWidget {
   final VoidCallback onSignupTap;
@@ -26,7 +27,6 @@ class _LoginFormState extends ConsumerState<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -38,13 +38,12 @@ class _LoginFormState extends ConsumerState<LoginForm> {
   Future<void> _handleLogin() async {
     // 1. Manual Validation (No Layout Shift)
     if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
-      setState(() => _errorMessage = "Please Fill Out All The Fields");
+      ToastUtils.showErrorToast(context, label: "Validation Error", message: "Please Fill Out All The Fields");
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // Clear previous errors
     });
 
     try {
@@ -72,10 +71,9 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       if (err.contains("SocketException") ||
           err.contains("ClientException") ||
           err.contains("Connection refused")) {
-        setState(() => _errorMessage = "Check your internet connection");
+        ToastUtils.showErrorToast(context, label: "Network Error", message: "Check your internet connection");
       } else {
-        setState(() =>
-            _errorMessage = err.replaceFirst('Exception: ', ''));
+        ToastUtils.showErrorToast(context, label: "Error", message: err.replaceFirst('Exception: ', ''));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -112,12 +110,6 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             const SizedBox(height: 16),
             _buildTextField(_passwordController, "Password", Icons.lock_outline,
                 isPassword: true, action: TextInputAction.done),
-
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 22),
-              Text(_errorMessage!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 12)),
-            ],
 
             const SizedBox(height: 20), // Spacing for forgot password
 

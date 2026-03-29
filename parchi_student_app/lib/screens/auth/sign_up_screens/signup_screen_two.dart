@@ -336,9 +336,10 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                           children: [
                             const SizedBox(height: 10),
                             const Text(
-                                "Upload your verification documents.", // [MODIFIED] Generic text
+                                "Upload your verification documents. These details are solely for verifying your student status. Parchi does not permanently store or hold these documents.",
                                 style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
+                                    height: 1.4,
                                     color: AppColors.textSecondary)),
                             
                             const SizedBox(height: 16),
@@ -442,6 +443,34 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                                 image: _cnicBackImage),
                             const SizedBox(height: 24),
                             _buildInputLabel("Selfie Image *"),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                              ),
+                              child: const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Selfie Guidelines:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+                                  SizedBox(height: 10),
+                                  Text("• Headshot: Face and shoulders only", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                  SizedBox(height: 6),
+                                  Text("• Visibility: No glasses, masks, or hands on face", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                  SizedBox(height: 6),
+                                  Text("• Lighting: Good lighting (avoid heavy shadows)", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                  SizedBox(height: 6),
+                                  Text("• Background: Use a plain or simple background", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                  SizedBox(height: 6),
+                                  Text("• Recency: Photo must be recent and look like you", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                  SizedBox(height: 12),
+                                  Text("Tip: Hold phone at eye level in natural light.", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.primary)),
+                                ],
+                              ),
+                            ),
                             _buildUploadBox(
                                 "Upload Selfie",
                                 _selfieImage != null,

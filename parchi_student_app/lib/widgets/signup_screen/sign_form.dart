@@ -4,7 +4,7 @@ import '../common/spinning_loader.dart';
 import '../../screens/auth/sign_up_screens/signup_screen_two.dart'; 
 import '../../services/institutes_service.dart';
 import '../../models/institute_model.dart'; 
-
+import '../../utils/toast_utils.dart';
 class SignupForm extends StatefulWidget {
   final VoidCallback onLoginTap;
 
@@ -28,7 +28,6 @@ class _SignupFormState extends State<SignupForm> {
   DateTime? _selectedDate; // NEW
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  String? _errorMessage;
 
   final InstitutesService _institutesService = InstitutesService();
   List<Institute> _institutes = [];
@@ -122,23 +121,23 @@ class _SignupFormState extends State<SignupForm> {
         _cnicController.text.trim().isEmpty || // CNIC mandatory
         _dobController.text.isEmpty || // DOB mandatory
         _selectedUniversity == null) {
-      setState(() => _errorMessage = "Please Fill Out All The Fields");
+      ToastUtils.showErrorToast(context, label: "Validation Error", message: "Please Fill Out All The Fields");
       return;
     }
 
     // CNIC Validation (Example: 13 digits)
     if (_cnicController.text.trim().length != 13) {
-       setState(() => _errorMessage = "CNIC must be 13 digits");
+       ToastUtils.showErrorToast(context, label: "Validation Error", message: "CNIC must be 13 digits");
        return;
     }
 
     if (_passwordController.text.length < 6) {
-      setState(() => _errorMessage = "Password must be at least 6 characters");
+      ToastUtils.showErrorToast(context, label: "Validation Error", message: "Password must be at least 6 characters");
       return;
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() => _errorMessage = "Passwords Don't Match");
+      ToastUtils.showErrorToast(context, label: "Validation Error", message: "Passwords Don't Match");
       return;
     }
 
@@ -146,7 +145,6 @@ class _SignupFormState extends State<SignupForm> {
     if (true) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null; 
       });
       await Future.delayed(const Duration(milliseconds: 500));
 
@@ -245,13 +243,6 @@ class _SignupFormState extends State<SignupForm> {
               ),
               const SizedBox(height: 12),
               _buildUniversityDropdown(),
-
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 12),
-                Text(_errorMessage!,
-                    style: const TextStyle(
-                        color: AppColors.error, fontSize: 12)),
-              ],
 
               const SizedBox(height: 18),
 

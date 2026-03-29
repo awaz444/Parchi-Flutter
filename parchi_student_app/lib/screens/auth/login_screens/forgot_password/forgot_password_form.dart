@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../widgets/common/spinning_loader.dart';
 import '../../../../utils/colours.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../utils/toast_utils.dart';
 
 class ForgotPasswordForm extends StatefulWidget {
   final VoidCallback onBackTap;
@@ -16,7 +17,6 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -31,7 +31,6 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -61,9 +60,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
         );
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
+      ToastUtils.showErrorToast(context, label: "Error", message: e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) {
         setState(() {
@@ -134,33 +131,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
               ),
             ),
 
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline,
-                        color: Colors.red.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            // Error UI removed, ToastUtils is used instead.
 
             const SizedBox(height: 22), // Compensation for missing fields to align buttons
 

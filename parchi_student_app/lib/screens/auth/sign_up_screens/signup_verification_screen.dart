@@ -408,6 +408,18 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
                             ],
                             
                             const SizedBox(height: 20),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Text(
+                                "Your submitted documents are solely used for verification and will not be permanently held by Parchi.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
