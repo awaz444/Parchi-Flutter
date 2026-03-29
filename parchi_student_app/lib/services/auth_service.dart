@@ -74,15 +74,16 @@ class AuthService {
 
     if (expiresAt != null) {
       final expiryTime = expiresAt * 1000; // Convert to milliseconds
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final timeRemainingSeconds = (expiryTime - now) ~/ 1000;
+      
       // Check if expired or about to expire (within 5 minutes)
-      if (DateTime.now().millisecondsSinceEpoch >= expiryTime - 300000) {
+      if (now >= expiryTime - 300000) {
         try {
-          print("Token expired or close to expiry. Refreshing...");
           await refreshToken();
           // refreshToken() updates the cache via setToken() / setTokenExpiry()
           return _cachedAccessToken;
         } catch (e) {
-          print("Auto-refresh in getToken failed: $e");
           // Return null so callers know auth is required — do NOT return the
           // expired token, as the backend will reject it.
           return null;
@@ -244,10 +245,12 @@ class AuthService {
         final sessionData = responseData['data']['session'];
         if (sessionData != null) {
           if (sessionData['access_token'] != null) {
-            await setToken(sessionData['access_token']);
+            final newAccess = sessionData['access_token'];
+            await setToken(newAccess);
           }
           if (sessionData['refresh_token'] != null) {
-            await setRefreshToken(sessionData['refresh_token']);
+            final newRefresh = sessionData['refresh_token'];
+            await setRefreshToken(newRefresh);
           }
           if (sessionData['expires_at'] != null) {
             await setTokenExpiry(sessionData['expires_at']);

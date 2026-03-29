@@ -144,4 +144,77 @@ class ToastUtils {
       ..hideCurrentSnackBar()
       ..showSnackBar(snackBar);
   }
+
+  /// Displays a custom built SnackBar Success Toast
+  static void showSuccessToast(
+    BuildContext? context, {
+    required String label,
+    required String message,
+  }) {
+    // Attempt to use global context if not provided
+    final BuildContext? targetContext = context ?? NavigationService.messengerKey.currentContext;
+
+    if (targetContext == null) return;
+
+    final snackBar = SnackBar(
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent,
+      margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF388E3C), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 2.0),
+              child: Icon(Icons.check_circle_outline, color: Color(0xFF388E3C), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Color(0xFF388E3C),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+      duration: const Duration(seconds: 4),
+    );
+
+    ScaffoldMessenger.of(targetContext)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  }
 }

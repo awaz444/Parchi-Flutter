@@ -318,7 +318,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           ],
                         ),
                         
-                        const Spacer(flex: 2),
+
                       ],
                     ),
                   ),
