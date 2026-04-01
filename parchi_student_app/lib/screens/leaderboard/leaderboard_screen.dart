@@ -258,7 +258,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       child: Row(
         children: [
           SizedBox(
-            width: 40,
+            width: 48,
             child: statsAsync.when(
               data: (stats) => Text(
                 stats.leaderboardPosition > 0
@@ -266,7 +266,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                     : "-",
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -372,12 +372,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 40,
+            width: 48,
             child: Text(
               "#$rank",
               style: TextStyle(
                 color: isCurrentUser ? Colors.white : AppColors.primary,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -456,7 +456,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           BlinkingSkeleton(
-              width: 30,
+              width: 38,
               height: 20,
               baseColor: AppColors.primary.withOpacity(0.1)),
           const SizedBox(width: 16),

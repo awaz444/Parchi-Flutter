@@ -635,6 +635,32 @@ class AuthService {
     }
   }
 
+  // [NEW] Mark App Intro As Seen
+  Future<void> markAppIntroSeen() async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('No token found. Please login again.');
+    }
+
+    try {
+      final response = await _httpClient.patch(
+        Uri.parse('${ApiConfig.baseUrl}/students/app-intro'),
+        headers: {
+          ..._baseHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        final responseData = jsonDecode(response.body);
+        throw Exception(
+            responseData['message'] ?? 'Failed to update app intro status');
+      }
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
   // Change Password
   Future<void> changePassword({
     required String currentPassword,

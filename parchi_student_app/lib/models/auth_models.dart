@@ -18,6 +18,7 @@ class User {
   final bool isFoundersClub; // [NEW]
   final String? verificationStatus; // [NEW]
   final bool hasUnreadNotifications; // [NEW]
+  final bool hasSeenAppIntro; // [NEW]
 
   User({
     required this.id,
@@ -33,6 +34,7 @@ class User {
     this.isFoundersClub = false, // [NEW] Default to false
     this.verificationStatus, // [NEW]
     this.hasUnreadNotifications = false, // [NEW]
+    this.hasSeenAppIntro = false, // [NEW]
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -80,6 +82,11 @@ class User {
       
       // [NEW] Parse hasUnreadNotifications
       hasUnreadNotifications: json['hasUnreadNotifications'] as bool? ?? false,
+
+      // [NEW] Parse hasSeenAppIntro
+      hasSeenAppIntro: studentData != null
+          ? (studentData['has_seen_app_intro'] as bool? ?? false)
+          : (json['has_seen_app_intro'] as bool? ?? json['hasSeenAppIntro'] as bool? ?? false),
     );
   }
 
@@ -99,6 +106,7 @@ class User {
       'isFoundersClub': isFoundersClub, // [NEW]
       'verificationStatus': verificationStatus, // [NEW]
       'hasUnreadNotifications': hasUnreadNotifications, // [NEW]
+      'hasSeenAppIntro': hasSeenAppIntro, // [NEW]
     };
   }
 }

@@ -53,4 +53,38 @@ class UserProfile extends _$UserProfile {
   void clearUser() {
     state = const AsyncValue.data(null);
   }
+
+  // Update app intro state locally (fast UI response) and ping backend
+  Future<void> markAppIntroSeen() async {
+    final currentUser = state.value;
+    if (currentUser != null) {
+      // Optimistic local update
+      final updatedUser = User(
+        id: currentUser.id,
+        email: currentUser.email,
+        role: currentUser.role,
+        isActive: currentUser.isActive,
+        phone: currentUser.phone,
+        firstName: currentUser.firstName,
+        lastName: currentUser.lastName,
+        parchiId: currentUser.parchiId,
+        university: currentUser.university,
+        profilePicture: currentUser.profilePicture,
+        isFoundersClub: currentUser.isFoundersClub,
+        verificationStatus: currentUser.verificationStatus,
+        hasUnreadNotifications: currentUser.hasUnreadNotifications,
+        hasSeenAppIntro: true, // Mark as seen
+      );
+      state = AsyncValue.data(updatedUser);
+      authService.setUser(updatedUser); // Update local cache
+
+      // Ping backend asynchronously to persist without blocking UI
+      try {
+        await authService.markAppIntroSeen();
+      } catch (e) {
+        // Silently fail or log if backend call fails (can retry next session)
+        print('Error marking app intro as seen: $e');
+      }
+    }
+  }
 }
