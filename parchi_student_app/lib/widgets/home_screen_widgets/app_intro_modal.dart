@@ -72,7 +72,7 @@ class AppIntroModal extends StatelessWidget {
                     _buildIntroPoint(
                       icon: Icons.map_rounded,
                       text:
-                          'Open the map to discover 50+ partner brands in Karachi where your Parchi ID is essentially "student currency." From coffee to textbooks, find where you’re saving next.',
+                          'Explore the app to discover 50+ partner locations in Karachi where your Parchi ID is essentially "student currency." From coffee to textbooks, find where you’re saving next.',
                     ),
                     const SizedBox(height: 16),
                     _buildIntroPoint(
