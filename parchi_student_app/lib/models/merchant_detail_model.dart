@@ -6,6 +6,8 @@ class MerchantDetailModel {
   final String? bannerUrl;
   final String? category;
   final String? termsAndConditions;
+  final BonusSettingsModel? bonusSettings;
+  final List<BranchOffer> offers;
   final List<BranchModel> branches;
 
   MerchantDetailModel({
@@ -15,6 +17,8 @@ class MerchantDetailModel {
     this.bannerUrl,
     this.category,
     this.termsAndConditions,
+    this.bonusSettings,
+    required this.offers,
     required this.branches,
   });
 
@@ -25,10 +29,18 @@ class MerchantDetailModel {
       logoPath: json['logoPath'] ?? json['logo_path'],
       bannerUrl: json['bannerUrl'] ?? json['banner_url'],
       category: json['category'],
-      termsAndConditions: json['termsAndConditions'] ?? json['terms_and_conditions'],
+      termsAndConditions:
+          json['termsAndConditions'] ?? json['terms_and_conditions'],
+      bonusSettings: json['bonusSettings'] != null
+          ? BonusSettingsModel.fromJson(json['bonusSettings'])
+          : null,
+      offers: (json['offers'] as List<dynamic>?)
+              ?.map((offer) => BranchOffer.fromJson(offer))
+              .toList() ??
+          [],
       branches: (json['branches'] as List<dynamic>?)
               ?.map((branch) => BranchModel.fromJson(branch))
-          .toList() ??
+              .toList() ??
           [],
     );
   }
@@ -88,8 +100,6 @@ class BranchModel {
   final double? latitude;
   final double? longitude;
   final String? contactPhone;
-  final BonusSettingsModel? bonusSettings;
-  final List<BranchOffer> offers;
 
   BranchModel({
     required this.id,
@@ -98,27 +108,22 @@ class BranchModel {
     this.city,
     this.latitude,
     this.longitude,
-    this.contactPhone,
-    this.bonusSettings,
-    required this.offers,
+    required this.contactPhone,
   });
 
   factory BranchModel.fromJson(Map<String, dynamic> json) {
     return BranchModel(
       id: json['id'] ?? '',
-      name: json['name'] ?? '',
+      name: json['branchName'] ?? json['name'] ?? '',
       address: json['address'] ?? '',
       city: json['city'],
-      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
-      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
-      contactPhone: json['contactPhone'] ?? json['contact_phone'],
-      bonusSettings: json['bonusSettings'] != null
-          ? BonusSettingsModel.fromJson(json['bonusSettings'])
+      latitude: json['latitude'] != null
+          ? (json['latitude'] as num).toDouble()
           : null,
-      offers: (json['offers'] as List<dynamic>?)
-              ?.map((offer) => BranchOffer.fromJson(offer))
-          .toList() ??
-          [],
+      longitude: json['longitude'] != null
+          ? (json['longitude'] as num).toDouble()
+          : null,
+      contactPhone: json['contactPhone'] ?? json['contact_phone'],
     );
   }
 }

@@ -25,8 +25,7 @@ class MerchantDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visibleBranches =
-        merchant.branches.where((b) => b.offers.isNotEmpty).toList();
+    final bool hasOffers = merchant.offers.isNotEmpty;
 
     Future<void> refresh() async {
       return ref.refresh(merchantDetailsProvider(merchant.id).future);
@@ -149,14 +148,23 @@ class MerchantDetailsScreen extends ConsumerWidget {
                 child: _MerchantIdentityBlock(merchant: merchant),
               ),
 
-              // ── Branch coupon cards ────────────────────────────────────
+              // ── Merchant unified ticket ──────────────────────────────
+              if (hasOffers)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  sliver: SliverToBoxAdapter(
+                    child: _MerchantCouponCard(merchant: merchant),
+                  ),
+                ),
+
+              // ── Branch location list ───────────────────────────────────
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) =>
-                        _BranchCouponCard(branch: visibleBranches[index]),
-                    childCount: visibleBranches.length,
+                        _BranchLocationItem(branch: merchant.branches[index]),
+                    childCount: merchant.branches.length,
                   ),
                 ),
               ),
@@ -328,15 +336,15 @@ class _MerchantIdentityBlock extends StatelessWidget {
 // Branch coupon card — the hero of the screen.
 // Layout: top "stub" (offer) / perforated tear / bottom "body" (branch info)
 // ─────────────────────────────────────────────────────────────────────────────
-class _BranchCouponCard extends StatelessWidget {
-  final BranchModel branch;
+class _MerchantCouponCard extends StatelessWidget {
+  final MerchantDetailModel merchant;
 
-  const _BranchCouponCard({required this.branch});
+  const _MerchantCouponCard({required this.merchant});
 
   @override
   Widget build(BuildContext context) {
-    final offer = branch.offers.isNotEmpty ? branch.offers.first : null;
-    final bonus = branch.bonusSettings;
+    final offer = merchant.offers.isNotEmpty ? merchant.offers.first : null;
+    final bonus = merchant.bonusSettings;
     final bool hasBonus = bonus != null && bonus.isActive;
 
     return Container(
@@ -366,8 +374,8 @@ class _BranchCouponCard extends StatelessWidget {
             // ── PERFORATED DIVIDER ────────────────────────────────────
             if (offer != null) const _PerforatedDivider(),
 
-            // ── BOTTOM BODY: branch details ───────────────────────────
-            _BranchBody(branch: branch, hasBonus: hasBonus),
+            // ── BOTTOM BODY: merchant/loyalty info ────────────────────
+            _MerchantTicketBody(merchant: merchant, hasBonus: hasBonus),
 
             // ── LOYALTY BONUS (if active) ─────────────────────────────
             if (hasBonus) _LoyaltyBonusSection(bonus: bonus!),
@@ -530,11 +538,11 @@ class _PerforationPainter extends CustomPainter {
 // ─────────────────────────────────────────────────────────────────────────────
 // Branch body: address, phone
 // ─────────────────────────────────────────────────────────────────────────────
-class _BranchBody extends StatelessWidget {
-  final BranchModel branch;
+class _MerchantTicketBody extends StatelessWidget {
+  final MerchantDetailModel merchant;
   final bool hasBonus;
 
-  const _BranchBody({required this.branch, required this.hasBonus});
+  const _MerchantTicketBody({required this.merchant, required this.hasBonus});
 
   @override
   Widget build(BuildContext context) {
@@ -545,9 +553,9 @@ class _BranchBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Branch name
+          // Business name
           Text(
-            branch.name,
+            merchant.businessName,
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w800,
@@ -556,19 +564,18 @@ class _BranchBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          // Address
-          Row(
+          const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 1.5),
-                child: Icon(Icons.location_on_outlined,
+                child: Icon(Icons.info_outline,
                     size: 14, color: AppColors.textSecondary),
               ),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  "${branch.address}${branch.city != null ? ', ${branch.city}' : ''}",
+                  "Collect punch-stamps at any valid branch to unlock loyalty rewards.",
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
@@ -578,7 +585,58 @@ class _BranchBody extends StatelessWidget {
               ),
             ],
           ),
-          // Phone
+          if (!hasBonus) const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _BranchLocationItem extends StatelessWidget {
+  final BranchModel branch;
+
+  const _BranchLocationItem({required this.branch});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withOpacity(0.06), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            branch.name,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111111),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.location_on_outlined,
+                  size: 14, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  "${branch.address}${branch.city != null ? ', ${branch.city}' : ''}",
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
           if (branch.contactPhone != null &&
               branch.contactPhone!.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -586,20 +644,18 @@ class _BranchBody extends StatelessWidget {
               children: [
                 const Icon(Icons.phone_outlined,
                     size: 14, color: AppColors.primary),
-                const SizedBox(width: 5),
+                const SizedBox(width: 6),
                 Text(
                   branch.contactPhone!,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
                   ),
                 ),
               ],
             ),
           ],
-          if (!hasBonus) const SizedBox(height: 4),
         ],
       ),
     );
