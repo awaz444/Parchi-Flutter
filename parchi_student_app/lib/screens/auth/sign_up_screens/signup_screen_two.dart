@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // [NEW]
 import '../../../utils/colours.dart';
+import '../../../utils/toast_utils.dart';
 import '../../../services/supabase_storage_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../models/auth_models.dart'; // [NEW] For ConflictException
@@ -48,7 +49,6 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
   File? _cnicFrontImage;
   File? _cnicBackImage;
   File? _selfieImage;
-  String? _validationError;
   bool _isUploading = false;
   final AuthService _authService = AuthService();
   bool _isStudentIdVerification = true; // [NEW] Default to Student ID
@@ -94,41 +94,45 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
           } else {
             _selfieImage = File(image.path);
           }
-          _validationError = null;
         });
       }
-    } catch (e) {/* Error handling */}
+    } catch (e) {
+      if (mounted) ToastUtils.handleApiError(context, e);
+    }
   }
 
-  void _showError(String message) {
-    if (mounted) setState(() => _validationError = message);
-  }
+
 
   bool _validateForm() {
     if (_studentIdImage == null) {
-      setState(() => _validationError = _isStudentIdVerification 
-          ? "Upload Student ID Front" 
-          : "Upload Paid Fee Challan");
+      ToastUtils.showErrorToast(context,
+          label: "Validation Error",
+          message: _isStudentIdVerification
+              ? "Upload Student ID Front"
+              : "Upload Paid Fee Challan");
       return false;
     }
     // Only check back image if using Student ID verification
     if (_isStudentIdVerification && _studentIdBackImage == null) {
-      setState(() => _validationError = "Upload Student ID Back");
+      ToastUtils.showErrorToast(context,
+          label: "Validation Error", message: "Upload Student ID Back");
       return false;
     }
     if (_cnicFrontImage == null) {
-      setState(() => _validationError = "Upload CNIC Front");
+      ToastUtils.showErrorToast(context,
+          label: "Validation Error", message: "Upload CNIC Front");
       return false;
     }
     if (_cnicBackImage == null) {
-      setState(() => _validationError = "Upload CNIC Back");
+      ToastUtils.showErrorToast(context,
+          label: "Validation Error", message: "Upload CNIC Back");
       return false;
     }
     if (_selfieImage == null) {
-      setState(() => _validationError = "Upload Selfie");
+      ToastUtils.showErrorToast(context,
+          label: "Validation Error", message: "Upload Selfie");
       return false;
     }
-    setState(() => _validationError = null);
     return true;
   }
 
@@ -185,7 +189,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
         // [NEW] Handle Pending/Registered User Logic
         await _checkAccountStatus();
       } else {
-        _showError('Signup failed: ${e.toString()}');
+        ToastUtils.handleApiError(context, e);
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -216,7 +220,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
              }
              return;
           } else if (user.verificationStatus == 'approved') {
-             _showError("Account already approved. Please login.");
+             ToastUtils.showErrorToast(context, label: "Error", message: "Account already approved. Please login.");
              Future.delayed(const Duration(seconds: 2), () {
                 if(mounted) {
                   Navigator.of(context).popUntil((route) => route.isFirst);
@@ -227,10 +231,10 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
        }
        
        // Default fallback
-        _showError("Email already registered. Please login.");
+       ToastUtils.showErrorToast(context, label: "Error", message: "Email already registered. Please login.");
      } catch (e) {
        // Login failed (wrong password? or other issue)
-       _showError('Signup failed: Email already registered.');
+       ToastUtils.handleApiError(context, e);
      }
   }
 
@@ -476,15 +480,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                                 _selfieImage != null,
                                 () => _showImageSourceDialog(4),
                                 image: _selfieImage),
-                            if (_validationError != null) ...[
-                              const SizedBox(height: 16),
-                              Center(
-                                child: Text(_validationError!,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        color: AppColors.error, fontSize: 12)),
-                              ),
-                            ],
+
                             const SizedBox(height: 30),
                             SizedBox(
                               width: double.infinity,

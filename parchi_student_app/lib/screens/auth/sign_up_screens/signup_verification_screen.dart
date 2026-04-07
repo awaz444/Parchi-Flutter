@@ -101,6 +101,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
         setState(() {
           _isLinkExpired = true;
         });
+        ToastUtils.handleApiError(context, e);
       }
     }
   }

@@ -67,14 +67,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               (route) => false);
       }
     } catch (e) {
-      final err = e.toString();
-      if (err.contains("SocketException") ||
-          err.contains("ClientException") ||
-          err.contains("Connection refused")) {
-        ToastUtils.showErrorToast(context, label: "Network Error", message: "Check your internet connection");
-      } else {
-        ToastUtils.showErrorToast(context, label: "Error", message: err.replaceFirst('Exception: ', ''));
-      }
+      ToastUtils.handleApiError(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

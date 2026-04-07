@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../../utils/colours.dart';
 import '../common/spinning_loader.dart';
 import '../../screens/auth/sign_up_screens/signup_screen_two.dart'; 
+import '../common/blinking_skeleton.dart';
 import '../../services/institutes_service.dart';
 import '../../models/institute_model.dart'; 
+import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import '../../utils/toast_utils.dart';
 class SignupForm extends StatefulWidget {
   final VoidCallback onLoginTap;
@@ -49,14 +52,9 @@ class _SignupFormState extends State<SignupForm> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoadingInstitutes = false;
-          // Fallback to empty or show error
-        });
-        // existing hardcoded list as fallback could be an option, but user wants api.
-        // For now, we'll leave it empty or maybe show a snackbar.
+        ToastUtils.handleApiError(context, e);
       }
-      print("Error fetching institutes: $e");
+      debugPrint("Error fetching institutes: $e");
     }
   }
 
@@ -100,7 +98,7 @@ class _SignupFormState extends State<SignupForm> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-        _dobController.text = "${picked.toLocal()}".split(' ')[0]; // yyyy-mm-dd
+        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
     }
   }
@@ -125,9 +123,15 @@ class _SignupFormState extends State<SignupForm> {
       return;
     }
 
-    // CNIC Validation (Example: 13 digits)
-    if (_cnicController.text.trim().length != 13) {
-       ToastUtils.showErrorToast(context, label: "Validation Error", message: "CNIC must be 13 digits");
+    // Phone Validation (exactly 10 digits)
+    if (_phoneController.text.trim().length != 10) {
+      ToastUtils.showErrorToast(context, label: "Validation Error", message: "Phone number must be exactly 10 digits");
+      return;
+    }
+
+    // CNIC Validation (13 digits + 2 hyphens = 15 characters)
+    if (_cnicController.text.trim().length != 15) {
+       ToastUtils.showErrorToast(context, label: "Validation Error", message: "CNIC must be in format xxxxx-xxxxxxx-x");
        return;
     }
 
@@ -211,7 +215,7 @@ class _SignupFormState extends State<SignupForm> {
               _buildTextField(
                   _lastNameController, "Last Name", Icons.person_outline, action: TextInputAction.next),
               const SizedBox(height: 12),
-              _buildTextField(_emailController, "Student Email",
+              _buildTextField(_emailController, "Email",
                   Icons.email_outlined, action: TextInputAction.next),
               const SizedBox(height: 12),
               _buildTextField(_passwordController, "Password",
@@ -225,12 +229,14 @@ class _SignupFormState extends State<SignupForm> {
               // Phone (Mandatory)
               _buildTextField(_phoneController, "Phone Number",
                   Icons.phone_outlined,
-                  isNumber: true, action: TextInputAction.next, prefixText: "+92 "),
+                  isNumber: true, maxLength: 10, action: TextInputAction.next, prefixText: "+92 ",
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
               const SizedBox(height: 12),
                // CNIC (Mandatory)
-              _buildTextField(_cnicController, "CNIC (13 digits)",
+              _buildTextField(_cnicController, "CNIC (xxxxx-xxxxxxx-x)",
                   Icons.credit_card,
-                  isNumber: true, maxLength: 13, action: TextInputAction.next),
+                  isNumber: true, maxLength: 15, action: TextInputAction.next,
+                  inputFormatters: [CnicInputFormatter()]),
               const SizedBox(height: 12),
               // Date of Birth (Mandatory)
               GestureDetector(
@@ -286,7 +292,7 @@ class _SignupFormState extends State<SignupForm> {
 
   Widget _buildTextField(
       TextEditingController controller, String hint, IconData icon,
-      {bool isPassword = false, bool isNumber = false, int? maxLength, bool isReadOnly = false, TextInputAction action = TextInputAction.done, String? prefixText}) {
+      {bool isPassword = false, bool isNumber = false, int? maxLength, bool isReadOnly = false, TextInputAction action = TextInputAction.done, String? prefixText, List<TextInputFormatter>? inputFormatters}) {
     return Container(
       decoration: BoxDecoration(
           color: AppColors.textSecondary.withOpacity(0.1),
@@ -298,6 +304,7 @@ class _SignupFormState extends State<SignupForm> {
         textInputAction: action, // Controls keyboard return key
         readOnly: isReadOnly,
         maxLength: maxLength,
+        inputFormatters: inputFormatters,
         onTap: isReadOnly ? () => _selectDate(context) : null,
         decoration: InputDecoration(
           hintText: hint,
@@ -458,8 +465,16 @@ prefixIcon: prefixText == null
   }
 
   Widget _buildUniversityDropdown() {
+    if (_isLoadingInstitutes) {
+      return BlinkingSkeleton(
+        width: double.infinity,
+        height: 56,
+        borderRadius: 16,
+        baseColor: AppColors.textSecondary.withOpacity(0.1),
+      );
+    }
     return GestureDetector(
-      onTap: _isLoadingInstitutes ? null : () => _showUniversityPicker(context),
+      onTap: () => _showUniversityPicker(context),
       child: Container(
         height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -479,17 +494,43 @@ prefixIcon: prefixText == null
                 ),
               ),
             ),
-            if (_isLoadingInstitutes)
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: SpinningLoader(size: 20, color: AppColors.secondary),
-              )
-            else
-              const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+            const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
           ],
         ),
       ),
     );
+  }
+}
+
+class CnicInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text;
+    
+    // Allow only digits and hyphens
+    text = text.replaceAll(RegExp(r'[^\d-]'), '');
+
+    if (newValue.selection.baseOffset < oldValue.selection.baseOffset) {
+      // User is deleting characters
+      return newValue;
+    }
+
+    var buffer = StringBuffer();
+    var digitsOnly = text.replaceAll('-', '');
+    
+    for (int i = 0; i < digitsOnly.length; i++) {
+      if (i == 5) {
+        buffer.write('-');
+      } else if (i == 12) {
+        buffer.write('-');
+      }
+      buffer.write(digitsOnly[i]);
+    }
+
+    var string = buffer.toString();
+    return newValue.copyWith(
+        text: string,
+        selection: TextSelection.collapsed(offset: string.length));
   }
 }
