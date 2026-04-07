@@ -28,7 +28,21 @@ class ToastUtils {
       return;
     }
 
-    // 2. Unhandled Backend Crashes (500s, HTML traces, Raw Exceptions, excessive length)
+    // 2. Account deactivation / disabled status
+    if (errorLower.contains("deactivated") || 
+        errorLower.contains("disabled") || 
+        errorLower.contains("suspended") ||
+        errorLower.contains("banned")) {
+      showErrorToast(
+        context,
+        label: "Account Status",
+        message: "Account currently disabled. Contact info@parchipakistan.com for support.",
+        labelColor: unexpectedErrorColor,
+      );
+      return;
+    }
+
+    // 3. Unhandled Backend Crashes (500s, HTML traces, Raw Exceptions, excessive length)
     bool isUnexpected = false;
     if (errorLower.contains("internal server error") ||
         errorLower.contains("<html>") ||
@@ -44,7 +58,7 @@ class ToastUtils {
       showErrorToast(
         context,
         label: "Unexpected Error",
-        message: "Something went wrong on our end. Please try again in a moment.",
+        message: "Something went wrong. Please try again or contact info@parchipakistan.com",
         labelColor: unexpectedErrorColor,
       );
       return;
