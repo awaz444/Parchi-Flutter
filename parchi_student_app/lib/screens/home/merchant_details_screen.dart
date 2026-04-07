@@ -148,12 +148,27 @@ class MerchantDetailsScreen extends ConsumerWidget {
                 child: _MerchantIdentityBlock(merchant: merchant),
               ),
 
-              // ── Merchant unified ticket ──────────────────────────────
+              // ── Merchant unified loyalty (Merchant-wide) ────────────────
+              if (merchant.merchantLoyalty != null && merchant.merchantLoyalty!.isActive)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: _MerchantLoyaltyCard(merchant: merchant),
+                  ),
+                ),
+
+              // ── Offers List (Each as a ticket) ──────────────────────────
               if (hasOffers)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  sliver: SliverToBoxAdapter(
-                    child: _MerchantCouponCard(merchant: merchant),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => _OfferCard(
+                        merchant: merchant,
+                        offer: merchant.offers[index],
+                      ),
+                      childCount: merchant.offers.length,
+                    ),
                   ),
                 ),
 
@@ -333,34 +348,59 @@ class _MerchantIdentityBlock extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Branch coupon card — the hero of the screen.
-// Layout: top "stub" (offer) / perforated tear / bottom "body" (branch info)
+// Standalone card for Merchant-wide loyalty
 // ─────────────────────────────────────────────────────────────────────────────
-class _MerchantCouponCard extends StatelessWidget {
+class _MerchantLoyaltyCard extends StatelessWidget {
   final MerchantDetailModel merchant;
 
-  const _MerchantCouponCard({required this.merchant});
+  const _MerchantLoyaltyCard({required this.merchant});
 
   @override
   Widget build(BuildContext context) {
-    final offer = merchant.offers.isNotEmpty ? merchant.offers.first : null;
-    final bonus = merchant.bonusSettings;
-    final bool hasBonus = bonus != null && bonus.isActive;
+    final loyalty = merchant.merchantLoyalty!;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: _LoyaltyBonusSection(
+        loyalty: loyalty,
+        isMerchantWide: true,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Offer card — renders as a physical redeemable ticket.
+// ─────────────────────────────────────────────────────────────────────────────
+class _OfferCard extends StatelessWidget {
+  final MerchantDetailModel merchant;
+  final BranchOffer offer;
+
+  const _OfferCard({required this.merchant, required this.offer});
+
+  @override
+  Widget build(BuildContext context) {
+    final loyalty = offer.offerLoyalty;
+    final bool hasOfferLoyalty = loyalty != null && loyalty.isActive;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20, top: 4),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -369,16 +409,20 @@ class _MerchantCouponCard extends StatelessWidget {
         child: Column(
           children: [
             // ── TOP STUB: discount offer ──────────────────────────────
-            if (offer != null) _OfferStub(offer: offer),
+            _OfferStub(offer: offer),
 
             // ── PERFORATED DIVIDER ────────────────────────────────────
-            if (offer != null) const _PerforatedDivider(),
+            const _PerforatedDivider(),
 
-            // ── BOTTOM BODY: merchant/loyalty info ────────────────────
-            _MerchantTicketBody(merchant: merchant, hasBonus: hasBonus),
+            // ── BOTTOM BODY: merchant info ────────────────────────────
+            _OfferTicketBody(merchant: merchant, hasLoyalty: hasOfferLoyalty),
 
-            // ── LOYALTY BONUS (if active) ─────────────────────────────
-            if (hasBonus) _LoyaltyBonusSection(bonus: bonus!),
+            // ── OFFER-SPECIFIC LOYALTY (if active) ────────────────────
+            if (hasOfferLoyalty)
+              _LoyaltyBonusSection(
+                loyalty: loyalty!,
+                isMerchantWide: false,
+              ),
           ],
         ),
       ),
@@ -538,18 +582,18 @@ class _PerforationPainter extends CustomPainter {
 // ─────────────────────────────────────────────────────────────────────────────
 // Branch body: address, phone
 // ─────────────────────────────────────────────────────────────────────────────
-class _MerchantTicketBody extends StatelessWidget {
+class _OfferTicketBody extends StatelessWidget {
   final MerchantDetailModel merchant;
-  final bool hasBonus;
+  final bool hasLoyalty;
 
-  const _MerchantTicketBody({required this.merchant, required this.hasBonus});
+  const _OfferTicketBody({required this.merchant, required this.hasLoyalty});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: AppColors.lightSurface,
-      padding: EdgeInsets.fromLTRB(20, 16, 20, hasBonus ? 4 : 20),
+      color: Colors.white,
+      padding: EdgeInsets.fromLTRB(20, 16, 20, hasLoyalty ? 4 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -557,7 +601,7 @@ class _MerchantTicketBody extends StatelessWidget {
           Text(
             merchant.businessName,
             style: const TextStyle(
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
               color: Color(0xFF111111),
               letterSpacing: -0.2,
@@ -570,14 +614,14 @@ class _MerchantTicketBody extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(top: 1.5),
                 child: Icon(Icons.info_outline,
-                    size: 14, color: AppColors.textSecondary),
+                    size: 13, color: AppColors.textSecondary),
               ),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  "Collect punch-stamps at any valid branch to unlock loyalty rewards.",
+                  "Earn progress on every visit at a valid branch to unlock loyalty rewards.",
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: AppColors.textSecondary,
                     height: 1.4,
                   ),
@@ -585,7 +629,7 @@ class _MerchantTicketBody extends StatelessWidget {
               ),
             ],
           ),
-          if (!hasBonus) const SizedBox(height: 4),
+          if (!hasLoyalty) const SizedBox(height: 4),
         ],
       ),
     );
@@ -662,38 +706,31 @@ class _BranchLocationItem extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Loyalty bonus section — "punch hole" progress
-// ─────────────────────────────────────────────────────────────────────────────
 class _LoyaltyBonusSection extends StatelessWidget {
-  final BonusSettingsModel bonus;
+  final LoyaltySettingsModel loyalty;
+  final bool isMerchantWide;
 
-  const _LoyaltyBonusSection({required this.bonus});
+  const _LoyaltyBonusSection({
+    required this.loyalty,
+    required this.isMerchantWide,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final int total = bonus.nextGoal;
-    final int current = bonus.currentRedemptions ?? 0;
+    final int total = loyalty.nextGoal;
+    final int current = loyalty.currentRedemptions ?? 0;
     final int remaining = total - current;
 
     return Container(
       width: double.infinity,
-      color: AppColors.lightSurface,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Thin separator
-          Container(
-            height: 1,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.transparent, Color(0xFFE8E4DE), Colors.transparent],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
           // Header row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -711,13 +748,13 @@ class _LoyaltyBonusSection extends StatelessWidget {
                         color: Color(0xFFD4920A), size: 14),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    "LOYALTY BONUS",
-                    style: TextStyle(
-                      fontSize: 11,
+                  Text(
+                    isMerchantWide ? "MERCHANT LOYALTY" : "OFFER LOYALTY",
+                    style: const TextStyle(
+                      fontSize: 10,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFFD4920A),
-                      letterSpacing: 1.3,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ],
@@ -727,15 +764,15 @@ class _LoyaltyBonusSection extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.lightSurface,
+                  color: const Color(0xFFFBFBFB),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: const Color(0xFFDDDAD4), width: 1),
+                      color: const Color(0xFFEEEEEE), width: 1),
                 ),
                 child: Text(
                   "$current / $total",
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF111111),
                   ),
@@ -749,13 +786,13 @@ class _LoyaltyBonusSection extends StatelessWidget {
           // Description
           Text(
             remaining > 0
-                ? "Redeem $remaining more time${remaining == 1 ? '' : 's'} to unlock ${bonus.discountDescription}"
-                : "🎉 Bonus unlocked! Enjoy ${bonus.discountDescription}",
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF111111),
-              height: 1.4,
+                ? "Redeem $remaining more time${remaining == 1 ? '' : 's'} to unlock ${loyalty.discountDescription}"
+                : "🎉 Bonus unlocked! Enjoy ${loyalty.discountDescription}",
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111111),
+              height: 1.3,
             ),
           ),
 

@@ -6,7 +6,7 @@ class MerchantDetailModel {
   final String? bannerUrl;
   final String? category;
   final String? termsAndConditions;
-  final BonusSettingsModel? bonusSettings;
+  final LoyaltySettingsModel? merchantLoyalty;
   final List<BranchOffer> offers;
   final List<BranchModel> branches;
 
@@ -17,12 +17,21 @@ class MerchantDetailModel {
     this.bannerUrl,
     this.category,
     this.termsAndConditions,
-    this.bonusSettings,
+    this.merchantLoyalty,
     required this.offers,
     required this.branches,
   });
 
   factory MerchantDetailModel.fromJson(Map<String, dynamic> json) {
+    // Determine merchant-wide loyalty
+    LoyaltySettingsModel? mLoyalty;
+    if (json['loyalty'] != null && json['loyalty']['merchant'] != null) {
+      mLoyalty = LoyaltySettingsModel.fromJson(json['loyalty']['merchant']);
+    } else if (json['bonusSettings'] != null) {
+      // Fallback for legacy / existing code
+      mLoyalty = LoyaltySettingsModel.fromJson(json['bonusSettings']);
+    }
+
     return MerchantDetailModel(
       id: json['id'] ?? '',
       businessName: json['businessName'] ?? json['business_name'] ?? 'Unknown',
@@ -31,9 +40,7 @@ class MerchantDetailModel {
       category: json['category'],
       termsAndConditions:
           json['termsAndConditions'] ?? json['terms_and_conditions'],
-      bonusSettings: json['bonusSettings'] != null
-          ? BonusSettingsModel.fromJson(json['bonusSettings'])
-          : null,
+      merchantLoyalty: mLoyalty,
       offers: (json['offers'] as List<dynamic>?)
               ?.map((offer) => BranchOffer.fromJson(offer))
               .toList() ??
@@ -53,6 +60,7 @@ class BranchOffer {
   final String discountType;
   final num discountValue;
   final String formattedDiscount;
+  final LoyaltySettingsModel? offerLoyalty;
 
   BranchOffer({
     required this.id,
@@ -61,6 +69,7 @@ class BranchOffer {
     required this.discountType,
     required this.discountValue,
     required this.formattedDiscount,
+    this.offerLoyalty,
   });
 
   factory BranchOffer.fromJson(Map<String, dynamic> json) {
@@ -88,6 +97,9 @@ class BranchOffer {
       discountType: json['discountType'] ?? json['discount_type'] ?? 'percentage',
       discountValue: json['discountValue'] ?? json['discount_value'] ?? 0,
       formattedDiscount: formattedDiscount,
+      offerLoyalty: json['offerLoyalty'] != null
+          ? LoyaltySettingsModel.fromJson(json['offerLoyalty'])
+          : null,
     );
   }
 }
@@ -128,20 +140,20 @@ class BranchModel {
   }
 }
 
-class BonusSettingsModel {
+class LoyaltySettingsModel {
   final int redemptionsRequired;
   final int? currentRedemptions; // For user progress (optional if not logged in)
   final String discountDescription; // e.g., "50% OFF"
   final bool isActive;
 
-  BonusSettingsModel({
+  LoyaltySettingsModel({
     required this.redemptionsRequired,
     this.currentRedemptions,
     required this.discountDescription,
     required this.isActive,
   });
 
-  factory BonusSettingsModel.fromJson(Map<String, dynamic> json) {
+  factory LoyaltySettingsModel.fromJson(Map<String, dynamic> json) {
     // Robust parsing for currentRedemptions which might come as String, int or num from raw SQL
     int? current;
     final value = json['currentRedemptions'] ?? json['current_redemptions'];
@@ -155,7 +167,7 @@ class BonusSettingsModel {
       }
     }
 
-    return BonusSettingsModel(
+    return LoyaltySettingsModel(
       redemptionsRequired:
           json['redemptionsRequired'] ?? json['redemptions_required'] ?? 0,
       currentRedemptions: current,
