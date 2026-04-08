@@ -1,7 +1,7 @@
 name: parchi_student_app
 description: "A student discount app."
 publish_to: 'none'
-version: 2.0.4+16
+version: 2.0.5+17
 environment:
   sdk: ^3.0.0 # Adjusted to ensure compatibility
 
@@ -34,6 +34,7 @@ dependencies:
   url_launcher: ^6.3.0
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

@@ -25,6 +25,10 @@ import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
+import 'dart:io';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'screens/force_update/force_update_screen.dart';
+
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -318,6 +322,7 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isLoading = true;
+  bool _requiresUpdate = false;
   late final StreamSubscription<AuthState> _authSubscription;
   StreamSubscription<String>? _authErrorSubscription;
 
@@ -327,6 +332,32 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _checkAuthState();
     _setupAuthListener();
     _setupAuthErrorListener();
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final String localBuildNumberStr = packageInfo.buildNumber; 
+      
+      // We are hardcoding the required version constraint check to 2.0.5+17 for now
+      // This enforces that the build number must be at least 17
+      
+      final int localVersion = int.tryParse(localBuildNumberStr) ?? 0;
+      final int minRequired = 17; // Equivalent to checking against 2.0.5+17
+
+      if (localVersion < minRequired) {
+        if (mounted) {
+          setState(() {
+            _requiresUpdate = true;
+            _isLoading = false;
+          });
+          FlutterNativeSplash.remove();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error checking for update: $e");
+    }
   }
 
   void _setupAuthListener() {
@@ -405,10 +436,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          if (!_requiresUpdate) _isLoading = false;
         });
         // Remove native splash once Flutter builds its first frame
-        FlutterNativeSplash.remove();
+        if (!_requiresUpdate) FlutterNativeSplash.remove();
       }
 
       if (!isStudentAuth) {
@@ -422,15 +453,19 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // Home screen providers will handle displaying the "No Internet" UI.
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          if (!_requiresUpdate) _isLoading = false;
         });
-        FlutterNativeSplash.remove();
+        if (!_requiresUpdate) FlutterNativeSplash.remove();
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_requiresUpdate) {
+      return const ForceUpdateScreen();
+    }
+
     if (_isLoading) {
       return const SplashScreen();
     }
