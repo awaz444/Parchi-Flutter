@@ -344,7 +344,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // This enforces that the build number must be at least 17
       
       final int localVersion = int.tryParse(localBuildNumberStr) ?? 0;
-      final int minRequired = 17; // Equivalent to checking against 2.0.5+17
+      final int minRequired = 18; // Equivalent to checking against 2.0.5+17
 
       if (localVersion < minRequired) {
         if (mounted) {
