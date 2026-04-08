@@ -8,7 +8,7 @@ class ToastUtils {
   static const Color unexpectedErrorColor = Color(0xFFD32F2F);
 
   /// Analyzes an exception/error object and maps it to a user-friendly UI Toast.
-  static void handleApiError(BuildContext? context, dynamic error) {
+  static void handleApiError(BuildContext? context, dynamic error, {bool showDetailedErrors = false}) {
     String errorMessage = error.toString();
     String errorLower = errorMessage.toLowerCase();
 
@@ -29,8 +29,8 @@ class ToastUtils {
     }
 
     // 2. Account deactivation / disabled status
-    if (errorLower.contains("deactivated") || 
-        errorLower.contains("disabled") || 
+    if (errorLower.contains("deactivated") ||
+        errorLower.contains("disabled") ||
         errorLower.contains("suspended") ||
         errorLower.contains("banned")) {
       showErrorToast(
@@ -42,17 +42,14 @@ class ToastUtils {
       return;
     }
 
-    // 3. Unhandled Backend Crashes (500s, HTML traces, Raw Exceptions, excessive length)
-    bool isUnexpected = false;
-    if (errorLower.contains("internal server error") ||
+    // 3. Unhandled Backend Crashes (500s, HTML traces, stack traces)
+    bool isUnexpected = !showDetailedErrors && (
+        errorLower.contains("internal server error") ||
         errorLower.contains("<html>") ||
         errorLower.contains("nginx") ||
-        errorLower.contains("typeerror:") ||
-        errorLower.contains("exception:") ||
         errorLower.contains("stack trace:") ||
-        errorMessage.length > 200) {
-      isUnexpected = true;
-    }
+        errorLower.contains("\n    at ")
+    );
 
     if (isUnexpected) {
       showErrorToast(
@@ -64,14 +61,20 @@ class ToastUtils {
       return;
     }
 
-    // 3. Known / Standard Error (Strip 'Exception:' prefix if present)
-    String cleanMessage = errorMessage.replaceFirst(RegExp(r'^Exception:\s*'), '').replaceFirst(RegExp(r'^Error:\s*'), '');
+    // 4. Known / Standard Error (Strip 'Exception:' prefix if present)
+    String cleanMessage = errorMessage
+        .replaceFirst(RegExp(r'^Exception:\s*'), '')
+        .replaceFirst(RegExp(r'^Error:\s*'), '');
+
+    if (!showDetailedErrors && cleanMessage.length > 200) {
+      cleanMessage = '${cleanMessage.substring(0, 197)}...';
+    }
 
     showErrorToast(
-        context,
-        label: "Error",
-        message: cleanMessage,
-        labelColor: AppColors.error, // Standard error color natively
+      context,
+      label: showDetailedErrors ? 'Login Error' : 'Error',
+      message: cleanMessage,
+      labelColor: AppColors.error,
     );
   }
 

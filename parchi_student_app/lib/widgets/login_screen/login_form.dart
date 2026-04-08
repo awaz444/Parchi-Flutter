@@ -67,7 +67,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               (route) => false);
       }
     } catch (e) {
-      ToastUtils.handleApiError(context, e);
+      ToastUtils.handleApiError(context, e, showDetailedErrors: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
