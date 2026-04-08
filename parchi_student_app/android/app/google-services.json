@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:232497829289:android:3de288abb700248a6aa0b8",
+        "mobilesdk_app_id": "1:232497829289:android:2c853ce3c0351a216aa0b8",
         "android_client_info": {
-          "package_name": "com.example.parchi_student_app"
+          "package_name": "com.parchi.student"
         }
       },
       "oauth_client": [],
@@ -26,9 +26,9 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:232497829289:android:2c853ce3c0351a216aa0b8",
+        "mobilesdk_app_id": "1:232497829289:android:b86ada51638047a66aa0b8",
         "android_client_info": {
-          "package_name": "com.parchi.student"
+          "package_name": "com.parchi.studentapp"
         }
       },
       "oauth_client": [],
