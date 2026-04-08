@@ -166,7 +166,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
       await Supabase.instance.client.auth.resend(
         email: widget.email!,
         type: OtpType.signup,
-        emailRedirectTo: 'parchi://auth-callback',
+        emailRedirectTo: 'https://www.parchipakistan.com/auth-callback',
       );
       print("Resend successful");
       if (mounted) {

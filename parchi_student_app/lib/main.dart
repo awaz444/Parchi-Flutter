@@ -113,8 +113,8 @@ class _ParchiAppState extends State<ParchiApp> {
     _lastDeepLinkUri = uri;
 
     // Check if the route is related to auth-callback OR contains an access token fragment
-    // Note: Supabase magic links often come as https://project.supabase.co/auth/v1/verify?token=...&type=signup&redirect_to=parchi://auth-callback
-    // Or simpler: parchi://auth-callback#access_token=...
+    // Note: Supabase magic links often come as https://zjghfwnrzazmukykgyhh.supabase.co/auth/v1/verify?token=...&type=signup&redirect_to=https://www.parchipakistan.com/auth-callback
+    // Or simpler direct custom scheme: parchi://auth-callback#access_token=...
 
     // We need to parse fragment parameters primarily
     String? accessToken;
@@ -528,8 +528,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   void _handleMerchantLink(Uri uri) {
     debugPrint('MainScreen _handleMerchantLink: $uri');
 
-    // Only act on parchi://merchant/<merchantId>
-    if (uri.scheme != 'parchi') return;
+    // Only act on parchi://merchant/<merchantId> OR https://www.parchipakistan.com/merchant/<merchantId>
+    if (uri.scheme != 'parchi' && uri.scheme != 'https') return;
+    if (uri.scheme == 'https' && !uri.host.contains('parchipakistan.com')) return;
     if (uri.host != 'merchant' && !uri.path.contains('/merchant/')) return;
 
     // Extract merchantId: path segment takes priority, then query param.
