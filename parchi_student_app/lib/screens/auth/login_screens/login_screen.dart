@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../utils/colours.dart';
 import '../../../widgets/login_screen/login_form.dart';
@@ -7,14 +6,14 @@ import '../../../widgets/signup_screen/sign_form.dart';
 import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
 import 'forgot_password/forgot_password_form.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen>
+class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
   // Initialize PageController to start at index 1 (Login)
   // This places ForgotPassword at 0 (Left) and Signup at 2 (Right)
@@ -24,7 +23,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   int _currentPage = 1;
 
   late AnimationController _glowController;
-  late Animation<double> _glowAnimation;
 
   @override
   void initState() {
@@ -32,8 +30,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _glowController =
         AnimationController(vsync: this, duration: const Duration(seconds: 2))
           ..repeat(reverse: true);
-    _glowAnimation = Tween<double>(begin: 0.0, end: 25.0).animate(
-        CurvedAnimation(parent: _glowController, curve: Curves.easeInOut));
   }
 
   @override

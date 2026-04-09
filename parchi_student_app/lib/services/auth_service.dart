@@ -76,7 +76,6 @@ class AuthService {
     if (expiresAt != null) {
       final expiryTime = expiresAt * 1000; // Convert to milliseconds
       final now = DateTime.now().millisecondsSinceEpoch;
-      final timeRemainingSeconds = (expiryTime - now) ~/ 1000;
       
       // Check if expired or about to expire (within 5 minutes)
       if (now >= expiryTime - 300000) {
@@ -85,8 +84,19 @@ class AuthService {
           // refreshToken() updates the cache via setToken() / setTokenExpiry()
           return _cachedAccessToken;
         } catch (e) {
-          // Return null so callers know auth is required — do NOT return the
-          // expired token, as the backend will reject it.
+          // Grace mode: if token is still not expired, continue using it even
+          // when proactive refresh fails (e.g., temporary network issues).
+          if (now < expiryTime) {
+            final stillValidToken =
+                await _secureStorage.read(key: _accessTokenKey);
+            if (stillValidToken != null) {
+              _cachedAccessToken = stillValidToken;
+              _cachedExpiresAt = expiresAt;
+              return stillValidToken;
+            }
+          }
+
+          // Truly expired and refresh failed.
           return null;
         }
       }
@@ -238,7 +248,7 @@ class AuthService {
         body: jsonEncode({
           'refreshToken': refreshToken,
         }),
-      );
+      ).timeout(const Duration(seconds: 12));
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 

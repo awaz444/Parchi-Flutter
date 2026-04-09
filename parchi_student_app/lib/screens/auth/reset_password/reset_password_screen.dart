@@ -44,6 +44,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       } else {
         // Fallback or error if no refresh token
         // Usually recovery links have refresh_token
+        if (!mounted) return;
         setState(() {
           _errorMessage = 'Invalid link. Missing refresh token.';
         });
@@ -109,10 +110,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         );
       }
     } on AuthException catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.message;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'An unexpected error occurred. Please try again.';
       });

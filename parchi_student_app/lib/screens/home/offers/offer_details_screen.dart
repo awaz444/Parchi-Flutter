@@ -22,6 +22,16 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant OfferDetailsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.offerId != widget.offerId) {
+      setState(() {
+        _detailsFuture = offersService.getOfferDetails(widget.offerId);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,

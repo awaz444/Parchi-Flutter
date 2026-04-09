@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../utils/colours.dart';
-import '../../services/leaderboard_service.dart';
 import '../../models/leaderboard_model.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
-import 'dart:math' as math;
 import '../../widgets/common/blinking_skeleton.dart';
 import '../../widgets/common/parchi_loader.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/leaderboard_provider.dart';
 import '../../providers/user_provider.dart';
@@ -47,13 +44,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Future<void> _refresh() async {
-    _startRefreshSequence();
+    await _startRefreshSequence();
   }
 
   Future<void> _startRefreshSequence() async {
     setState(() => _isRefreshing = true);
     try {
-      await ref.read(leaderboardProvider.notifier).refresh();
+      await Future.wait([
+        ref.read(leaderboardProvider.notifier).refresh(),
+        ref.refresh(redemptionStatsProvider.future),
+      ]);
     } catch (e) {
       debugPrint("Leaderboard refresh error: $e");
     } finally {

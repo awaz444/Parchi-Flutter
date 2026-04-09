@@ -61,10 +61,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
   // [NEW] Wrapper for CustomRefreshIndicator
   Future<void> _handleRefresh() async {
     // Start sequence immediately — no artificial delay.
-    _startRefreshSequence();
+    await _startRefreshSequence();
   }
 
   Future<void> _startRefreshSequence() async {
+     if (!mounted) return;
      setState(() => _isRefreshing = true);
      await _fetchNotifications();
      if (mounted) setState(() => _isRefreshing = false);

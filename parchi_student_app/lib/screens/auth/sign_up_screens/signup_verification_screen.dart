@@ -40,27 +40,24 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
   bool _isLinkExpired = false; // [NEW] Track link expiry
   
   Timer? _resendTimer;
-  int _resendCountdown = 60;
-  bool _canResend = false;
+  final ValueNotifier<int> _resendCountdown = ValueNotifier<int>(60);
+  final ValueNotifier<bool> _canResend = ValueNotifier<bool>(false);
 
   void _startResendTimer() {
-    setState(() {
-      _resendCountdown = 60;
-      _canResend = false;
-    });
+    _resendCountdown.value = 60;
+    _canResend.value = false;
     _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          if (_resendCountdown > 0) {
-            _resendCountdown--;
-          } else {
-            _canResend = true;
-            timer.cancel();
-          }
-        });
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_resendCountdown.value > 0) {
+        _resendCountdown.value = _resendCountdown.value - 1;
       } else {
-         timer.cancel();
+        _canResend.value = true;
+        timer.cancel();
       }
     });
   }
@@ -84,6 +81,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
       final description = widget.errorDescription;
       if (description != null && description.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           ToastUtils.showErrorToast(
             context,
             label: "Verification Failed",
@@ -138,7 +136,6 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
   }
 
   void _handleVerificationSuccess() {
-    print("_handleVerificationSuccess called. isVerified: $_isVerified, mounted: $mounted");
     if (_isVerified) return;
     if (mounted) {
       setState(() {
@@ -164,9 +161,14 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
   }
 
   Future<void> _resendEmail() async {
-    print("Resend Email clicked");
     if (widget.email == null) {
-      print("Email is null");
+      if (mounted) {
+        ToastUtils.showErrorToast(
+          context,
+          label: "Missing Email",
+          message: "No email found for resend. Please go back and try again.",
+        );
+      }
       return;
     }
     setState(() {
@@ -175,13 +177,11 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
     });
 
     try {
-      print("Resending email to ${widget.email}");
       await Supabase.instance.client.auth.resend(
         email: widget.email!,
         type: OtpType.signup,
         emailRedirectTo: 'parchi://auth-callback',
       );
-      print("Resend successful");
       if (mounted) {
         _startResendTimer(); // Restart timer on success
         ScaffoldMessenger.of(context).showSnackBar(
@@ -192,7 +192,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
         );
       }
     } catch (e) {
-      print("Resend failed: $e");
+      debugPrint("Resend failed: $e");
       if (mounted) {
         ToastUtils.handleApiError(context, e);
       }
@@ -209,6 +209,8 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
   void dispose() {
     _authSubscription.cancel();
     _resendTimer?.cancel();
+    _resendCountdown.dispose();
+    _canResend.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -375,41 +377,55 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
                               SizedBox(
                                 width: double.infinity,
                                 height: 56,
-                                child: OutlinedButton(
-                                  onPressed: (_canResend && !_isResending)
-                                      ? _resendEmail
-                                      : null,
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                        color: _canResend 
-                                           ? AppColors.primary 
-                                           : AppColors.textSecondary.withOpacity(0.3), 
-                                        width: 2),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                  child: _isResending
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.primary,
+                                child: ValueListenableBuilder<bool>(
+                                  valueListenable: _canResend,
+                                  builder: (context, canResend, _) {
+                                    return ValueListenableBuilder<int>(
+                                      valueListenable: _resendCountdown,
+                                      builder: (context, countdown, __) {
+                                        return OutlinedButton(
+                                          onPressed: (canResend && !_isResending)
+                                              ? _resendEmail
+                                              : null,
+                                          style: OutlinedButton.styleFrom(
+                                            side: BorderSide(
+                                                color: canResend
+                                                    ? AppColors.primary
+                                                    : AppColors.textSecondary
+                                                        .withOpacity(0.3),
+                                                width: 2),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(30),
+                                            ),
                                           ),
-                                        )
-                                      : Text(
-                                          _canResend 
-                                              ? "Resend Email" 
-                                              : "Resend in $_resendCountdown s",
-                                          style: TextStyle(
-                                            color: _canResend 
-                                                ? AppColors.primary 
-                                                : AppColors.textSecondary,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                          child: _isResending
+                                              ? const SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  canResend
+                                                      ? "Resend Email"
+                                                      : "Resend in $countdown s",
+                                                  style: TextStyle(
+                                                    color: canResend
+                                                        ? AppColors.primary
+                                                        : AppColors
+                                                            .textSecondary,
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                        );
+                                      },
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(height: 16),

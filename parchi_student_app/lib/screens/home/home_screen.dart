@@ -20,6 +20,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<double> _expandProgress = ValueNotifier(0.0);
+  ProviderSubscription<AsyncValue<dynamic>>? _userProfileSub;
 
   // Pixels of scroll before the header is fully expanded.
   // Tuned to card height (180) + top gap (16).
@@ -37,6 +38,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _userProfileSub = ref.listenManual(userProfileProvider, (previous, next) {
+      if (!next.isLoading && !next.hasError) {
+        final user = next.value;
+        if (user != null &&
+            user.role.toLowerCase() == 'student' &&
+            !user.hasSeenAppIntro &&
+            !_hasShownIntro) {
+          _hasShownIntro = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AppIntroModal(
+                onDismiss: () {
+                  ref.read(userProfileProvider.notifier).markAppIntroSeen();
+                  Navigator.of(context).pop();
+                },
+              ),
+            );
+          });
+        }
+      }
+    });
   }
 
   void _onScroll() {
@@ -47,6 +72,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
+    _userProfileSub?.close();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchController.dispose();
@@ -142,32 +168,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final double topPadding = MediaQuery.paddingOf(context).top;
     final double collapsedHeaderHeight = topPadding + 5.0 + 60.0;
-
-    // Listen for user profile loads to unconditionally trigger the intro overlay once
-    ref.listen(userProfileProvider, (previous, next) {
-      if (!next.isLoading && !next.hasError) {
-        final user = next.value;
-        if (user != null &&
-            user.role.toLowerCase() == 'student' &&
-            !user.hasSeenAppIntro &&
-            !_hasShownIntro) {
-          _hasShownIntro = true;
-          // Defer dialog showing to next frame to avoid build phase conflict
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => AppIntroModal(
-                onDismiss: () {
-                  ref.read(userProfileProvider.notifier).markAppIntroSeen();
-                  Navigator.of(context).pop();
-                },
-              ),
-            );
-          });
-        }
-      }
-    });
 
     final userAsync = ref.watch(userProfileProvider);
     final homeUIState = ref.watch(homeUIProvider);

@@ -24,6 +24,7 @@ class _RedemptionHistoryScreenState
     extends ConsumerState<RedemptionHistoryScreen>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
+  final ScrollController _historyScrollController = ScrollController();
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   final ValueNotifier<double> _expandProgress = ValueNotifier(0.0);
@@ -39,6 +40,7 @@ class _RedemptionHistoryScreenState
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _sheetController.addListener(_onSheetChanged);
+    _historyScrollController.addListener(_onHistoryScroll);
   }
 
   void _onSheetChanged() {
@@ -53,7 +55,16 @@ class _RedemptionHistoryScreenState
 
   Future<void> _refresh() async {
     // Start the refresh sequence immediately — no artificial delay.
-    _startRefreshSequence();
+    await _startRefreshSequence();
+  }
+
+  void _onHistoryScroll() {
+    if (!_historyScrollController.hasClients) return;
+    if (_historyScrollController.position.extentAfter > 200) return;
+
+    final historyState = ref.read(redemptionHistoryProvider);
+    if (!historyState.hasMore || historyState.isLoadingMore) return;
+    ref.read(redemptionHistoryProvider.notifier).loadMore();
   }
 
   Future<void> _startRefreshSequence() async {
@@ -78,6 +89,8 @@ class _RedemptionHistoryScreenState
   @override
   void dispose() {
     _tabController.dispose();
+    _historyScrollController.removeListener(_onHistoryScroll);
+    _historyScrollController.dispose();
     _sheetController.removeListener(_onSheetChanged);
     _sheetController.dispose();
     super.dispose();
@@ -226,6 +239,7 @@ class _RedemptionHistoryScreenState
                   );
                 },
                 child: ListView.separated(
+                  controller: _historyScrollController,
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   // +1 for the load-more footer
                   itemCount: items.length + (historyState.hasMore ? 1 : 0),
@@ -234,11 +248,6 @@ class _RedemptionHistoryScreenState
                   itemBuilder: (context, index) {
                     // Load-more trigger at the bottom
                     if (index == items.length) {
-                      if (!historyState.isLoadingMore) {
-                        ref
-                            .read(redemptionHistoryProvider.notifier)
-                            .loadMore();
-                      }
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Center(

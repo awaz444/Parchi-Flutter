@@ -25,10 +25,13 @@ class MerchantDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bool hasOffers = merchant.offers.isNotEmpty;
+    final merchantAsync = ref.watch(merchantDetailsProvider(merchant.id));
+    final resolvedMerchant = merchantAsync.valueOrNull ?? merchant;
+    final bool hasOffers = resolvedMerchant.offers.isNotEmpty;
 
     Future<void> refresh() async {
-      return ref.refresh(merchantDetailsProvider(merchant.id).future);
+      ref.invalidate(merchantDetailsProvider(merchant.id));
+      await ref.read(merchantDetailsProvider(merchant.id).future);
     }
 
     return Scaffold(
@@ -45,7 +48,7 @@ class MerchantDetailsScreen extends ConsumerWidget {
               elevation: 0,
               // Title is invisible while banner is expanded; fades in on collapse.
               title: Text(
-                merchant.businessName,
+                resolvedMerchant.businessName,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -79,9 +82,9 @@ class MerchantDetailsScreen extends ConsumerWidget {
                   fit: StackFit.expand,
                   children: [
                     // Banner image
-                    merchant.bannerUrl != null
+                    resolvedMerchant.bannerUrl != null
                         ? CachedNetworkImage(
-                            imageUrl: merchant.bannerUrl!,
+                            imageUrl: resolvedMerchant.bannerUrl!,
                             fit: BoxFit.cover,
                             errorWidget: (context, url, error) =>
                                 Container(color: const Color(0xFF1A1A1A)),
@@ -145,15 +148,16 @@ class MerchantDetailsScreen extends ConsumerWidget {
             slivers: [
               // ── Merchant identity block ────────────────────────────────
               SliverToBoxAdapter(
-                child: _MerchantIdentityBlock(merchant: merchant),
+                child: _MerchantIdentityBlock(merchant: resolvedMerchant),
               ),
 
               // ── Merchant unified loyalty (Merchant-wide) ────────────────
-              if (merchant.merchantLoyalty != null && merchant.merchantLoyalty!.isActive)
+              if (resolvedMerchant.merchantLoyalty != null &&
+                  resolvedMerchant.merchantLoyalty!.isActive)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   sliver: SliverToBoxAdapter(
-                    child: _MerchantLoyaltyCard(merchant: merchant),
+                    child: _MerchantLoyaltyCard(merchant: resolvedMerchant),
                   ),
                 ),
 
@@ -164,10 +168,10 @@ class MerchantDetailsScreen extends ConsumerWidget {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => _OfferCard(
-                        merchant: merchant,
-                        offer: merchant.offers[index],
+                        merchant: resolvedMerchant,
+                        offer: resolvedMerchant.offers[index],
                       ),
-                      childCount: merchant.offers.length,
+                      childCount: resolvedMerchant.offers.length,
                     ),
                   ),
                 ),
@@ -178,8 +182,8 @@ class MerchantDetailsScreen extends ConsumerWidget {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) =>
-                        _BranchLocationItem(branch: merchant.branches[index]),
-                    childCount: merchant.branches.length,
+                        _BranchLocationItem(branch: resolvedMerchant.branches[index]),
+                    childCount: resolvedMerchant.branches.length,
                   ),
                 ),
               ),
@@ -420,7 +424,7 @@ class _OfferCard extends StatelessWidget {
             // ── OFFER-SPECIFIC LOYALTY (if active) ────────────────────
             if (hasOfferLoyalty)
               _LoyaltyBonusSection(
-                loyalty: loyalty!,
+                loyalty: loyalty,
                 isMerchantWide: false,
               ),
           ],
