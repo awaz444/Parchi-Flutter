@@ -4,7 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../utils/colours.dart';
 import '../../../utils/toast_utils.dart';
-import '../../../services/supabase_storage_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../models/auth_models.dart'; // [NEW] For ConflictException
 import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
@@ -42,7 +41,6 @@ class SignupScreenTwo extends StatefulWidget {
 
 class _SignupScreenTwoState extends State<SignupScreenTwo> {
   final ImagePicker _imagePicker = ImagePicker();
-  final SupabaseStorageService _storageService = SupabaseStorageService();
   File? _studentIdImage;
   File? _studentIdBackImage;
   File? _cnicFrontImage;
@@ -139,9 +137,6 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
     if (!_validateForm()) return;
     setState(() => _isUploading = true);
 
-    final String tempUserId =
-        widget.email.replaceAll('@', '_').replaceAll('.', '_');
-
     try {
       // If doing Challan verification, use the same image logic for 'back' to satisfy backend requirement
       // effectively uploading the challan twice or mocking the back image slot
@@ -149,16 +144,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
           ? _studentIdBackImage! 
           : _studentIdImage!; // Reuse challan for back slot
 
-      final imageUrls = await _storageService.uploadKycImages(
-        studentIdImage: _studentIdImage!,
-        studentIdBackImage: backImageToUpload,
-        cnicFrontImage: _cnicFrontImage!,
-        cnicBackImage: _cnicBackImage!,
-        selfieImage: _selfieImage!,
-        userId: tempUserId,
-      );
-
-      final signupResponse = await _authService.studentSignup(
+      final signupResponse = await _authService.studentSignupWithFiles(
         firstName: widget.firstName,
         lastName: widget.lastName,
         email: widget.email,
@@ -167,11 +153,11 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
         university: widget.university,
         cnic: widget.cnic,
         dateOfBirth: widget.dateOfBirth,
-        studentIdCardFrontUrl: imageUrls['studentIdUrl']!,
-        studentIdCardBackUrl: imageUrls['studentIdBackUrl']!,
-        cnicFrontImageUrl: imageUrls['cnicFrontUrl']!,
-        cnicBackImageUrl: imageUrls['cnicBackUrl']!,
-        selfieImageUrl: imageUrls['selfieUrl']!,
+        studentIdCardFront: _studentIdImage!,
+        studentIdCardBack: backImageToUpload,
+        cnicFrontImage: _cnicFrontImage!,
+        cnicBackImage: _cnicBackImage!,
+        selfieImage: _selfieImage!,
       );
 
       if (mounted)

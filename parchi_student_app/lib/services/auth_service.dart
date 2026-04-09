@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -411,6 +412,90 @@ class AuthService {
         // Handle error response
         throw _handleStudentSignupError(response.statusCode, responseData);
       }
+    } on http.ClientException {
+      throw Exception('Network error. Please check your internet connection.');
+    } catch (e) {
+      if (e is ValidationException ||
+          e is ConflictException ||
+          e is UnprocessableEntityException ||
+          e is ServerException) {
+        rethrow;
+      }
+      throw Exception('Student signup failed: ${e.toString()}');
+    }
+  }
+
+  Future<StudentSignupResponse> studentSignupWithFiles({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+    String? phone,
+    required String university,
+    required String cnic,
+    required String dateOfBirth,
+    required File studentIdCardFront,
+    required File studentIdCardBack,
+    required File cnicFrontImage,
+    required File cnicBackImage,
+    required File selfieImage,
+  }) async {
+    _isLoggingOut = false;
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse(ApiConfig.studentSignupWithFilesEndpoint),
+      );
+
+      request.fields['firstName'] = firstName;
+      request.fields['lastName'] = lastName;
+      request.fields['email'] = email;
+      request.fields['password'] = password;
+      request.fields['phone'] = phone ?? '';
+      request.fields['university'] = university;
+      request.fields['cnic'] = cnic;
+      request.fields['dateOfBirth'] = dateOfBirth;
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'studentIdCardFront',
+          studentIdCardFront.path,
+        ),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'studentIdCardBack',
+          studentIdCardBack.path,
+        ),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'cnicFrontImage',
+          cnicFrontImage.path,
+        ),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'cnicBackImage',
+          cnicBackImage.path,
+        ),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'selfieImage',
+          selfieImage.path,
+        ),
+      );
+
+      final streamedResponse = await _httpClient.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+      final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return StudentSignupResponse.fromJson(responseData);
+      }
+
+      throw _handleStudentSignupError(response.statusCode, responseData);
     } on http.ClientException {
       throw Exception('Network error. Please check your internet connection.');
     } catch (e) {

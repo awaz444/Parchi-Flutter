@@ -4,8 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../utils/colours.dart';
 import '../../../utils/toast_utils.dart'; // [NEW] Import ToastUtils
-import '../login_screens/login_screen.dart';
-import '../../../main.dart'; // To navigate to MainScreen (wrapped in AuthWrapper)
 import 'verification_success_screen.dart'; // [NEW]
 
 class SignupVerificationScreen extends StatefulWidget {
@@ -13,6 +11,8 @@ class SignupVerificationScreen extends StatefulWidget {
   final String? email;
   final String? accessToken; // [NEW]
   final String? refreshToken; // [NEW]
+  final String? errorCode;
+  final String? errorDescription;
 
   const SignupVerificationScreen({
     super.key,
@@ -20,6 +20,8 @@ class SignupVerificationScreen extends StatefulWidget {
     this.email,
     this.accessToken,
     this.refreshToken,
+    this.errorCode,
+    this.errorDescription,
   });
 
   @override
@@ -76,9 +78,21 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
     );
     _controller.forward();
     
-    // [NEW] Manually set session if tokens are passed
-    // [NEW] Manually set session if tokens are passed
-    if (widget.refreshToken != null) {
+    // Show explicit expired/denied state when callback carries an auth error.
+    if (widget.errorCode != null) {
+      _isLinkExpired = true;
+      final description = widget.errorDescription;
+      if (description != null && description.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ToastUtils.showErrorToast(
+            context,
+            label: "Verification Failed",
+            message: description.replaceAll('+', ' '),
+          );
+        });
+      }
+    } else if (widget.refreshToken != null) {
+      // Manually set session if tokens are passed
       _setManualSession();
     }
 
@@ -109,7 +123,6 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
   void _setupDeepLinkListener() {
     _authSubscription =
         Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      final AuthChangeEvent event = data.event;
       final Session? session = data.session;
       
       if (session != null) {
@@ -166,7 +179,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
       await Supabase.instance.client.auth.resend(
         email: widget.email!,
         type: OtpType.signup,
-        emailRedirectTo: 'https://www.parchipakistan.com/auth-callback',
+        emailRedirectTo: 'parchi://auth-callback',
       );
       print("Resend successful");
       if (mounted) {
@@ -342,7 +355,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
                               _isVerified
                                   ? "Your email has been verified successfully.\nRedirecting you..."
                                   : (_isLinkExpired
-                                      ? "This verification link has expired or is invalid.\nPlease request a new one."
+                                      ? "${widget.errorDescription?.replaceAll('+', ' ') ?? 'This verification link has expired or is invalid.'}\nPlease request a new one."
                                       : "We've sent a verification link to\n${widget.email ?? 'your email address'}.\nPlease check your inbox and spam folder."),
                               textAlign: TextAlign.center,
                               style: TextStyle(

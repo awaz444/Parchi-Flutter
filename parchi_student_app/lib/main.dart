@@ -119,6 +119,8 @@ class _ParchiAppState extends State<ParchiApp> {
     String? accessToken;
     String? refreshToken;
     String? type;
+    String? errorCode;
+    String? errorDescription;
 
     // 1. Try extracting from fragment (typical for implicit flow / magic link redirects)
     if (uri.fragment.isNotEmpty) {
@@ -127,6 +129,8 @@ class _ParchiAppState extends State<ParchiApp> {
         accessToken = queryParams['access_token'];
         refreshToken = queryParams['refresh_token'];
         type = queryParams['type'];
+        errorCode = queryParams['error_code'];
+        errorDescription = queryParams['error_description'];
       } catch (e) {
         debugPrint("Error parsing fragment: $e");
       }
@@ -137,6 +141,8 @@ class _ParchiAppState extends State<ParchiApp> {
       accessToken = uri.queryParameters['access_token'];
       refreshToken = uri.queryParameters['refresh_token'];
       type = uri.queryParameters['type'];
+      errorCode = uri.queryParameters['error_code'];
+      errorDescription = uri.queryParameters['error_description'];
     }
 
     // Identify if it's a reset password or signup verification
@@ -162,6 +168,8 @@ class _ParchiAppState extends State<ParchiApp> {
           builder: (context) => SignupVerificationScreen(
             accessToken: accessToken,
             refreshToken: refreshToken,
+            errorCode: errorCode,
+            errorDescription: errorDescription,
           ),
         ),
       );
@@ -231,6 +239,8 @@ class _ParchiAppState extends State<ParchiApp> {
           String? accessToken;
           String? refreshToken;
           String? type;
+          String? errorCode;
+          String? errorDescription;
 
           // 1. Fragment parsing (primary for Supabase)
           // We treat settings.name as a full URI or path
@@ -242,6 +252,8 @@ class _ParchiAppState extends State<ParchiApp> {
               accessToken = queryParams['access_token'];
               refreshToken = queryParams['refresh_token'];
               type = queryParams['type'];
+              errorCode = queryParams['error_code'];
+              errorDescription = queryParams['error_description'];
             }
           } catch (e) {
             debugPrint("Error parsing fragment in generateRoute: $e");
@@ -252,6 +264,8 @@ class _ParchiAppState extends State<ParchiApp> {
             accessToken = uri.queryParameters['access_token'];
             refreshToken = uri.queryParameters['refresh_token'];
             type = uri.queryParameters['type'];
+            errorCode = uri.queryParameters['error_code'];
+            errorDescription = uri.queryParameters['error_description'];
           }
 
           // Determine screen
@@ -269,6 +283,8 @@ class _ParchiAppState extends State<ParchiApp> {
               builder: (context) => SignupVerificationScreen(
                 accessToken: accessToken,
                 refreshToken: refreshToken,
+                errorCode: errorCode,
+                errorDescription: errorDescription,
               ),
             );
           }
