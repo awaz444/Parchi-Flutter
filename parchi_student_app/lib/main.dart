@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -338,6 +339,9 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isLoading = true;
   bool _requiresUpdate = false;
+  bool _isUnderMaintenance = false;
+  String? _updateTitle;
+  String? _updateMessage;
   late final StreamSubscription<AuthState> _authSubscription;
   StreamSubscription<String>? _authErrorSubscription;
 
@@ -353,24 +357,51 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkForUpdate() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      final String localBuildNumberStr = packageInfo.buildNumber; 
-      
-      // We are hardcoding the required version constraint check to 2.0.5+17 for now
-      // This enforces that the build number must be at least 17
-      
+      final String localBuildNumberStr = packageInfo.buildNumber;
       final int localVersion = int.tryParse(localBuildNumberStr) ?? 0;
-      final int minRequired = 18; // Equivalent to checking against 2.0.5+17
 
-      if (localVersion < minRequired) {
-        if (mounted) {
-          setState(() {
-            _requiresUpdate = true;
-            _isLoading = false;
-          });
-          FlutterNativeSplash.remove();
+      // [NEW] Fetch the latest config from Supabase
+      final response = await Supabase.instance.client
+          .from('app_configs')
+          .select()
+          .limit(1)
+          .maybeSingle();
+
+      if (response != null) {
+        final int minAndroid = response['min_android_build_number'] ?? 0;
+        final int minIos = response['min_ios_build_number'] ?? 0;
+        final bool isMaintenance = response['is_under_maintenance'] ?? false;
+        
+        final int minRequired = Platform.isAndroid ? minAndroid : minIos;
+
+        if (isMaintenance) {
+          if (mounted) {
+            setState(() {
+              _isUnderMaintenance = true;
+              _updateTitle = response['force_update_title'];
+              _updateMessage = response['force_update_message'];
+              _isLoading = false;
+            });
+            FlutterNativeSplash.remove();
+          }
+          return;
+        }
+
+        if (localVersion < minRequired) {
+          if (mounted) {
+            setState(() {
+              _requiresUpdate = true;
+              _updateTitle = response['force_update_title'];
+              _updateMessage = response['force_update_message'];
+              _isLoading = false;
+            });
+            FlutterNativeSplash.remove();
+          }
         }
       }
     } catch (e) {
+      debugPrint("Error checking for update: $e");
+    }
       debugPrint("Error checking for update: $e");
     }
   }
@@ -473,8 +504,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    if (_requiresUpdate) {
-      return const ForceUpdateScreen();
+    if (_requiresUpdate || _isUnderMaintenance) {
+      return ForceUpdateScreen(
+        title: _updateTitle,
+        message: _updateMessage,
+        isMaintenance: _isUnderMaintenance,
+      );
     }
 
     if (_isLoading) {

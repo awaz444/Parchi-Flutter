@@ -4,7 +4,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../utils/colours.dart';
 
 class ForceUpdateScreen extends StatelessWidget {
-  const ForceUpdateScreen({super.key});
+  final String? title;
+  final String? message;
+  final bool isMaintenance;
+
+  const ForceUpdateScreen({
+    super.key,
+    this.title,
+    this.message,
+    this.isMaintenance = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,16 +28,16 @@ class ForceUpdateScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.system_update_alt,
+              Icon(
+                isMaintenance ? Icons.engineering : Icons.system_update_alt,
                 size: 80,
                 color: AppColors.primary,
               ),
               const SizedBox(height: 32),
-              const Text(
-                "New Version Available",
+              Text(
+                title ?? (isMaintenance ? "Under Maintenance" : "New Version Available"),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   fontFamily: 'Hagrid',
@@ -36,36 +45,39 @@ class ForceUpdateScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                "To keep your Parchiyan safe and enjoy the latest deals, please update the app.",
+              Text(
+                message ?? (isMaintenance 
+                  ? "We're currently performing some scheduled maintenance to improve your experience. We'll be back shortly!"
+                  : "To keep your Parchiyan safe and enjoy the latest deals, please update the app."),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   color: AppColors.textSecondary,
                   height: 1.5,
                 ),
               ),
               const SizedBox(height: 48),
-              ElevatedButton(
-                onPressed: _launchStore,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              if (!isMaintenance)
+                ElevatedButton(
+                  onPressed: _launchStore,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  "Update Now",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
+                  child: const Text(
+                    "Update Now",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
