@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // [NEW]
 import '../../../utils/colours.dart';
 import '../../../utils/toast_utils.dart';
 import '../../../services/supabase_storage_service.dart';
@@ -199,7 +198,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
   Future<void> _checkAccountStatus() async {
      try {
        // Attempt to login to check status
-       final response = await _authService.login(
+       await _authService.login(
          email: widget.email,
          password: widget.password,
        );
@@ -233,7 +232,17 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
        // Default fallback
        ToastUtils.showErrorToast(context, label: "Error", message: "Email already registered. Please login.");
      } catch (e) {
-       // Login failed (wrong password? or other issue)
+       final errorText = e.toString().toLowerCase();
+       // If signup email already exists but password doesn't match, avoid
+       // showing a misleading auth error on the signup screen.
+       if (errorText.contains('invalid email or password')) {
+        ToastUtils.showErrorToast(
+          context,
+          label: "Account Exists",
+          message: "This email is already registered. Please login or reset your password.",
+        );
+        return;
+       }
        ToastUtils.handleApiError(context, e);
      }
   }

@@ -142,21 +142,15 @@ class SupabaseStorageService {
     required String userId,
   }) async {
     try {
-      // Upload all images concurrently
-      final results = await Future.wait([
-        uploadStudentIdImage(studentIdImage, userId),
-        uploadStudentIdBackImage(studentIdBackImage, userId),
-        uploadCnicFrontImage(cnicFrontImage, userId),
-        uploadCnicBackImage(cnicBackImage, userId),
-        uploadSelfieImage(selfieImage, userId),
-      ]);
-
       return {
-        'studentIdUrl': results[0],
-        'studentIdBackUrl': results[1],
-        'cnicFrontUrl': results[2],
-        'cnicBackUrl': results[3],
-        'selfieUrl': results[4],
+        // Uploading one-by-one is slower but much more stable on Android
+        // networks/devices than 5 concurrent large uploads.
+        'studentIdUrl': await uploadStudentIdImage(studentIdImage, userId),
+        'studentIdBackUrl':
+            await uploadStudentIdBackImage(studentIdBackImage, userId),
+        'cnicFrontUrl': await uploadCnicFrontImage(cnicFrontImage, userId),
+        'cnicBackUrl': await uploadCnicBackImage(cnicBackImage, userId),
+        'selfieUrl': await uploadSelfieImage(selfieImage, userId),
       };
     } catch (e) {
       throw Exception('Failed to upload KYC images: $e');
