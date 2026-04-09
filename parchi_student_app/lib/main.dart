@@ -402,8 +402,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
     } catch (e) {
       debugPrint("Error checking for update: $e");
     }
-      debugPrint("Error checking for update: $e");
-    }
   }
 
   void _setupAuthListener() {
