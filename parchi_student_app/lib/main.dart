@@ -572,23 +572,44 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   void _handleMerchantLink(Uri uri) {
     debugPrint('MainScreen _handleMerchantLink: $uri');
 
-    // Only act on parchi://merchant/<merchantId>
-    if (uri.scheme != 'parchi') return;
-    if (uri.host != 'merchant' && !uri.path.contains('/merchant/')) return;
+    // Only act on parchi:// or https://parchipakistan.com links
+    final bool isCustomScheme = uri.scheme == 'parchi';
+    final bool isWebScheme = uri.scheme == 'https' || uri.scheme == 'http';
+    
+    if (!isCustomScheme && !isWebScheme) return;
 
-    // Extract merchantId: path segment takes priority, then query param.
-    final merchantId = uri.pathSegments.isNotEmpty
-        ? uri.pathSegments.first
-        : uri.queryParameters['id'] ?? '';
+    // Check if it's a merchant link
+    final bool isMerchantPath = uri.path.contains('/merchant/') || uri.host == 'merchant';
+    if (!isMerchantPath) return;
 
-    if (merchantId.isEmpty) return;
+    // Extract merchantId
+    // Case 1: https://parchipakistan.com/merchant/ID -> segments: ['merchant', 'ID']
+    // Case 2: parchi://merchant/ID -> host: 'merchant', segments: ['ID']
+    String? merchantId;
+    
+    if (uri.pathSegments.contains('merchant')) {
+      final index = uri.pathSegments.indexOf('merchant');
+      if (index + 1 < uri.pathSegments.length) {
+        merchantId = uri.pathSegments[index + 1];
+      }
+    } else if (uri.host == 'merchant' && uri.pathSegments.isNotEmpty) {
+      merchantId = uri.pathSegments.first;
+    }
+
+    // Fallback to query parameter 'id'
+    merchantId ??= uri.queryParameters['id'];
+
+    if (merchantId == null || merchantId.isEmpty) {
+      debugPrint('MainScreen – could not extract merchantId from $uri');
+      return;
+    }
 
     // Guard: widget must still be mounted before using context/Navigator.
     if (!mounted) return;
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => MerchantDeepLinkScreen(merchantId: merchantId),
+        builder: (_) => MerchantDeepLinkScreen(merchantId: merchantId!),
       ),
     );
   }

@@ -497,6 +497,7 @@
 				DEVELOPMENT_TEAM = 2HSS33TUFV;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Runner/RunnerRelease.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -681,6 +682,7 @@
 				DEVELOPMENT_TEAM = 2HSS33TUFV;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				CODE_SIGN_ENTITLEMENTS = Runner/RunnerRelease.entitlements;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -45,6 +45,17 @@
                 <data android:scheme="parchi" android:host="reset-password" />
                 <data android:scheme="parchi" android:host="merchant" />
             </intent-filter>
+            <!-- App Links for Merchants -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="parchipakistan.com" android:pathPrefix="/merchant/" />
+                <data android:scheme="https" android:host="www.parchipakistan.com" android:pathPrefix="/merchant/" />
+                <data android:scheme="http" android:host="parchipakistan.com" android:pathPrefix="/merchant/" />
+                <data android:scheme="http" android:host="www.parchipakistan.com" android:pathPrefix="/merchant/" />
+            </intent-filter>
+
             <!-- App Links for Supabase -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
