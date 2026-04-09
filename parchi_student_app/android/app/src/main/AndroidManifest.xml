@@ -45,12 +45,14 @@
                 <data android:scheme="parchi" android:host="reset-password" />
                 <data android:scheme="parchi" android:host="merchant" />
             </intent-filter>
-            <!-- App Links: only www — apex parchipakistan.com redirects and fails Android domain verification -->
+            <!-- App Links for Supabase -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="www.parchipakistan.com" />
+                <data android:scheme="https" />
+                <data android:host="zjghfwnrzazmukykgyhh.supabase.co" />
+                <data android:pathPrefix="/auth/v1/verify" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
