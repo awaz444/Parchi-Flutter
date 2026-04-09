@@ -25,7 +25,6 @@ import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
-import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'screens/force_update/force_update_screen.dart';
 
@@ -41,9 +40,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // [NEW] Initialize Notification Service (Subscribes to 'students_all')
-  await NotificationHandlerService().initialize();
-
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
     anonKey: SupabaseConfig.supabaseAnonKey,
@@ -55,6 +51,9 @@ void main() async {
       child: ParchiApp(),
     ),
   );
+
+  // Keep app startup snappy: notification setup is not required before first frame.
+  unawaited(NotificationHandlerService().initialize());
 }
 
 class ParchiApp extends StatefulWidget {
@@ -425,14 +424,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _checkAuthState() async {
     try {
-      // Start both auth logic and a minimum 2-second delay
-      // Add a 5 second timeout so the splash screen doesn't hang forever without internet
-      final results = await Future.wait([
-        authService.isStudentAuthenticated(),
-        Future.delayed(const Duration(seconds: 2)),
-      ]).timeout(const Duration(seconds: 5));
-
-      final isStudentAuth = results[0] as bool;
+      // Avoid artificial delays on launch; only wait for the auth check itself.
+      final isStudentAuth = await authService
+          .isStudentAuthenticated()
+          .timeout(const Duration(seconds: 3));
 
       if (mounted) {
         setState(() {
