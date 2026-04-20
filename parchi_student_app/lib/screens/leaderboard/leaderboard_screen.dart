@@ -81,6 +81,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             fontSize: 16,
             fontWeight: FontWeight.w800,
             fontFamily: 'Hagrid',
+            fontFamilyFallback: const ['sans-serif'],
           ),
         ),
       ),

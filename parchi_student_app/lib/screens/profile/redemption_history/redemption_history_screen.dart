@@ -127,6 +127,7 @@ class _RedemptionHistoryScreenState
               color: Colors.white,
               fontWeight: FontWeight.w800,
               fontFamily: 'Hagrid',
+              fontFamilyFallback: ['sans-serif'],
               fontSize: 16,
             )),
         backgroundColor: AppColors.primary,

@@ -41,6 +41,7 @@ class ForceUpdateScreen extends StatelessWidget {
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   fontFamily: 'Hagrid',
+                  fontFamilyFallback: ['sans-serif'],
                   color: Color(0xFF111111),
                 ),
               ),

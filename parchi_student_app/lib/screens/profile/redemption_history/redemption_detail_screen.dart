@@ -96,6 +96,7 @@ class RedemptionDetailScreen extends ConsumerWidget {
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                     fontFamily: 'Hagrid',
+                    fontFamilyFallback: ['sans-serif'],
                     color: AppColors.textPrimary,
                   ),
                   textAlign: TextAlign.center,

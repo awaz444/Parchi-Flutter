@@ -129,6 +129,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             fontSize: 16,
             fontWeight: FontWeight.w800,
             fontFamily: 'Hagrid',
+            fontFamilyFallback: const ['sans-serif'],
           ),
         ),
       ),

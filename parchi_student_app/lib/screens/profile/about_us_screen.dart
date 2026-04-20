@@ -16,6 +16,7 @@ class AboutUsScreen extends StatelessWidget {
             fontSize: 16,
             fontWeight: FontWeight.w800,
             fontFamily: 'Hagrid',
+            fontFamilyFallback: ['sans-serif'],
           ),
         ),
         centerTitle: true,

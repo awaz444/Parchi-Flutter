@@ -239,6 +239,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 color: Colors.white,
                                 fontSize: 26,
                                 fontFamily: 'Hagrid',
+                                fontFamilyFallback: ['sans-serif'],
                                 fontWeight: FontWeight.w800)),
                         const SizedBox(height: 4),
                         Text(parchiId,

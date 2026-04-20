@@ -54,6 +54,7 @@ class MerchantDetailsScreen extends ConsumerWidget {
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   fontFamily: 'Hagrid',
+                  fontFamilyFallback: ['sans-serif'],
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
