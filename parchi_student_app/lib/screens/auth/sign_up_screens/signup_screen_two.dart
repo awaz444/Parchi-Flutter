@@ -1,5 +1,7 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../utils/colours.dart';
@@ -74,22 +76,34 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
     );
   }
 
+  /// Cache paths from [ImagePicker] can be deleted by Android before upload.
+  /// Copy into app documents so [MultipartFile.fromPath] still sees the file.
+  Future<File> _persistPickedImage(XFile image, int imageType) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final safeName =
+        'signup_kyc_${imageType}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final dest = File('${docsDir.path}/$safeName');
+    await File(image.path).copy(dest.path);
+    return dest;
+  }
+
   Future<void> _pickImage(ImageSource source, int imageType) async {
     try {
       final XFile? image =
           await _imagePicker.pickImage(source: source, imageQuality: 85);
       if (image != null) {
+        final File persisted = await _persistPickedImage(image, imageType);
         setState(() {
           if (imageType == 0) {
-            _studentIdImage = File(image.path);
+            _studentIdImage = persisted;
           } else if (imageType == 1) {
-            _studentIdBackImage = File(image.path);
+            _studentIdBackImage = persisted;
           } else if (imageType == 2) {
-            _cnicFrontImage = File(image.path);
+            _cnicFrontImage = persisted;
           } else if (imageType == 3) {
-            _cnicBackImage = File(image.path);
+            _cnicBackImage = persisted;
           } else {
-            _selfieImage = File(image.path);
+            _selfieImage = persisted;
           }
         });
       }
