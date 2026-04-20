@@ -280,7 +280,7 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
               const SizedBox(height: 2),
               if (offer.discountValue > 0)
                 Text(
-                  "Valid until ${offer.validUntil.day}/${offer.validUntil.month}",
+                  "Valid until ${offer.validUntil.toLocal().day}/${offer.validUntil.toLocal().month}",
                   style: const TextStyle(
                     fontSize: 12,
                     decoration: TextDecoration

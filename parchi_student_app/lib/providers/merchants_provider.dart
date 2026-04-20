@@ -18,6 +18,7 @@ class MerchantListState {
   final String? error;
   final int page;
   final bool hasMore;
+  final String? searchQuery;
 
   MerchantListState({
     this.items = const [],
@@ -26,6 +27,7 @@ class MerchantListState {
     this.error,
     this.page = 1,
     this.hasMore = true,
+    this.searchQuery,
   });
 
   MerchantListState copyWith({
@@ -35,6 +37,7 @@ class MerchantListState {
     String? error,
     int? page,
     bool? hasMore,
+    String? searchQuery,
   }) {
     return MerchantListState(
       items: items ?? this.items,
@@ -43,6 +46,7 @@ class MerchantListState {
       error: error,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 }
@@ -66,6 +70,7 @@ class MerchantListNotifier extends StateNotifier<MerchantListState> {
         page: 1,
         limit: _limit,
         month: currentMonth,
+        search: state.searchQuery,
       );
 
       state = state.copyWith(
@@ -83,8 +88,15 @@ class MerchantListNotifier extends StateNotifier<MerchantListState> {
   }
 
   Future<void> refresh() async {
-    // Reset and reload
-    state = MerchantListState(items: [], isLoading: true);
+    // Reset and reload (keeping search query if any)
+    state = MerchantListState(
+        items: [], isLoading: true, searchQuery: state.searchQuery);
+    await loadInitial();
+  }
+
+  Future<void> setSearchQuery(String? query) async {
+    if (state.searchQuery == query) return;
+    state = state.copyWith(searchQuery: query, items: [], isLoading: true);
     await loadInitial();
   }
 
@@ -102,6 +114,7 @@ class MerchantListNotifier extends StateNotifier<MerchantListState> {
         page: nextPage,
         limit: _limit,
         month: currentMonth,
+        search: state.searchQuery,
       );
 
       state = state.copyWith(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/colours.dart';
@@ -9,6 +10,7 @@ import 'notfication/notification_screen.dart';
 import '../profile/profile_screen.dart';
 import '../auth/login_screens/login_screen.dart';
 import '../../widgets/home_screen_widgets/app_intro_modal.dart';
+import '../../providers/merchants_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +23,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<double> _expandProgress = ValueNotifier(0.0);
   ProviderSubscription<AsyncValue<dynamic>>? _userProfileSub;
+  Timer? _debounce;
 
   // Pixels of scroll before the header is fully expanded.
   // Tuned to card height (180) + top gap (16).
@@ -72,6 +75,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _userProfileSub?.close();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
@@ -85,15 +89,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _searchQuery = val;
       _isSearching = val.isNotEmpty;
     });
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        ref.read(studentMerchantsProvider.notifier).setSearchQuery(val);
+      }
+    });
   }
 
   void _cancelSearch() {
     _searchController.clear();
     _searchFocus.unfocus();
+    _debounce?.cancel();
     setState(() {
       _searchQuery = "";
       _isSearching = false;
     });
+    ref.read(studentMerchantsProvider.notifier).setSearchQuery("");
   }
 
   // ─── Navigation transitions ────────────────────────────────────────────────

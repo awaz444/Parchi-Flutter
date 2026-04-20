@@ -303,7 +303,7 @@ class _RedemptionHistoryScreenState
     final logoUrl = item.merchant?.logoPath ??
         item.offer?.merchant?.logoPath ??
         item.offer?.imageUrl;
-    final timeStr = DateFormat('MMM d').format(item.redeemedAt); // e.g. Oct 24
+    final timeStr = DateFormat('MMM d').format(item.redeemedAt.toLocal()); // e.g. Oct 24
 
     return InkWell(
       onTap: () {

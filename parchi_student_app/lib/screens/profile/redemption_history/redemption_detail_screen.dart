@@ -253,10 +253,10 @@ class RedemptionDetailScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildDetailRow("Date",
-                    DateFormat('MMM d, yyyy').format(redemption.redeemedAt)),
+                    DateFormat('MMM d, yyyy').format(redemption.redeemedAt.toLocal())),
                 const Divider(height: 24),
                 _buildDetailRow(
-                    "Time", DateFormat('h:mm a').format(redemption.redeemedAt)),
+                    "Time", DateFormat('h:mm a').format(redemption.redeemedAt.toLocal())),
                 const Divider(height: 24),
                 _buildDetailRow("Reference ID",
                     redemption.id.split('-').last.toUpperCase()),

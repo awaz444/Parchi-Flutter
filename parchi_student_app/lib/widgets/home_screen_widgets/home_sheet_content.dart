@@ -588,19 +588,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           else
             Builder(
               builder: (context) {
-                final merchants = merchantState.items;
-                final filteredMerchants = widget.searchQuery.isEmpty
-                    ? merchants
-                    : merchants.where((m) {
-                        final query =
-                            widget.searchQuery.toLowerCase();
-                        final name =
-                            (m.businessName).toLowerCase();
-                        final cat =
-                            (m.category ?? "").toLowerCase();
-                        return name.contains(query) ||
-                            cat.contains(query);
-                      }).toList();
+                final filteredMerchants = merchantState.items;
 
                 if (filteredMerchants.isEmpty) {
                   return SliverToBoxAdapter(
@@ -655,7 +643,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                         );
                       },
                       childCount: filteredMerchants.length +
-                          (widget.searchQuery.isEmpty ? 1 : 0),
+                          (merchantState.hasMore || widget.searchQuery.isEmpty ? 1 : 0),
                     ),
                   ),
                 );

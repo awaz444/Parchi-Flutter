@@ -372,11 +372,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   String _formatDate(DateTime date) {
+    final localDate = date.toLocal();
     final now = DateTime.now();
-    final difference = now.difference(date);
+    final difference = now.difference(localDate);
 
     if (difference.inDays > 7) {
-      return DateFormat('MMM d, y').format(date);
+      return DateFormat('MMM d, y').format(localDate);
     } else if (difference.inDays >= 1) {
       return '${difference.inDays}d ago';
     } else if (difference.inHours >= 1) {

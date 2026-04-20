@@ -32,12 +32,14 @@ class MerchantsService {
     int page = 1,
     int limit = 10,
     String? month,
+    String? search,
   }) async {
 
     final queryParameters = {
       'page': page.toString(),
       'limit': limit.toString(),
       if (month != null) 'month': month,
+      if (search != null && search.isNotEmpty) 'search': search,
     };
 
     final uri = Uri.parse(ApiConfig.studentMerchantListEndpoint)
