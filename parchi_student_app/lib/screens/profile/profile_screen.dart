@@ -13,6 +13,7 @@ import '../../utils/toast_utils.dart'; // [NEW] Added ToastUtils
 import '../../widgets/common/spinning_loader.dart'; // [REQUIRED]
 import 'about_us_screen.dart'; // [NEW]
 import 'help_center_screen.dart'; // [NEW]
+import '../../widgets/common/hagrid_text.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -234,12 +235,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         const SizedBox(height: 16),
 
                         // Name & ID
-                        Text(fullName,
+                        HagridText(fullName,
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 26,
-                                fontFamily: 'Hagrid',
-                                fontFamilyFallback: ['sans-serif'],
                                 fontWeight: FontWeight.w800)),
                         const SizedBox(height: 4),
                         Text(parchiId,

@@ -5,6 +5,7 @@ import '../../../utils/colours.dart';
 import '../../../models/redemption_model.dart';
 import '../../../providers/redemption_provider.dart';
 import '../../../widgets/common/blinking_skeleton.dart';
+import '../../../widgets/common/hagrid_text.dart';
 
 class RedemptionDetailScreen extends ConsumerWidget {
   /// Only the ID is passed — full details are fetched on demand.
@@ -19,10 +20,9 @@ class RedemptionDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.lightCanvas,
       appBar: AppBar(
-        title: const Text('Redemption Details',
+        title: const HagridText('Redemption Details',
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontFamily: 'Hagrid',
               fontWeight: FontWeight.w800,
               fontSize: 16,
             )),
@@ -90,13 +90,11 @@ class RedemptionDetailScreen extends ConsumerWidget {
                       : null,
                 ),
                 const SizedBox(height: 16),
-                Text(
+                HagridText(
                   merchantName,
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    fontFamily: 'Hagrid',
-                    fontFamilyFallback: ['sans-serif'],
                     color: AppColors.textPrimary,
                   ),
                   textAlign: TextAlign.center,

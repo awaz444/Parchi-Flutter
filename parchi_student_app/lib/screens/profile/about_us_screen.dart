@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/colours.dart';
+import '../../widgets/common/hagrid_text.dart';
 
 class AboutUsScreen extends StatelessWidget {
   const AboutUsScreen({super.key});
@@ -9,14 +10,12 @@ class AboutUsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-        title: const Text(
+        title: const HagridText(
           "About Us",
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            fontFamily: 'Hagrid',
-            fontFamilyFallback: ['sans-serif'],
           ),
         ),
         centerTitle: true,

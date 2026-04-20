@@ -8,6 +8,7 @@ import '../../../models/notification_model.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import '../../../widgets/common/parchi_loader.dart';
 import '../../../widgets/common/blinking_skeleton.dart';
+import '../../../widgets/common/hagrid_text.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -122,14 +123,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
-        title: const Text(
+        title: const HagridText(
           "Notifications",
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            fontFamily: 'Hagrid',
-            fontFamilyFallback: const ['sans-serif'],
           ),
         ),
       ),

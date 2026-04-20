@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:math' as math;
+import '../../widgets/common/hagrid_text.dart';
 import '../../models/merchant_detail_model.dart';
 import '../../utils/colours.dart';
 import '../../widgets/common/parchi_refresh_loader.dart';
@@ -47,14 +48,12 @@ class MerchantDetailsScreen extends ConsumerWidget {
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               // Title is invisible while banner is expanded; fades in on collapse.
-              title: Text(
+              title: HagridText(
                 resolvedMerchant.businessName,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  fontFamily: 'Hagrid',
-                  fontFamilyFallback: ['sans-serif'],
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

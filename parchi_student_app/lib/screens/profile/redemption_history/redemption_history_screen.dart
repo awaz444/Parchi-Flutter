@@ -11,6 +11,7 @@ import '../../../providers/redemption_provider.dart';
 import '../../../providers/user_provider.dart'; // [GUEST] For auth check
 import '../../../widgets/common/blinking_skeleton.dart';
 import '../../../widgets/common/guest_login_prompt.dart'; // [GUEST]
+import '../../../widgets/common/hagrid_text.dart';
 
 class RedemptionHistoryScreen extends ConsumerStatefulWidget {
   const RedemptionHistoryScreen({super.key});
@@ -122,12 +123,10 @@ class _RedemptionHistoryScreenState
     return Scaffold(
       backgroundColor: AppColors.primary,
       appBar: AppBar(
-        title: const Text('Redemption History',
+        title: const HagridText('Redemption History',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
-              fontFamily: 'Hagrid',
-              fontFamilyFallback: ['sans-serif'],
               fontSize: 16,
             )),
         backgroundColor: AppColors.primary,

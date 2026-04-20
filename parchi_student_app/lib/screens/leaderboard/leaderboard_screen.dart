@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/leaderboard_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/redemption_provider.dart';
+import '../../widgets/common/hagrid_text.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -74,14 +75,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         scrolledUnderElevation: 0,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
+        title: const HagridText(
           "Leaderboard",
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            fontFamily: 'Hagrid',
-            fontFamilyFallback: const ['sans-serif'],
           ),
         ),
       ),

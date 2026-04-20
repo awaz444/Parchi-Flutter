@@ -11,6 +11,7 @@ import 'package:parchi_student_app/widgets/home_screen_restraunts_widgets/brand_
 import '../home_screen_restraunts_widgets/restaurant_big_card.dart';
 import '../home_screen_restraunts_widgets/restaurant_medium_card.dart';
 import '../common/blinking_skeleton.dart';
+import 'filter_bottom_sheet.dart';
 
 import '../../screens/home/merchant_details_screen.dart';
 import '../../models/merchant_detail_model.dart';
@@ -55,6 +56,73 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
   void initState() {
     super.initState();
     widget.scrollController.addListener(_onScroll);
+  }
+
+  Widget _buildFilterButton(BuildContext context, WidgetRef ref) {
+    final merchantState = ref.watch(studentMerchantsProvider);
+    int filterCount = 0;
+    if (merchantState.selectedCategory != null) filterCount++;
+    if (merchantState.selectedSubCategory != null) filterCount++;
+
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => const FilterBottomSheet(),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: filterCount > 0
+              ? AppColors.primary.withOpacity(0.1)
+              : AppColors.lightCanvas,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: filterCount > 0 ? AppColors.primary : Colors.grey[200]!,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.tune_rounded,
+              size: 18,
+              color: filterCount > 0 ? AppColors.primary : AppColors.textPrimary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              "Filter",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color:
+                    filterCount > 0 ? AppColors.primary : AppColors.textPrimary,
+              ),
+            ),
+            if (filterCount > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  filterCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -545,15 +613,22 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           // ── SECTION 3: ALL RESTAURANTS header ────────────────────────────
           // Hidden when searching — we go straight to cards.
           if (!widget.isSearching)
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(18, 18, 18, 18),
-                child: Text(
-                  "All Restaurants",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary),
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "All Restaurants",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    _buildFilterButton(context, ref),
+                  ],
                 ),
               ),
             ),

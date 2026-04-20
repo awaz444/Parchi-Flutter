@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/colours.dart';
+import '../../widgets/common/hagrid_text.dart';
 
 class ForceUpdateScreen extends StatelessWidget {
   final String? title;
@@ -34,14 +35,12 @@ class ForceUpdateScreen extends StatelessWidget {
                 color: AppColors.primary,
               ),
               const SizedBox(height: 32),
-              Text(
+              HagridText(
                 title ?? (isMaintenance ? "Under Maintenance" : "New Version Available"),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  fontFamily: 'Hagrid',
-                  fontFamilyFallback: ['sans-serif'],
                   color: Color(0xFF111111),
                 ),
               ),

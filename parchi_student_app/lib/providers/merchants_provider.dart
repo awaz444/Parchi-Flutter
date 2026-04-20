@@ -19,6 +19,8 @@ class MerchantListState {
   final int page;
   final bool hasMore;
   final String? searchQuery;
+  final String? selectedCategory;
+  final String? selectedSubCategory;
 
   MerchantListState({
     this.items = const [],
@@ -28,6 +30,8 @@ class MerchantListState {
     this.page = 1,
     this.hasMore = true,
     this.searchQuery,
+    this.selectedCategory,
+    this.selectedSubCategory,
   });
 
   MerchantListState copyWith({
@@ -38,6 +42,13 @@ class MerchantListState {
     int? page,
     bool? hasMore,
     String? searchQuery,
+    String? selectedCategory,
+    String? selectedSubCategory,
+    // Add flags to explicitly clear nullable fields if needed, 
+    // or use a more robust copyWith pattern.
+    bool clearSearch = false,
+    bool clearCategory = false,
+    bool clearSubCategory = false,
   }) {
     return MerchantListState(
       items: items ?? this.items,
@@ -46,7 +57,9 @@ class MerchantListState {
       error: error,
       page: page ?? this.page,
       hasMore: hasMore ?? this.hasMore,
-      searchQuery: searchQuery ?? this.searchQuery,
+      searchQuery: clearSearch ? null : (searchQuery ?? this.searchQuery),
+      selectedCategory: clearCategory ? null : (selectedCategory ?? this.selectedCategory),
+      selectedSubCategory: clearSubCategory ? null : (selectedSubCategory ?? this.selectedSubCategory),
     );
   }
 }
@@ -71,6 +84,8 @@ class MerchantListNotifier extends StateNotifier<MerchantListState> {
         limit: _limit,
         month: currentMonth,
         search: state.searchQuery,
+        category: state.selectedCategory,
+        subCategory: state.selectedSubCategory,
       );
 
       state = state.copyWith(
@@ -88,15 +103,51 @@ class MerchantListNotifier extends StateNotifier<MerchantListState> {
   }
 
   Future<void> refresh() async {
-    // Reset and reload (keeping search query if any)
+    // Reset and reload (keeping search query and filters)
     state = MerchantListState(
-        items: [], isLoading: true, searchQuery: state.searchQuery);
+      items: [], 
+      isLoading: true, 
+      searchQuery: state.searchQuery,
+      selectedCategory: state.selectedCategory,
+      selectedSubCategory: state.selectedSubCategory,
+    );
     await loadInitial();
   }
 
   Future<void> setSearchQuery(String? query) async {
     if (state.searchQuery == query) return;
-    state = state.copyWith(searchQuery: query, items: [], isLoading: true);
+    state = state.copyWith(
+      searchQuery: query, 
+      clearSearch: query == null,
+      items: [], 
+      isLoading: true
+    );
+    await loadInitial();
+  }
+
+  Future<void> setFilters(String? category, String? subCategory) async {
+    if (state.selectedCategory == category && state.selectedSubCategory == subCategory) return;
+    state = state.copyWith(
+      selectedCategory: category, 
+      selectedSubCategory: subCategory, 
+      clearCategory: category == null,
+      clearSubCategory: subCategory == null,
+      items: [], 
+      isLoading: true
+    );
+    await loadInitial();
+  }
+
+  Future<void> clearFilters() async {
+    if (state.selectedCategory == null && state.selectedSubCategory == null) return;
+    state = state.copyWith(
+      selectedCategory: null, 
+      selectedSubCategory: null,
+      clearCategory: true,
+      clearSubCategory: true,
+      items: [], 
+      isLoading: true
+    );
     await loadInitial();
   }
 
@@ -115,6 +166,8 @@ class MerchantListNotifier extends StateNotifier<MerchantListState> {
         limit: _limit,
         month: currentMonth,
         search: state.searchQuery,
+        category: state.selectedCategory,
+        subCategory: state.selectedSubCategory,
       );
 
       state = state.copyWith(
