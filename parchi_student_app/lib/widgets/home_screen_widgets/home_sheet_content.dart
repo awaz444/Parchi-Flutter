@@ -307,6 +307,74 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
     );
   }
 
+  Widget _buildErrorState(String message) {
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.error,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Oops!",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: 160,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => ref.read(studentMerchantsProvider.notifier).loadInitial(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  "Try Again",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -653,13 +721,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
             )
           else if (merchantState.error != null &&
               merchantState.items.isEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                    child: Text("Error: ${merchantState.error}")),
-              ),
-            )
+            _buildErrorState(merchantState.error!)
           else
             Builder(
               builder: (context) {

@@ -95,9 +95,22 @@ class MerchantListNotifier extends StateNotifier<MerchantListState> {
         hasMore: response.pagination.hasNext,
       );
     } catch (e) {
+      String errorMessage = "Something went wrong. Please try again.";
+      final errorStr = e.toString();
+      
+      if (errorStr.contains('SocketException') || 
+          errorStr.contains('Network is unreachable') ||
+          errorStr.contains('Failed host lookup')) {
+        errorMessage = "No internet connection. Please check your network.";
+      } else if (errorStr.contains('TimeoutException')) {
+        errorMessage = "Request timed out. Please try again later.";
+      } else if (errorStr.contains('404')) {
+        errorMessage = "Service not found. Please contact support.";
+      }
+
       state = state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: errorMessage,
       );
     }
   }
