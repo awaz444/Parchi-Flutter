@@ -14,6 +14,8 @@ import 'verification_success_screen.dart'; // [NEW]
 
 import '../../../widgets/common/spinning_loader.dart';
 import '../../../widgets/common/image_source_popup.dart'; // [NEW] Import
+import '../../../services/analytics_service.dart';
+
 
 class SignupScreenTwo extends StatefulWidget {
   final String firstName;
@@ -55,8 +57,10 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
   @override
   void initState() {
     super.initState();
+    analyticsService.logEvent('signup_step_2_start');
     // _clearExistingSession(); // Removed to prevent triggering logout navigation
   }
+
 
   // Future<void> _clearExistingSession() async { ... } removed
 
@@ -173,6 +177,10 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
         cnicBackImage: _cnicBackImage!,
         selfieImage: _selfieImage!,
       );
+
+      analyticsService.logEvent('signup_step_2_complete');
+      analyticsService.logEvent('kyc_submitted');
+
 
       if (mounted)
         Navigator.pushReplacement(

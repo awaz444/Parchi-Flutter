@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../utils/colours.dart';
 import '../../../utils/toast_utils.dart'; // [NEW] Import ToastUtils
 import 'verification_success_screen.dart'; // [NEW]
+import '../../../services/analytics_service.dart';
+
 
 class SignupVerificationScreen extends StatefulWidget {
   final String? parchiId;
@@ -96,7 +98,9 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
 
     _setupDeepLinkListener();
     _startResendTimer(); // Start timer immediately on load
+    analyticsService.logEvent('signup_verification_sent');
   }
+
 
   Future<void> _setManualSession() async {
     try {
@@ -142,6 +146,10 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
         _isVerified = true;
         _isLinkExpired = false; // Reset expiry if successful
       });
+
+      analyticsService.logEvent('signup_verification_verified');
+      analyticsService.logEvent('signup_completed');
+
       // Restart animation for the checkmark
       _controller.reset();
       _controller.forward();

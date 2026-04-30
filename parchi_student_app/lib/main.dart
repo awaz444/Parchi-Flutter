@@ -30,6 +30,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'screens/force_update/force_update_screen.dart';
 
 
+import 'services/analytics_service.dart';
+
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -46,7 +48,11 @@ void main() async {
     anonKey: SupabaseConfig.supabaseAnonKey,
   );
 
+  // Log app open
+  analyticsService.logEvent('app_opened');
+
   runApp(
+
     // [NEW] Wrap entire app in ProviderScope
     const ProviderScope(
       child: ParchiApp(),

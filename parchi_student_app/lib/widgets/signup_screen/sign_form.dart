@@ -8,6 +8,8 @@ import '../../models/institute_model.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import '../../utils/toast_utils.dart';
+import '../../services/analytics_service.dart';
+
 class SignupForm extends StatefulWidget {
   final VoidCallback onLoginTap;
 
@@ -40,7 +42,9 @@ class _SignupFormState extends State<SignupForm> {
   void initState() {
     super.initState();
     _fetchInstitutes();
+    analyticsService.logEvent('signup_step_1_start');
   }
+
 
   Future<void> _fetchInstitutes() async {
     setState(() => _isLoadingInstitutes = true);
@@ -150,7 +154,9 @@ class _SignupFormState extends State<SignupForm> {
       setState(() {
         _isLoading = true;
       });
+      analyticsService.logEvent('signup_step_1_complete');
       await Future.delayed(const Duration(milliseconds: 500));
+
 
       if (!mounted) return;
 
