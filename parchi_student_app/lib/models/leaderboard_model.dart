@@ -5,6 +5,7 @@ class LeaderboardItem {
   final int redemptions;
   final String? userId; // Optional: ID if available
   final String? parchiId; // Optional: Parchi ID if available
+  final String? profilePicture; // Optional: profile picture URL
 
   LeaderboardItem({
     required this.rank,
@@ -13,6 +14,7 @@ class LeaderboardItem {
     required this.redemptions,
     this.userId,
     this.parchiId,
+    this.profilePicture,
   });
 
   factory LeaderboardItem.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class LeaderboardItem {
       redemptions: json['redemptions'] ?? 0,
       userId: json['userId']?.toString() ?? json['user_id']?.toString(),
       parchiId: json['parchiId']?.toString() ?? json['parchi_id']?.toString(),
+      profilePicture: json['profilePicture']?.toString() ?? json['profile_picture']?.toString(),
     );
   }
 }

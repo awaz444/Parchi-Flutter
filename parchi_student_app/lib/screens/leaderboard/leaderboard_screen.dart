@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/colours.dart';
 import '../../models/leaderboard_model.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
@@ -173,6 +174,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   university: item.university,
                   redemptions: item.redemptions,
                   isCurrentUser: isCurrentUser,
+                  profilePicture: item.profilePicture,
                 );
               },
             ),
@@ -281,6 +283,20 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
           ),
           const SizedBox(width: 8),
 
+          // Current user avatar in sticky bar
+          _buildAvatar(
+            profilePicture: user.profilePicture,
+            initials: () {
+              final first = (user.firstName ?? '').trim();
+              final last = (user.lastName ?? '').trim();
+              final parts = [first, last].where((s) => s.isNotEmpty).toList();
+              return parts.map((w) => w[0]).take(2).join().toUpperCase();
+            }(),
+            isCurrentUser: true,
+            radius: 18,
+          ),
+          const SizedBox(width: 8),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,25 +380,38 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     required String university,
     required int redemptions,
     required bool isCurrentUser,
+    String? profilePicture,
   }) {
+    final initials = name.trim().isNotEmpty
+        ? name.trim().split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase()
+        : '?';
+
     return Container(
       color: isCurrentUser ? AppColors.primary : AppColors.lightSurface,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 48,
+            width: 40,
             child: Text(
               "#$rank",
               style: TextStyle(
                 color: isCurrentUser ? Colors.white : AppColors.primary,
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
+          // Avatar
+          _buildAvatar(
+            profilePicture: profilePicture,
+            initials: initials,
+            isCurrentUser: isCurrentUser,
+            radius: 20,
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,6 +464,54 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     );
   }
 
+  Widget _buildAvatar({
+    required String? profilePicture,
+    required String initials,
+    required bool isCurrentUser,
+    double radius = 20,
+  }) {
+    final bgColor = isCurrentUser
+        ? Colors.white.withOpacity(0.25)
+        : AppColors.primary.withOpacity(0.12);
+    final textColor = isCurrentUser ? Colors.white : AppColors.primary;
+
+    if (profilePicture != null && profilePicture.isNotEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: bgColor,
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: profilePicture,
+            width: radius * 2,
+            height: radius * 2,
+            fit: BoxFit.cover,
+            errorWidget: (_, __, ___) => Text(
+              initials,
+              style: TextStyle(
+                color: textColor,
+                fontSize: radius * 0.7,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: bgColor,
+      child: Text(
+        initials,
+        style: TextStyle(
+          color: textColor,
+          fontSize: radius * 0.7,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildLeaderboardListSkeleton() {
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: 100),
@@ -451,15 +528,21 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
   Widget _buildLeaderboardItemSkeleton() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           BlinkingSkeleton(
-              width: 38,
+              width: 32,
               height: 20,
               baseColor: AppColors.primary.withOpacity(0.1)),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
+          BlinkingSkeleton(
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              baseColor: AppColors.primary.withOpacity(0.1)),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
