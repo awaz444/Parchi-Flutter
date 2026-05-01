@@ -15,6 +15,7 @@ import 'verification_success_screen.dart'; // [NEW]
 import '../../../widgets/common/spinning_loader.dart';
 import '../../../widgets/common/image_source_popup.dart'; // [NEW] Import
 import '../../../services/analytics_service.dart';
+import '../../../services/signup_draft_service.dart';
 
 
 class SignupScreenTwo extends StatefulWidget {
@@ -59,6 +60,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
   void initState() {
     super.initState();
     analyticsService.logEvent('signup_step_2_start');
+    _loadImageDraft();
     // _clearExistingSession(); // Removed to prevent triggering logout navigation
   }
 
@@ -111,13 +113,80 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
             _selfieImage = persisted;
           }
         });
+        _saveImageDraft();
       }
     } catch (e) {
       if (mounted) ToastUtils.handleApiError(context, e);
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Draft save / restore (step 2)
+  // -------------------------------------------------------------------------
 
+  Future<void> _loadImageDraft() async {
+    final draft = await signupDraftService.loadDraft();
+    if (!draft.hasStep2Data) return;
+
+    File? front, back, cnicFront, cnicBack, selfie;
+
+    Future<File?> tryLoad(String? path) async {
+      if (path == null) return null;
+      final f = File(path);
+      return (await f.exists()) ? f : null;
+    }
+
+    front = await tryLoad(draft.studentIdFrontPath);
+    back = await tryLoad(draft.studentIdBackPath);
+    cnicFront = await tryLoad(draft.cnicFrontPath);
+    cnicBack = await tryLoad(draft.cnicBackPath);
+    selfie = await tryLoad(draft.selfiePath);
+
+    final hasAny =
+        front != null || cnicFront != null || selfie != null;
+    if (!hasAny || !mounted) return;
+
+    setState(() {
+      if (front != null) _studentIdImage = front;
+      if (back != null) _studentIdBackImage = back;
+      if (cnicFront != null) _cnicFrontImage = cnicFront;
+      if (cnicBack != null) _cnicBackImage = cnicBack;
+      if (selfie != null) _selfieImage = selfie;
+      if (draft.isStudentIdVerification != null) {
+        _isStudentIdVerification = draft.isStudentIdVerification!;
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.restore_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Previous document uploads restored.'),
+            ],
+          ),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
+  }
+
+  /// Fire-and-forget: saves current image paths to local storage.
+  void _saveImageDraft() {
+    signupDraftService.saveStep2(
+      studentIdFrontPath: _studentIdImage?.path,
+      studentIdBackPath: _studentIdBackImage?.path,
+      cnicFrontPath: _cnicFrontImage?.path,
+      cnicBackPath: _cnicBackImage?.path,
+      selfiePath: _selfieImage?.path,
+      isStudentIdVerification: _isStudentIdVerification,
+    );
+  }
 
   bool _validateForm() {
     if (_studentIdImage == null) {
@@ -184,6 +253,8 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
       analyticsService.logEvent('signup_step_2_complete');
       analyticsService.logEvent('kyc_submitted');
 
+      // Clear the local draft now that registration succeeded
+      await signupDraftService.clearDraft();
 
       if (mounted)
         Navigator.pushReplacement(
@@ -381,7 +452,10 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                                 children: [
                                   Expanded(
                                     child: GestureDetector(
-                                      onTap: () => setState(() => _isStudentIdVerification = true),
+                                      onTap: () {
+                                          setState(() => _isStudentIdVerification = true);
+                                          _saveImageDraft();
+                                        },
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: _isStudentIdVerification 
@@ -406,7 +480,10 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                                   ),
                                   Expanded(
                                     child: GestureDetector(
-                                      onTap: () => setState(() => _isStudentIdVerification = false),
+                                      onTap: () {
+                                          setState(() => _isStudentIdVerification = false);
+                                          _saveImageDraft();
+                                        },
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: !_isStudentIdVerification 

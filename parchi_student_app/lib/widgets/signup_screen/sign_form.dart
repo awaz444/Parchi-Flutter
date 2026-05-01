@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import '../../utils/toast_utils.dart';
 import '../../services/analytics_service.dart';
+import '../../services/signup_draft_service.dart';
 
 class SignupForm extends StatefulWidget {
   final VoidCallback onLoginTap;
@@ -34,6 +35,7 @@ class _SignupFormState extends State<SignupForm> {
   DateTime? _selectedDate; // NEW
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _draftLoadComplete = false;
 
   final InstitutesService _institutesService = InstitutesService();
   List<Institute> _institutes = [];
@@ -44,6 +46,14 @@ class _SignupFormState extends State<SignupForm> {
     super.initState();
     _fetchInstitutes();
     analyticsService.logEvent('signup_step_1_start');
+    _loadDraft();
+    _firstNameController.addListener(_saveDraft);
+    _lastNameController.addListener(_saveDraft);
+    _emailController.addListener(_saveDraft);
+    _passwordController.addListener(_saveDraft);
+    _confirmPasswordController.addListener(_saveDraft);
+    _phoneController.addListener(_saveDraft);
+    _dobController.addListener(_saveDraft);
   }
 
 
@@ -112,6 +122,68 @@ class _SignupFormState extends State<SignupForm> {
     if (input.trim().isEmpty) return "";
     final val = input.trim();
     return val[0].toUpperCase() + val.substring(1);
+  }
+
+  // -------------------------------------------------------------------------
+  // Draft save / restore
+  // -------------------------------------------------------------------------
+
+  Future<void> _loadDraft() async {
+    final draft = await signupDraftService.loadDraft();
+    if (draft.hasStep1Data) {
+      if (draft.firstName != null) _firstNameController.text = draft.firstName!;
+      if (draft.lastName != null) _lastNameController.text = draft.lastName!;
+      if (draft.email != null) _emailController.text = draft.email!;
+      if (draft.password != null) {
+        _passwordController.text = draft.password!;
+        _confirmPasswordController.text = draft.password!;
+      }
+      if (draft.phone != null) _phoneController.text = draft.phone!;
+      if (draft.university != null) _selectedUniversity = draft.university;
+      if (draft.grade != null) _selectedGrade = draft.grade;
+      if (draft.dob != null) {
+        _dobController.text = draft.dob!;
+        try {
+          _selectedDate = DateFormat('dd/MM/yyyy').parse(draft.dob!);
+        } catch (_) {}
+      }
+      if (mounted) {
+        setState(() {});
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.restore_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('Previous signup progress restored.'),
+                ],
+              ),
+              backgroundColor: AppColors.primary,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        });
+      }
+    }
+    _draftLoadComplete = true;
+  }
+
+  /// Fire-and-forget: saves current step-1 field values to local storage.
+  void _saveDraft() {
+    if (!_draftLoadComplete) return;
+    signupDraftService.saveStep1(
+      firstName: _firstNameController.text,
+      lastName: _lastNameController.text,
+      email: _emailController.text,
+      password: _passwordController.text,
+      phone: _phoneController.text,
+      university: _selectedUniversity,
+      grade: _selectedGrade,
+      dob: _dobController.text,
+    );
   }
 
   Future<void> _handleNext() async {
@@ -429,6 +501,7 @@ prefixIcon: prefixText == null
                             onTap: () {
                               Navigator.pop(context);
                               setState(() => _selectedUniversity = inst.name);
+                              _saveDraft();
                             },
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
@@ -557,6 +630,7 @@ prefixIcon: prefixText == null
                       onTap: () {
                         Navigator.pop(context);
                         setState(() => _selectedGrade = grade);
+                        _saveDraft();
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
