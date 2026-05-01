@@ -27,9 +27,10 @@ class _SignupFormState extends State<SignupForm> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _cnicController = TextEditingController(); // NEW
   final _dobController = TextEditingController(); // NEW
   String? _selectedUniversity;
+  String? _selectedGrade;
+
   DateTime? _selectedDate; // NEW
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -70,8 +71,8 @@ class _SignupFormState extends State<SignupForm> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _phoneController.dispose();
-    _cnicController.dispose();
     _dobController.dispose();
+
     super.dispose();
   }
 
@@ -120,9 +121,10 @@ class _SignupFormState extends State<SignupForm> {
         _passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty ||
         _phoneController.text.trim().isEmpty || // Phone is now mandatory
-        _cnicController.text.trim().isEmpty || // CNIC mandatory
+        _selectedGrade == null || // Grade mandatory
         _dobController.text.isEmpty || // DOB mandatory
         _selectedUniversity == null) {
+
       ToastUtils.showErrorToast(context, label: "Validation Error", message: "Please Fill Out All The Fields");
       return;
     }
@@ -133,11 +135,8 @@ class _SignupFormState extends State<SignupForm> {
       return;
     }
 
-    // CNIC Validation (13 digits + 2 hyphens = 15 characters)
-    if (_cnicController.text.trim().length != 15) {
-       ToastUtils.showErrorToast(context, label: "Validation Error", message: "CNIC must be in format xxxxx-xxxxxxx-x");
-       return;
-    }
+    // CNIC validation removed
+
 
     if (_passwordController.text.length < 6) {
       ToastUtils.showErrorToast(context, label: "Validation Error", message: "Password must be at least 6 characters");
@@ -170,8 +169,9 @@ class _SignupFormState extends State<SignupForm> {
             password: _passwordController.text,
             phone: "+92${_phoneController.text.trim()}", // Prepend +92
             university: _selectedUniversity!,
-            cnic: _cnicController.text.trim(),
+            educationalGrade: _selectedGrade!,
             dateOfBirth: _dobController.text.trim(),
+
           ),
         ),
       );
@@ -238,11 +238,9 @@ class _SignupFormState extends State<SignupForm> {
                   isNumber: true, maxLength: 10, action: TextInputAction.next, prefixText: "+92 ",
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
               const SizedBox(height: 12),
-               // CNIC (Mandatory)
-              _buildTextField(_cnicController, "CNIC (xxxxx-xxxxxxx-x)",
-                  Icons.credit_card,
-                  isNumber: true, maxLength: 15, action: TextInputAction.next,
-                  inputFormatters: [CnicInputFormatter()]),
+              const SizedBox(height: 12),
+              _buildGradeDropdown(),
+
               const SizedBox(height: 12),
               // Date of Birth (Mandatory)
               GestureDetector(
@@ -506,37 +504,122 @@ prefixIcon: prefixText == null
       ),
     );
   }
-}
+  void _showGradePicker(BuildContext context) {
+    final List<String> grades = [
+      "Matric / O-Levels",
+      "Inter / A-Levels",
+      "Undergrad Year 1",
+      "Undergrad Year 2",
+      "Undergrad Year 3",
+      "Undergrad Year 4",
+      "Undergrad Year 5",
+      "Graduate / Post-grad",
+    ];
 
-class CnicInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    var text = newValue.text;
-    
-    // Allow only digits and hyphens
-    text = text.replaceAll(RegExp(r'[^\d-]'), '');
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.backgroundLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.textSecondary.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                "Select Educational Grade",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: grades.length,
+                  itemBuilder: (context, index) {
+                    final grade = grades[index];
+                    final isSelected = _selectedGrade == grade;
+                    return InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        setState(() => _selectedGrade = grade);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary.withOpacity(0.1) : null,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              grade,
+                              style: TextStyle(
+                                color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (isSelected)
+                              const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-    if (newValue.selection.baseOffset < oldValue.selection.baseOffset) {
-      // User is deleting characters
-      return newValue;
-    }
-
-    var buffer = StringBuffer();
-    var digitsOnly = text.replaceAll('-', '');
-    
-    for (int i = 0; i < digitsOnly.length; i++) {
-      if (i == 5) {
-        buffer.write('-');
-      } else if (i == 12) {
-        buffer.write('-');
-      }
-      buffer.write(digitsOnly[i]);
-    }
-
-    var string = buffer.toString();
-    return newValue.copyWith(
-        text: string,
-        selection: TextSelection.collapsed(offset: string.length));
+  Widget _buildGradeDropdown() {
+    return GestureDetector(
+      onTap: () => _showGradePicker(context),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+            color: AppColors.textSecondary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          children: [
+            const Icon(Icons.school_outlined, color: AppColors.textSecondary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _selectedGrade ?? "Select Educational Grade",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: _selectedGrade != null
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary.withOpacity(0.7),
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
   }
 }

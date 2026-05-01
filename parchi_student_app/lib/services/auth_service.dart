@@ -378,13 +378,14 @@ class AuthService {
     required String password,
     String? phone,
     required String university,
-    required String cnic,
+    required String educationalGrade,
     required String dateOfBirth,
     required String studentIdCardFrontUrl,
     required String studentIdCardBackUrl,
     required String cnicFrontImageUrl,
     required String cnicBackImageUrl,
     required String selfieImageUrl,
+
   }) async {
     _isLoggingOut = false; // Reset logout lock
     try {
@@ -396,8 +397,9 @@ class AuthService {
         'password': password,
         'phone': phone,
         'university': university,
-        'cnic': cnic,
+        'educationalGrade': educationalGrade,
         'dateOfBirth': dateOfBirth,
+
         'studentIdCardFrontUrl': studentIdCardFrontUrl,
         'studentIdCardBackUrl': studentIdCardBackUrl,
         'cnicFrontImageUrl': cnicFrontImageUrl,
@@ -435,15 +437,16 @@ class AuthService {
     }
   }
 
-  Future<StudentSignupResponse> studentSignupWithFiles({
+  Future<StudentSignupResponse> registerStudentWithDocuments({
     required String firstName,
     required String lastName,
     required String email,
     required String password,
     String? phone,
     required String university,
-    required String cnic,
+    required String educationalGrade,
     required String dateOfBirth,
+
     required File studentIdCardFront,
     required File studentIdCardBack,
     required File cnicFrontImage,
@@ -463,8 +466,9 @@ class AuthService {
       request.fields['password'] = password;
       request.fields['phone'] = phone ?? '';
       request.fields['university'] = university;
-      request.fields['cnic'] = cnic;
+      request.fields['educationalGrade'] = educationalGrade;
       request.fields['dateOfBirth'] = dateOfBirth;
+
 
       request.files.add(
         await http.MultipartFile.fromPath(

@@ -24,7 +24,7 @@ class SignupScreenTwo extends StatefulWidget {
   final String password;
   final String phone;
   final String university;
-  final String cnic;
+  final String educationalGrade;
   final String dateOfBirth;
 
   const SignupScreenTwo({
@@ -35,13 +35,14 @@ class SignupScreenTwo extends StatefulWidget {
     required this.password,
     required this.phone,
     required this.university,
-    required this.cnic,
+    required this.educationalGrade,
     required this.dateOfBirth,
   });
 
   @override
   State<SignupScreenTwo> createState() => _SignupScreenTwoState();
 }
+
 
 class _SignupScreenTwoState extends State<SignupScreenTwo> {
   final ImagePicker _imagePicker = ImagePicker();
@@ -162,14 +163,14 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
           ? _studentIdBackImage! 
           : _studentIdImage!; // Reuse challan for back slot
 
-      final signupResponse = await _authService.studentSignupWithFiles(
+      final ok = await _authService.registerStudentWithDocuments(
         firstName: widget.firstName,
         lastName: widget.lastName,
         email: widget.email,
         password: widget.password,
         phone: widget.phone,
         university: widget.university,
-        cnic: widget.cnic,
+        educationalGrade: widget.educationalGrade,
         dateOfBirth: widget.dateOfBirth,
         studentIdCardFront: _studentIdImage!,
         studentIdCardBack: backImageToUpload,
@@ -177,6 +178,8 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
         cnicBackImage: _cnicBackImage!,
         selfieImage: _selfieImage!,
       );
+
+
 
       analyticsService.logEvent('signup_step_2_complete');
       analyticsService.logEvent('kyc_submitted');
@@ -187,8 +190,9 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
             context,
             MaterialPageRoute(
                 builder: (_) => SignupVerificationScreen(
-                    parchiId: signupResponse.parchiId,
-                    email: signupResponse.email)));
+                    parchiId: ok.parchiId,
+                    email: ok.email)));
+
     } catch (e) {
       if (e is ConflictException || 
           e.toString().contains("Conflict") || 
@@ -357,11 +361,12 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                           children: [
                             const SizedBox(height: 10),
                             const Text(
-                                "Upload your verification documents. These details are solely for verifying your student status. Parchi does not permanently store or hold these documents.",
+                                "Upload your verification documents. These details are solely for verifying your student status. Provide either your Student ID OR a Secondary Document (Challan, Result Sheet, etc.)",
                                 style: TextStyle(
                                     fontSize: 14,
                                     height: 1.4,
                                     color: AppColors.textSecondary)),
+
                             
                             const SizedBox(height: 16),
 
@@ -411,7 +416,8 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                                         ),
                                         child: Center(
                                           child: Text(
-                                            "Paid Fee Challan",
+                                            "Secondary Document",
+
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
@@ -430,9 +436,9 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
 
                             const SizedBox(height: 24),
 
-                            _buildInputLabel(_isStudentIdVerification ? "Student ID Front *" : "Paid Fee Challan *"),
+                            _buildInputLabel(_isStudentIdVerification ? "Student ID Front *" : "Secondary Document *"),
                             _buildUploadBox(
-                                _isStudentIdVerification ? "Upload ID Front" : "Upload Challan",
+                                _isStudentIdVerification ? "Upload ID Front" : "Upload Document",
                                 _studentIdImage != null,
                                 () => _showImageSourceDialog(0),
                                 image: _studentIdImage),

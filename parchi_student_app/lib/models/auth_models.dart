@@ -245,7 +245,7 @@ class StudentSignupResponse {
   final String firstName;
   final String lastName;
   final String university;
-  final String parchiId;
+  final String? parchiId;
   final String verificationStatus;
   final DateTime createdAt;
   final int status;
@@ -257,7 +257,7 @@ class StudentSignupResponse {
     required this.firstName,
     required this.lastName,
     required this.university,
-    required this.parchiId,
+    this.parchiId,
     required this.verificationStatus,
     required this.createdAt,
     required this.status,
@@ -272,13 +272,14 @@ class StudentSignupResponse {
       firstName: data['firstName'] as String,
       lastName: data['lastName'] as String,
       university: data['university'] as String,
-      parchiId: data['parchiId'] as String,
+      parchiId: data['parchiId'] as String?,
       verificationStatus: data['verificationStatus'] as String,
       createdAt: DateTime.parse(data['createdAt'] as String),
       status: json['status'] as int? ?? 201,
       message: json['message'] as String? ?? '',
     );
   }
+
 }
 
 // Custom Exception Classes for Student Signup
