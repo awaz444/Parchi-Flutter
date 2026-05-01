@@ -143,7 +143,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             final lName = user?.lastName ?? "";
             final fullName = "$fName $lName".trim();
             final email = user?.email ?? "No Email";
-            final parchiId = user?.parchiId ?? "PK-????";
+            final parchiId = user?.parchiId ?? "????";
             final university = user?.university ?? "University";
             final phone = user?.phone ?? "No Phone";
 

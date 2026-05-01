@@ -78,7 +78,7 @@ class AppIntroModal extends StatelessWidget {
                     _buildIntroPoint(
                       icon: Icons.qr_code_rounded,
                       text:
-                          'When you\'re at the counter, it’s simple: tell them your PK-XXXXX ID. The app handles the rest while the cashier applies your "Parchi Exclusive" discount.',
+                          'When you\'re at the counter, it\'s simple: tell them your Parchi ID. The app handles the rest while the cashier applies your "Parchi Exclusive" discount.',
                     ),
                     const SizedBox(height: 16),
                     _buildIntroPoint(
