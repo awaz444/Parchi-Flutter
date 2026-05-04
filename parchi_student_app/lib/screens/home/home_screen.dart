@@ -51,12 +51,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _hasShownIntro = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
+            // Capture notifier before the async gap so the callback
+            // never touches `ref` after the widget may be disposed.
+            final notifier = ref.read(userProfileProvider.notifier);
             showDialog(
               context: context,
               barrierDismissible: false,
               builder: (context) => AppIntroModal(
                 onDismiss: () {
-                  ref.read(userProfileProvider.notifier).markAppIntroSeen();
+                  notifier.markAppIntroSeen();
                   Navigator.of(context).pop();
                 },
               ),

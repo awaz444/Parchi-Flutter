@@ -449,8 +449,6 @@ class AuthService {
 
     required File studentIdCardFront,
     required File studentIdCardBack,
-    required File cnicFrontImage,
-    required File cnicBackImage,
     required File selfieImage,
   }) async {
     _isLoggingOut = false;
@@ -480,18 +478,6 @@ class AuthService {
         await http.MultipartFile.fromPath(
           'studentIdCardBack',
           studentIdCardBack.path,
-        ),
-      );
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'cnicFrontImage',
-          cnicFrontImage.path,
-        ),
-      );
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'cnicBackImage',
-          cnicBackImage.path,
         ),
       );
       request.files.add(

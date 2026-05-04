@@ -17,8 +17,6 @@ class SignupDraftService {
   static const String _keyDob = '${_prefix}dob';
   static const String _keyStudentIdFront = '${_prefix}student_id_front';
   static const String _keyStudentIdBack = '${_prefix}student_id_back';
-  static const String _keyCnicFront = '${_prefix}cnic_front';
-  static const String _keyCnicBack = '${_prefix}cnic_back';
   static const String _keySelfie = '${_prefix}selfie';
   static const String _keyIsStudentIdVerification =
       '${_prefix}is_student_id_verification';
@@ -63,8 +61,6 @@ class SignupDraftService {
   Future<void> saveStep2({
     String? studentIdFrontPath,
     String? studentIdBackPath,
-    String? cnicFrontPath,
-    String? cnicBackPath,
     String? selfiePath,
     bool? isStudentIdVerification,
   }) async {
@@ -75,8 +71,6 @@ class SignupDraftService {
     if (studentIdBackPath != null) {
       prefs.setString(_keyStudentIdBack, studentIdBackPath);
     }
-    if (cnicFrontPath != null) prefs.setString(_keyCnicFront, cnicFrontPath);
-    if (cnicBackPath != null) prefs.setString(_keyCnicBack, cnicBackPath);
     if (selfiePath != null) prefs.setString(_keySelfie, selfiePath);
     if (isStudentIdVerification != null) {
       prefs.setBool(_keyIsStudentIdVerification, isStudentIdVerification);
@@ -101,8 +95,6 @@ class SignupDraftService {
       dob: prefs.getString(_keyDob),
       studentIdFrontPath: prefs.getString(_keyStudentIdFront),
       studentIdBackPath: prefs.getString(_keyStudentIdBack),
-      cnicFrontPath: prefs.getString(_keyCnicFront),
-      cnicBackPath: prefs.getString(_keyCnicBack),
       selfiePath: prefs.getString(_keySelfie),
       isStudentIdVerification:
           prefs.getBool(_keyIsStudentIdVerification),
@@ -125,8 +117,6 @@ class SignupDraftService {
       _keyDob,
       _keyStudentIdFront,
       _keyStudentIdBack,
-      _keyCnicFront,
-      _keyCnicBack,
       _keySelfie,
       _keyIsStudentIdVerification,
     ]) {
@@ -151,8 +141,6 @@ class SignupDraft {
   final String? dob;
   final String? studentIdFrontPath;
   final String? studentIdBackPath;
-  final String? cnicFrontPath;
-  final String? cnicBackPath;
   final String? selfiePath;
   final bool? isStudentIdVerification;
 
@@ -167,8 +155,6 @@ class SignupDraft {
     this.dob,
     this.studentIdFrontPath,
     this.studentIdBackPath,
-    this.cnicFrontPath,
-    this.cnicBackPath,
     this.selfiePath,
     this.isStudentIdVerification,
   });
@@ -181,7 +167,6 @@ class SignupDraft {
 
   bool get hasStep2Data =>
       studentIdFrontPath != null ||
-      cnicFrontPath != null ||
       selfiePath != null;
 }
 

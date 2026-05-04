@@ -49,10 +49,10 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
   final ImagePicker _imagePicker = ImagePicker();
   File? _studentIdImage;
   File? _studentIdBackImage;
-  File? _cnicFrontImage;
-  File? _cnicBackImage;
   File? _selfieImage;
   bool _isUploading = false;
+  bool _agreedToTerms = false;
+  bool _declaresStudentStatus = false;
   final AuthService _authService = AuthService();
   bool _isStudentIdVerification = true; // [NEW] Default to Student ID
 
@@ -105,10 +105,6 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
             _studentIdImage = persisted;
           } else if (imageType == 1) {
             _studentIdBackImage = persisted;
-          } else if (imageType == 2) {
-            _cnicFrontImage = persisted;
-          } else if (imageType == 3) {
-            _cnicBackImage = persisted;
           } else {
             _selfieImage = persisted;
           }
@@ -128,7 +124,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
     final draft = await signupDraftService.loadDraft();
     if (!draft.hasStep2Data) return;
 
-    File? front, back, cnicFront, cnicBack, selfie;
+    File? front, back, selfie;
 
     Future<File?> tryLoad(String? path) async {
       if (path == null) return null;
@@ -138,19 +134,15 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
 
     front = await tryLoad(draft.studentIdFrontPath);
     back = await tryLoad(draft.studentIdBackPath);
-    cnicFront = await tryLoad(draft.cnicFrontPath);
-    cnicBack = await tryLoad(draft.cnicBackPath);
     selfie = await tryLoad(draft.selfiePath);
 
     final hasAny =
-        front != null || cnicFront != null || selfie != null;
+        front != null || selfie != null;
     if (!hasAny || !mounted) return;
 
     setState(() {
       if (front != null) _studentIdImage = front;
       if (back != null) _studentIdBackImage = back;
-      if (cnicFront != null) _cnicFrontImage = cnicFront;
-      if (cnicBack != null) _cnicBackImage = cnicBack;
       if (selfie != null) _selfieImage = selfie;
       if (draft.isStudentIdVerification != null) {
         _isStudentIdVerification = draft.isStudentIdVerification!;
@@ -181,8 +173,6 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
     signupDraftService.saveStep2(
       studentIdFrontPath: _studentIdImage?.path,
       studentIdBackPath: _studentIdBackImage?.path,
-      cnicFrontPath: _cnicFrontImage?.path,
-      cnicBackPath: _cnicBackImage?.path,
       selfiePath: _selfieImage?.path,
       isStudentIdVerification: _isStudentIdVerification,
     );
@@ -203,19 +193,21 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
           label: "Validation Error", message: "Upload Student ID Back");
       return false;
     }
-    if (_cnicFrontImage == null) {
-      ToastUtils.showErrorToast(context,
-          label: "Validation Error", message: "Upload CNIC Front");
-      return false;
-    }
-    if (_cnicBackImage == null) {
-      ToastUtils.showErrorToast(context,
-          label: "Validation Error", message: "Upload CNIC Back");
-      return false;
-    }
     if (_selfieImage == null) {
       ToastUtils.showErrorToast(context,
           label: "Validation Error", message: "Upload Selfie");
+      return false;
+    }
+    if (!_agreedToTerms) {
+      ToastUtils.showErrorToast(context,
+          label: "Validation Error",
+          message: "Please acknowledge the Terms & Conditions");
+      return false;
+    }
+    if (!_declaresStudentStatus) {
+      ToastUtils.showErrorToast(context,
+          label: "Validation Error",
+          message: "Please declare your student status");
       return false;
     }
     return true;
@@ -243,8 +235,6 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
         dateOfBirth: widget.dateOfBirth,
         studentIdCardFront: _studentIdImage!,
         studentIdCardBack: backImageToUpload,
-        cnicFrontImage: _cnicFrontImage!,
-        cnicBackImage: _cnicBackImage!,
         selfieImage: _selfieImage!,
       );
 
@@ -532,20 +522,6 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                             ],
 
                             const SizedBox(height: 24),
-                            _buildInputLabel("CNIC Front *"),
-                            _buildUploadBox(
-                                "Upload CNIC Front",
-                                _cnicFrontImage != null,
-                                () => _showImageSourceDialog(2),
-                                image: _cnicFrontImage),
-                            const SizedBox(height: 24),
-                            _buildInputLabel("CNIC Back *"),
-                            _buildUploadBox(
-                                "Upload CNIC Back",
-                                _cnicBackImage != null,
-                                () => _showImageSourceDialog(3),
-                                image: _cnicBackImage),
-                            const SizedBox(height: 24),
                             _buildInputLabel("Selfie Image *"),
                             Container(
                               width: double.infinity,
@@ -578,10 +554,61 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                             _buildUploadBox(
                                 "Upload Selfie",
                                 _selfieImage != null,
-                                () => _showImageSourceDialog(4),
+                                () => _showImageSourceDialog(2),
                                 image: _selfieImage),
 
                             const SizedBox(height: 30),
+
+                            // ── Declarations ──────────────────────────────
+                            GestureDetector(
+                              onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Checkbox(
+                                    value: _agreedToTerms,
+                                    activeColor: AppColors.primary,
+                                    onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(top: 12),
+                                      child: Text(
+                                        "I acknowledge and agree to the Terms & Conditions of Parchi.",
+                                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () => setState(() => _declaresStudentStatus = !_declaresStudentStatus),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Checkbox(
+                                    value: _declaresStudentStatus,
+                                    activeColor: AppColors.primary,
+                                    onChanged: (v) => setState(() => _declaresStudentStatus = v ?? false),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(top: 12),
+                                      child: Text(
+                                        "I declare that I am a currently enrolled student and the documents I have submitted are authentic.",
+                                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
                             SizedBox(
                               width: double.infinity,
                               height: 56,
