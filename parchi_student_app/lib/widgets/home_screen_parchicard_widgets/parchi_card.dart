@@ -541,13 +541,27 @@ class CardFrontContent extends StatelessWidget {
                           width: 80,
                           height: 24,
                           baseColor: Colors.white.withOpacity(0.3))
-                      : Text(
-                          studentId,
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.0),
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              studentId,
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.0),
+                            ),
+                            Text(
+                              "PARCHI ID",
+                              style: TextStyle(
+                                  color: secondaryTextColor,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5),
+                            ),
+                          ],
                         ),
                 ],
               ),
@@ -1012,13 +1026,29 @@ class CompactParchiHeader extends StatelessWidget {
                                             baseColor: Colors.white
                                                 .withOpacity(0.3),
                                           )
-                                        : Text(
-                                            studentId,
-                                            style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w900,
-                                            ),
+                                        : Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                studentId,
+                                                style: TextStyle(
+                                                  color: textColor,
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                              Text(
+                                                "PARCHI ID",
+                                                style: TextStyle(
+                                                  color: secondaryTextColor,
+                                                  fontSize: 7,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                   ],
                                 ),

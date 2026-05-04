@@ -422,96 +422,23 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                           children: [
                             const SizedBox(height: 10),
                             const Text(
-                                "Upload your verification documents. These details are solely for verifying your student status. Provide either your Student ID OR a Secondary Document (Challan, Result Sheet, etc.)",
+                                "Verify your student status to unlock exclusive deals. You can use your Student ID or any other proof of enrollment.",
                                 style: TextStyle(
                                     fontSize: 14,
                                     height: 1.4,
                                     color: AppColors.textSecondary)),
 
-                            
-                            const SizedBox(height: 16),
-
-                            // [NEW] Toggle Switch
-                            Container(
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.textSecondary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                          setState(() => _isStudentIdVerification = true);
-                                          _saveImageDraft();
-                                        },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: _isStudentIdVerification 
-                                              ? AppColors.primary 
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "Student ID",
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold, // [MODIFIED] Slightly bolder
-                                              color: _isStudentIdVerification 
-                                                  ? AppColors.textOnPrimary 
-                                                  : AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                          setState(() => _isStudentIdVerification = false);
-                                          _saveImageDraft();
-                                        },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: !_isStudentIdVerification 
-                                              ? AppColors.primary 
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            "Secondary Document",
-
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: !_isStudentIdVerification 
-                                                  ? AppColors.textOnPrimary 
-                                                  : AppColors.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
                             const SizedBox(height: 24),
 
-                            _buildInputLabel(_isStudentIdVerification ? "Student ID Front *" : "Secondary Document *"),
-                            _buildUploadBox(
-                                _isStudentIdVerification ? "Upload ID Front" : "Upload Document",
-                                _studentIdImage != null,
-                                () => _showImageSourceDialog(0),
-                                image: _studentIdImage),
-                            
-                            // Only show ID Back if Student ID is selected
+                            // --- VERIFICATION TYPE SELECTION ---
                             if (_isStudentIdVerification) ...[
+                              _buildInputLabel("Student ID Front *"),
+                              _buildUploadBox(
+                                  "Upload ID Front",
+                                  _studentIdImage != null,
+                                  () => _showImageSourceDialog(0),
+                                  image: _studentIdImage),
+                              
                               const SizedBox(height: 24),
                               _buildInputLabel("Student ID Back *"),
                               _buildUploadBox(
@@ -519,35 +446,116 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                                   _studentIdBackImage != null,
                                   () => _showImageSourceDialog(1),
                                   image: _studentIdBackImage),
+
+                              const SizedBox(height: 20),
+                              Center(
+                                child: TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isStudentIdVerification = false;
+                                      // Clear images if switching to avoid confusion, 
+                                      // though keeping them might be preferred by some.
+                                      // User said "if a student gives a secondary doc, they should not be allowed to give student id front and back"
+                                      _studentIdImage = null;
+                                      _studentIdBackImage = null;
+                                    });
+                                    _saveImageDraft();
+                                  },
+                                  child: const Text(
+                                    "Don't have a student ID card?",
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _buildInputLabel("Secondary Document *"),
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isStudentIdVerification = true;
+                                        _studentIdImage = null;
+                                      });
+                                      _saveImageDraft();
+                                    },
+                                    child: const Text(
+                                      "Use Student ID instead",
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              _buildUploadBox(
+                                  "Upload Proof (Challan, Result, etc.)",
+                                  _studentIdImage != null,
+                                  () => _showImageSourceDialog(0),
+                                  image: _studentIdImage),
+                              const SizedBox(height: 8),
+                              const Text(
+                                "Upload any document that proves your current enrollment (e.g., Fee Challan, Admission Letter, or Result Sheet).",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                             ],
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 32),
                             _buildInputLabel("Selfie Image *"),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(20),
+                              margin: const EdgeInsets.only(bottom: 20),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                                color: AppColors.primary.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
                               ),
-                              child: const Column(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text("Selfie Guidelines:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
-                                  SizedBox(height: 10),
-                                  Text("• Headshot: Face and shoulders only", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                  SizedBox(height: 6),
-                                  Text("• Visibility: No glasses, masks, or hands on face", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                  SizedBox(height: 6),
-                                  Text("• Lighting: Good lighting (avoid heavy shadows)", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                  SizedBox(height: 6),
-                                  Text("• Background: Use a plain or simple background", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                  SizedBox(height: 6),
-                                  Text("• Recency: Photo must be recent and look like you", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                  SizedBox(height: 12),
-                                  Text("Tip: Hold phone at eye level in natural light.", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.primary)),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(Icons.face_retouching_natural_rounded, color: Colors.white, size: 20),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text("Selfie Guidelines", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildGuidelineRow(Icons.check_circle_outline_rounded, "Headshot: Face and shoulders only"),
+                                  _buildGuidelineRow(Icons.check_circle_outline_rounded, "Visibility: No glasses, masks, or hats"),
+                                  _buildGuidelineRow(Icons.check_circle_outline_rounded, "Lighting: Good lighting, avoid shadows"),
+                                  _buildGuidelineRow(Icons.check_circle_outline_rounded, "Background: Use a plain background"),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text(
+                                      "Tip: Hold phone at eye level in natural light.",
+                                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -562,49 +570,59 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
                             // ── Declarations ──────────────────────────────
                             GestureDetector(
                               onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Checkbox(
-                                    value: _agreedToTerms,
-                                    activeColor: AppColors.primary,
-                                    onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(top: 12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: Checkbox(
+                                        value: _agreedToTerms,
+                                        activeColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                        onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
                                       child: Text(
                                         "I acknowledge and agree to the Terms & Conditions of Parchi.",
                                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             GestureDetector(
                               onTap: () => setState(() => _declaresStudentStatus = !_declaresStudentStatus),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Checkbox(
-                                    value: _declaresStudentStatus,
-                                    activeColor: AppColors.primary,
-                                    onChanged: (v) => setState(() => _declaresStudentStatus = v ?? false),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(top: 12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: Checkbox(
+                                        value: _declaresStudentStatus,
+                                        activeColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                        onChanged: (v) => setState(() => _declaresStudentStatus = v ?? false),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
                                       child: Text(
                                         "I declare that I am a currently enrolled student and the documents I have submitted are authentic.",
                                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
 
@@ -646,14 +664,32 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
     );
   }
 
+  Widget _buildGuidelineRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputLabel(String text) {
     return Padding(
         padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
         child: Text(text,
             style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 14)));
+                fontWeight: FontWeight.w700,
+                fontSize: 15)));
   }
 
   Widget _buildUploadBox(String text, bool isUploaded, VoidCallback onTap,
@@ -665,29 +701,70 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
         width: double.infinity,
         decoration: BoxDecoration(
           color: isUploaded
-              ? AppColors.textSecondary.withOpacity(0.1)
-              : AppColors.textSecondary.withOpacity(0.05), // Lighter bg for empty
-          borderRadius: BorderRadius.circular(16),
+              ? Colors.white
+              : AppColors.textSecondary.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
               color: isUploaded
                   ? AppColors.primary
-                  : AppColors.textSecondary.withOpacity(0.3),
-              width: 1.5),
+                  : AppColors.textSecondary.withOpacity(0.2),
+              width: 2,
+              style: isUploaded ? BorderStyle.solid : BorderStyle.solid), // Could use dashed if a package was available
+          boxShadow: isUploaded ? [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ] : null,
         ),
         child: isUploaded && image != null
             ? ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.file(image,
-                    fit: BoxFit.cover, width: double.infinity))
+                borderRadius: BorderRadius.circular(22),
+                child: Stack(
+                  children: [
+                    Image.file(image,
+                        fit: BoxFit.cover, width: double.infinity),
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ],
+                ))
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.cloud_upload_outlined,
-                      size: 48,
-                      color: AppColors.textSecondary.withOpacity(0.4)),
-                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.add_a_photo_rounded,
+                        size: 32,
+                        color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 16),
                   Text(text,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                      )),
+                  const SizedBox(height: 4),
+                  Text("Tap to capture or upload",
+                      style: TextStyle(
+                        color: AppColors.textSecondary.withOpacity(0.7),
+                        fontSize: 12,
+                      )),
                 ],
               ),
       ),
