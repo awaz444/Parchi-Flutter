@@ -363,8 +363,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkForUpdate() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      final String localBuildNumberStr = packageInfo.buildNumber;
-      final int localVersion = int.tryParse(localBuildNumberStr) ?? 0;
+      final String localVersion = packageInfo.version; // e.g. "2.1.0"
 
       // [NEW] Fetch the latest config from Supabase
       final response = await Supabase.instance.client
@@ -374,11 +373,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
           .maybeSingle();
 
       if (response != null) {
-        final int minAndroid = response['min_android_build_number'] ?? 0;
-        final int minIos = response['min_ios_build_number'] ?? 0;
+        final String minAndroid = response['min_android_version'] ?? '1.0.0';
+        final String minIos = response['min_ios_version'] ?? '1.0.0';
         final bool isMaintenance = response['is_under_maintenance'] ?? false;
         
-        final int minRequired = Platform.isAndroid ? minAndroid : minIos;
+        final String minRequired = Platform.isAndroid ? minAndroid : minIos;
 
         if (isMaintenance) {
           if (mounted) {
@@ -393,7 +392,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return;
         }
 
-        if (localVersion < minRequired) {
+        if (_isVersionLessThan(localVersion, minRequired)) {
           if (mounted) {
             setState(() {
               _requiresUpdate = true;
@@ -409,6 +408,21 @@ class _AuthWrapperState extends State<AuthWrapper> {
       debugPrint("Error checking for update: $e");
     }
   }
+
+  /// Returns true if [version] is strictly less than [minVersion].
+  /// Both must be in "major.minor.patch" format.
+  bool _isVersionLessThan(String version, String minVersion) {
+    final List<int> v = version.split('.').map((s) => int.tryParse(s) ?? 0).toList();
+    final List<int> m = minVersion.split('.').map((s) => int.tryParse(s) ?? 0).toList();
+    for (int i = 0; i < 3; i++) {
+      final int a = i < v.length ? v[i] : 0;
+      final int b = i < m.length ? m[i] : 0;
+      if (a < b) return true;
+      if (a > b) return false;
+    }
+    return false; // equal
+  }
+
 
   void _setupAuthListener() {
     _authSubscription =
