@@ -21,6 +21,7 @@ class ApiConfig {
   static String get updateProfilePictureEndpoint =>
       '$baseUrl/auth/student/profile-picture';
   static String get updateFcmTokenEndpoint => '$baseUrl/auth/update-fcm';
+  static String get appConfigEndpoint => '$baseUrl/admin/config/app';
   // Offers Endpoints
   static String get activeOffersEndpoint => '$baseUrl/offers/active';
   static String get featuredOffersEndpoint => '$baseUrl/offers/featured';

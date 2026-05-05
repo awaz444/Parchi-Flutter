@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'; // [NEW] Import Riverpo
 import 'package:app_links/app_links.dart'; // [NEW] Import AppLinks
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart' as http;
 import 'screens/auth/reset_password/reset_password_screen.dart';
 import 'config/supabase_config.dart';
+import 'config/api_config.dart';
 import 'utils/colours.dart';
 import 'utils/toast_utils.dart'; // [NEW] Error Toast Utilities
 import 'screens/home/home_screen.dart';
@@ -365,26 +368,30 @@ class _AuthWrapperState extends State<AuthWrapper> {
       final packageInfo = await PackageInfo.fromPlatform();
       final String localVersion = packageInfo.version; // e.g. "2.1.0"
 
-      // [NEW] Fetch the latest config from Supabase
-      final response = await Supabase.instance.client
-          .from('app_configs')
-          .select()
-          .limit(1)
-          .maybeSingle();
+      // Use NestJS backend — avoids Supabase schema-cache issues (PGRST002)
+      final response = await http.get(
+        Uri.parse(ApiConfig.appConfigEndpoint),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
 
-      if (response != null) {
-        final String minAndroid = response['min_android_version'] ?? '1.0.0';
-        final String minIos = response['min_ios_version'] ?? '1.0.0';
-        final bool isMaintenance = response['is_under_maintenance'] ?? false;
-        
-        final String minRequired = Platform.isAndroid ? minAndroid : minIos;
+      if (response.statusCode < 200 || response.statusCode >= 300) return;
 
-        if (isMaintenance) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>?;
+      if (data == null) return;
+
+      final String minAndroid = data['minAndroidVersion'] ?? '1.0.0';
+      final String minIos = data['minIosVersion'] ?? '1.0.0';
+      final bool isMaintenance = data['isUnderMaintenance'] ?? false;
+
+      final String minRequired = Platform.isAndroid ? minAndroid : minIos;
+
+      if (isMaintenance) {
           if (mounted) {
             setState(() {
               _isUnderMaintenance = true;
-              _updateTitle = response['force_update_title'];
-              _updateMessage = response['force_update_message'];
+              _updateTitle = data['forceUpdateTitle'];
+              _updateMessage = data['forceUpdateMessage'];
               _isLoading = false;
             });
             FlutterNativeSplash.remove();
@@ -396,14 +403,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
           if (mounted) {
             setState(() {
               _requiresUpdate = true;
-              _updateTitle = response['force_update_title'];
-              _updateMessage = response['force_update_message'];
+              _updateTitle = data['forceUpdateTitle'];
+              _updateMessage = data['forceUpdateMessage'];
               _isLoading = false;
             });
             FlutterNativeSplash.remove();
           }
         }
-      }
     } catch (e) {
       debugPrint("Error checking for update: $e");
     }

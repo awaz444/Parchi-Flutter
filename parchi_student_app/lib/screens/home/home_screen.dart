@@ -11,6 +11,7 @@ import '../profile/profile_screen.dart';
 import '../auth/login_screens/login_screen.dart';
 import '../../widgets/home_screen_widgets/app_intro_modal.dart';
 import '../../providers/merchants_provider.dart';
+import '../../services/notification_handler_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
