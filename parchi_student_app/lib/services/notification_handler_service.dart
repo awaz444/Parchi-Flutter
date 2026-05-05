@@ -83,6 +83,33 @@ class NotificationHandlerService {
     }
   }
 
+  /// Subscribes to targeted topics based on student profile.
+  /// Call this whenever user data is refreshed.
+  Future<void> subscribeToTargetedTopics({
+    required String? university,
+    required bool isFoundersClub,
+  }) async {
+    try {
+      // Basic broadcast
+      await _fcm.subscribeToTopic('students_all');
+
+      // University-specific
+      if (university != null && university.isNotEmpty) {
+        final sanitizedUni = university.toLowerCase().replaceAll(' ', '_');
+        await _fcm.subscribeToTopic('university_$sanitizedUni');
+        print("FCM: Subscribed to university_$sanitizedUni");
+      }
+
+      // Membership-specific
+      if (isFoundersClub) {
+        await _fcm.subscribeToTopic('founders_club');
+        print("FCM: Subscribed to founders_club");
+      }
+    } catch (e) {
+      print("FCM: Targeted topic subscription failed: $e");
+    }
+  }
+
   // 3. Trigger the Local Notification
   Future<void> _showLocalNotification(RemoteMessage message) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(

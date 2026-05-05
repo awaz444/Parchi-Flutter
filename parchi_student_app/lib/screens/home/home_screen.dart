@@ -44,27 +44,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _userProfileSub = ref.listenManual(userProfileProvider, (previous, next) {
       if (!next.isLoading && !next.hasError) {
         final user = next.value;
-        if (user != null &&
-            user.role.toLowerCase() == 'student' &&
-            !user.hasSeenAppIntro &&
-            !_hasShownIntro) {
-          _hasShownIntro = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            // Capture notifier before the async gap so the callback
-            // never touches `ref` after the widget may be disposed.
-            final notifier = ref.read(userProfileProvider.notifier);
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => AppIntroModal(
-                onDismiss: () {
-                  notifier.markAppIntroSeen();
-                  Navigator.of(context).pop();
-                },
-              ),
-            );
-          });
+        if (user != null) {
+          // Subscribe to targeted notifications based on profile
+          NotificationHandlerService().subscribeToTargetedTopics(
+            university: user.university,
+            isFoundersClub: user.isFoundersClub,
+          );
+
+          if (user.role.toLowerCase() == 'student' &&
+              !user.hasSeenAppIntro &&
+              !_hasShownIntro) {
+            _hasShownIntro = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              final notifier = ref.read(userProfileProvider.notifier);
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => AppIntroModal(
+                  onDismiss: () {
+                    notifier.markAppIntroSeen();
+                    Navigator.of(context).pop();
+                  },
+                ),
+              );
+            });
+          }
         }
       }
     });
