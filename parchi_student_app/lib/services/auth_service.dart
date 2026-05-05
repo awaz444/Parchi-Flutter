@@ -599,7 +599,10 @@ class AuthService {
           ..._baseHeaders,
           'Authorization': 'Bearer $accessToken',
         },
-        body: jsonEncode({'token': fcmToken}),
+        body: jsonEncode({
+          'token': fcmToken,
+          'platform': Platform.isIOS ? 'ios' : 'android',
+        }),
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -817,12 +820,19 @@ class AuthService {
 
       if (token != null) {
         try {
+          // Get FCM token so the backend removes only this device's registration
+          String? fcmToken;
+          try {
+            fcmToken = await NotificationHandlerService().getToken();
+          } catch (_) {}
+
           await _httpClient.post(
             Uri.parse(ApiConfig.logoutEndpoint),
             headers: {
               ..._baseHeaders,
               'Authorization': 'Bearer $token',
             },
+            body: fcmToken != null ? jsonEncode({'fcmToken': fcmToken}) : null,
           );
         } catch (e) {
           // Ignore network errors during logout
