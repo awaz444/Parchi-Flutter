@@ -36,6 +36,7 @@ dependencies:
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
   package_info_plus: ^9.0.1
+  mobile_scanner: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +73,8 @@ flutter:
     - assets/history-svgrepo-com.svg
     - assets/home-svgrepo-com.svg
     - assets/leaderboard-svgrepo-com.svg
+    - assets/scan-svgrepo-com.svg
+    - assets/medal-ribbon-star-svgrepo-com.svg
   fonts:
     - family: Hagrid
       fonts:

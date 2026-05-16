@@ -29,6 +29,7 @@ import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'screens/qr_redemption/qr_redemption_screen.dart';
+import 'screens/qr_scan/qr_scan_screen.dart';
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 import 'package:package_info_plus/package_info_plus.dart';
 import 'screens/force_update/force_update_screen.dart';
@@ -666,142 +667,193 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
   // ──────────────────────────────────────────────────────────────────────────
 
+  void _onNavTap(int index) => setState(() => _currentIndex = index);
+
   @override
   Widget build(BuildContext context) {
-    // Watch the user provider to know if a guest is using the app.
-    // A null user means the user is not authenticated (guest).
     final userAsync = ref.watch(userProfileProvider);
     final bool isAuthenticated = userAsync.maybeWhen(
       data: (user) => user != null,
       orElse: () => false,
     );
 
-    // Resolve the active page.
-    // For the History tab (index 2), show a guest prompt if not authenticated.
     Widget activePage;
-    if (_currentIndex == 2 && !isAuthenticated) {
-      activePage = const GuestLoginPrompt(
-        title: 'Sign in to view your history',
-        subtitle:
-            'Your redemption history and Parchi card are only available to signed-in students.',
-        icon: Icons.history_rounded,
-      );
-    } else {
-      activePage = _currentIndex == 0
-          ? const HomeScreen()
-          : _currentIndex == 1
-              ? const LeaderboardScreen()
-              : const RedemptionHistoryScreen();
+    switch (_currentIndex) {
+      case 0:
+        activePage = const HomeScreen();
+      case 1:
+        activePage = const LeaderboardScreen();
+      case 2:
+        activePage = const _AchievementsPlaceholder();
+      case 3:
+        activePage = !isAuthenticated
+            ? const GuestLoginPrompt(
+                title: 'Sign in to view your history',
+                subtitle: 'Your redemption history is only available to signed-in students.',
+                icon: Icons.history_rounded,
+              )
+            : const RedemptionHistoryScreen();
+      default:
+        activePage = const HomeScreen();
     }
+
+    const Color activeColor = AppColors.primary;
+    const Color inactiveColor = AppColors.textSecondary;
+    const double iconSize = 24;
 
     return Scaffold(
       body: activePage,
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(top: 2),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border(
-            top: BorderSide(
-              color: AppColors.textSecondary.withOpacity(0.1),
-              width: 0.5,
-            ),
-          ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        shape: const CircleBorder(),
+        elevation: 6,
+        onPressed: () {
+          if (!isAuthenticated) {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const GuestLoginPrompt(
+                title: 'Sign in to scan QR codes',
+                subtitle: 'QR redemption is only available to signed-in students.',
+                icon: Icons.qr_code_scanner_rounded,
+              ),
+            );
+            return;
+          }
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const QrScanScreen()),
+          );
+        },
+        child: SvgPicture.asset(
+          'assets/scan-svgrepo-com.svg',
+          width: 26,
+          height: 26,
+          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
         ),
-        // [UPDATED] Wrapped in Theme to remove splash effects
-        child: Theme(
-          data: ThemeData(
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: AppColors.textSecondary,
-            selectedFontSize: 10,
-            unselectedFontSize: 10,
-            showSelectedLabels: true,
-            showUnselectedLabels: true,
-            type: BottomNavigationBarType.fixed,
-            enableFeedback: false, // Disables vibration/sound
-            items: [
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        color: AppColors.surface,
+        elevation: 8,
+        height: 56,
+        padding: EdgeInsets.zero,
+        child: Row(
+          children: [
+            // Home
+            Expanded(
+              child: InkWell(
+                onTap: () => _onNavTap(0),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: Center(
                   child: SvgPicture.asset(
                     'assets/home-svgrepo-com.svg',
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                        AppColors.textSecondary, BlendMode.srcIn),
+                    width: iconSize,
+                    height: iconSize,
+                    colorFilter: ColorFilter.mode(
+                      _currentIndex == 0 ? activeColor : inactiveColor,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
-                activeIcon: Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: SvgPicture.asset(
-                    'assets/home-svgrepo-com.svg',
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                        AppColors.primary, BlendMode.srcIn),
-                  ),
-                ),
-                label: "Home",
               ),
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
+            ),
+            // Leaderboard
+            Expanded(
+              child: InkWell(
+                onTap: () => _onNavTap(1),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: Center(
                   child: SvgPicture.asset(
                     'assets/leaderboard-svgrepo-com.svg',
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                        AppColors.textSecondary, BlendMode.srcIn),
+                    width: iconSize,
+                    height: iconSize,
+                    colorFilter: ColorFilter.mode(
+                      _currentIndex == 1 ? activeColor : inactiveColor,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
-                activeIcon: Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: SvgPicture.asset(
-                    'assets/leaderboard-svgrepo-com.svg',
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                        AppColors.primary, BlendMode.srcIn),
-                  ),
-                ),
-                label: "Leaderboard",
               ),
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
+            ),
+            // Gap for FAB
+            const SizedBox(width: 72),
+            // Achievements
+            Expanded(
+              child: InkWell(
+                onTap: () => _onNavTap(2),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: Center(
+                  child: SvgPicture.asset(
+                    'assets/medal-ribbon-star-svgrepo-com.svg',
+                    width: iconSize,
+                    height: iconSize,
+                    colorFilter: ColorFilter.mode(
+                      _currentIndex == 2 ? activeColor : inactiveColor,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // History
+            Expanded(
+              child: InkWell(
+                onTap: () => _onNavTap(3),
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                child: Center(
                   child: SvgPicture.asset(
                     'assets/history-svgrepo-com.svg',
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                        AppColors.textSecondary, BlendMode.srcIn),
+                    width: iconSize,
+                    height: iconSize,
+                    colorFilter: ColorFilter.mode(
+                      _currentIndex == 3 ? activeColor : inactiveColor,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
-                activeIcon: Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: SvgPicture.asset(
-                    'assets/history-svgrepo-com.svg',
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                        AppColors.primary, BlendMode.srcIn),
-                  ),
-                ),
-                label: "History",
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AchievementsPlaceholder extends StatelessWidget {
+  const _AchievementsPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppColors.backgroundLight,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.emoji_events_rounded, size: 64, color: AppColors.textSecondary),
+            SizedBox(height: 16),
+            Text(
+              'Achievements',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Coming soon',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+            ),
+          ],
         ),
       ),
     );
