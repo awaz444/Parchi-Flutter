@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/api_config.dart';
@@ -38,8 +39,10 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   // Animations
   late final AnimationController _pulseController;
   late final AnimationController _checkController;
+  late final AnimationController _successFadeController;
   late final Animation<double> _pulseAnimation;
   late final Animation<double> _checkAnimation;
+  late final Animation<double> _successFadeAnimation;
   late final AnimationController _timerController;
 
   // Branch/offer selection
@@ -70,6 +73,12 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     );
     _checkAnimation = CurvedAnimation(parent: _checkController, curve: Curves.elasticOut);
 
+    _successFadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _successFadeAnimation = CurvedAnimation(parent: _successFadeController, curve: Curves.easeOut);
+
     _timerController = AnimationController(vsync: this, duration: const Duration(minutes: 5));
 
     _loadOffers();
@@ -79,6 +88,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   void dispose() {
     _pulseController.dispose();
     _checkController.dispose();
+    _successFadeController.dispose();
     _timerController.dispose();
     _expiryTimer?.cancel();
     _realtimeChannel?.unsubscribe();
@@ -153,9 +163,11 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
 
         if (result['autoApproved'] == true) {
           // Skip pending — jump straight to success
+          HapticFeedback.heavyImpact();
           setState(() {
             _phase = _QrPhase.success;
           });
+          _successFadeController.forward();
           _checkController.forward();
           _scheduleAutoDismiss();
         } else {
@@ -218,12 +230,15 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
 
     switch (status) {
       case 'approved':
+        HapticFeedback.heavyImpact();
         setState(() => _phase = _QrPhase.success);
         _pulseController.stop();
+        _successFadeController.forward();
         _checkController.forward();
         _scheduleAutoDismiss();
         break;
       case 'rejected':
+        HapticFeedback.mediumImpact();
         setState(() => _phase = _QrPhase.rejected);
         _pulseController.stop();
         break;
@@ -622,6 +637,13 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   // ── Phase: Success ────────────────────────────────────────────────────────
 
   Widget _buildSuccess() {
+    return FadeTransition(
+      opacity: _successFadeAnimation,
+      child: _buildSuccessContent(),
+    );
+  }
+
+  Widget _buildSuccessContent() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
