@@ -104,6 +104,10 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
             _selectedOfferId = _offers[0]['id'];
           }
         });
+        // Single offer: skip the picker and initiate immediately
+        if (_offers.length == 1) {
+          _initiateRequest();
+        }
       } else {
         setState(() {
           _isLoadingOffers = false;
