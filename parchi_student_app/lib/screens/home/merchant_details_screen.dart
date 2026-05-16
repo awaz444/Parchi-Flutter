@@ -721,8 +721,9 @@ class _LoyaltyBonusSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int total = loyalty.nextGoal;
-    final int current = loyalty.currentRedemptions ?? 0;
+    final int req = loyalty.redemptionsRequired > 0 ? loyalty.redemptionsRequired : 1;
+    final int total = req;
+    final int current = (loyalty.currentRedemptions ?? 0) % req;
     final int remaining = total - current;
 
     return Container(
