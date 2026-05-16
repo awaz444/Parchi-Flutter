@@ -28,6 +28,7 @@ import 'services/notification_handler_service.dart';
 import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
+import 'screens/qr_redemption/qr_redemption_screen.dart';
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 import 'package:package_info_plus/package_info_plus.dart';
 import 'screens/force_update/force_update_screen.dart';
@@ -601,10 +602,34 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     // Only act on parchi:// or https://parchipakistan.com links
     final bool isCustomScheme = uri.scheme == 'parchi';
     final bool isWebScheme = uri.scheme == 'https' || uri.scheme == 'http';
-    
+
     if (!isCustomScheme && !isWebScheme) return;
 
-    // Check if it's a merchant link
+    // ── Redeem link: parchi://redeem/{branchId} or https://parchipakistan.com/redeem/{branchId}
+    final bool isRedeemPath = uri.path.contains('/redeem/') || uri.host == 'redeem';
+    if (isRedeemPath) {
+      String? branchId;
+      if (uri.pathSegments.contains('redeem')) {
+        final index = uri.pathSegments.indexOf('redeem');
+        if (index + 1 < uri.pathSegments.length) {
+          branchId = uri.pathSegments[index + 1];
+        }
+      } else if (uri.host == 'redeem' && uri.pathSegments.isNotEmpty) {
+        branchId = uri.pathSegments.first;
+      }
+      branchId ??= uri.queryParameters['branchId'];
+
+      if (branchId != null && branchId.isNotEmpty && mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => QrRedemptionScreen(branchId: branchId!),
+          ),
+        );
+      }
+      return;
+    }
+
+    // ── Merchant link ──────────────────────────────────────────────────────
     final bool isMerchantPath = uri.path.contains('/merchant/') || uri.host == 'merchant';
     if (!isMerchantPath) return;
 

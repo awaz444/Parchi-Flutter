@@ -965,6 +965,38 @@ class AuthService {
     return response;
   }
 
+  Future<http.Response> authenticatedDelete(String url) async {
+    if (_isLoggingOut) throw Exception('Session expired');
+
+    String? token = await getToken();
+    if (token == null) throw Exception('No authentication token found.');
+
+    final uri = Uri.parse(url);
+    var response = await _httpClient.delete(uri, headers: _authHeaders(token));
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      if (_isLoggingOut) throw Exception('Session expired');
+      try {
+        await refreshToken();
+        token = await getToken();
+        if (token != null) {
+          response = await _httpClient.delete(uri, headers: _authHeaders(token));
+          if (response.statusCode == 401 || response.statusCode == 403) {
+            final errorMessage = _extractErrorMessage(response);
+            _authErrorController.add(errorMessage);
+            await logout();
+            throw Exception(errorMessage);
+          }
+        }
+      } catch (e) {
+        if (e.toString().contains("Session expired")) rethrow;
+        rethrow;
+      }
+    }
+
+    return response;
+  }
+
   // Helper to extract error message from API response
   String _extractErrorMessage(http.Response response) {
     try {
