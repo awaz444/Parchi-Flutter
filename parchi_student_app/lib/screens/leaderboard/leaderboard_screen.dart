@@ -21,7 +21,9 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     with AutomaticKeepAliveClientMixin {
   bool _isRefreshing = false;
+  bool _showBackToTop = false;
   late final ScrollController _scrollController;
+  final GlobalKey _userRowKey = GlobalKey();
 
   @override
   void initState() {
@@ -33,12 +35,31 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     if (_scrollController.position.extentAfter < 200) {
       _loadMore();
     }
+    
+    // Back to top logic
+    final bool show = _scrollController.offset > 400;
+    if (show != _showBackToTop) {
+      setState(() => _showBackToTop = show);
+    }
+    
+    // Refresh the UI to update sticky bar visibility based on user row visibility
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  bool _isUserRowVisible() {
+    if (_userRowKey.currentContext == null) return false;
+    final box = _userRowKey.currentContext!.findRenderObject() as RenderBox?;
+    if (box == null) return false;
+    final position = box.localToGlobal(Offset.zero);
+    final screenHeight = MediaQuery.of(context).size.height;
+    // Check if the row is within the vertical viewport
+    return position.dy >= 0 && position.dy < screenHeight - 100; // Offset by sticky bar height
   }
 
   Future<void> _loadMore() async {
@@ -104,6 +125,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       isUserInList = state.items.any((item) => _isCurrentUser(item, user));
     }
 
+    // Item 14: Show sticky bar if user is NOT in list, OR if they are in list but their row is scrolled out of view
+    final bool showStickyBar = !showSkeleton && !hasError && user != null && 
+                               (!isUserInList || !_isUserRowVisible());
+
     return Stack(
       children: [
         if (showSkeleton)
@@ -147,7 +172,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             child: ListView.separated(
               controller: _scrollController,
               padding: EdgeInsets.only(
-                  bottom: !isUserInList && user != null ? 100 : 0),
+                  bottom: showStickyBar ? 100 : 16),
               itemCount: state.items.length + (state.hasMore ? 1 : 0),
               separatorBuilder: (context, index) {
                 if (index < state.items.length - 1 ||
@@ -169,6 +194,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 final isCurrentUser = _isCurrentUser(item, user);
 
                 return _buildLeaderboardItem(
+                  key: isCurrentUser ? _userRowKey : null,
                   rank: item.rank,
                   name: item.name,
                   university: item.university,
@@ -180,18 +206,47 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
           ),
 
-        if (!showSkeleton && !hasError && !isUserInList && user != null)
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 24,
-            child: _buildStickyUserBar(user),
+        // Item 14: Animated Sticky User Bar
+        AnimatedSlide(
+          offset: showStickyBar ? Offset.zero : const Offset(0, 1.5),
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
+              child: user != null ? _buildStickyUserBar(user) : const SizedBox.shrink(),
+            ),
           ),
+        ),
+
+        // Item 13: Back to Top Button
+        Positioned(
+          right: 16,
+          bottom: showStickyBar ? 100 : 24,
+          child: AnimatedOpacity(
+            opacity: _showBackToTop ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 250),
+            child: IgnorePointer(
+              ignoring: !_showBackToTop,
+              child: FloatingActionButton.small(
+                elevation: 4,
+                backgroundColor: AppColors.primary,
+                onPressed: () => _scrollController.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutCubic,
+                ),
+                child: const Icon(Icons.arrow_upward, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
- bool _isCurrentUser(LeaderboardItem item, dynamic user) {
+  bool _isCurrentUser(LeaderboardItem item, dynamic user) {
   if (user == null) return false;
 
   // Convert both to Strings to ensure "String vs UUID" or "int vs String" 
@@ -375,6 +430,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Widget _buildLeaderboardItem({
+    Key? key,
     required int rank,
     required String name,
     required String university,
@@ -387,6 +443,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         : '?';
 
     return Container(
+      key: key,
       color: isCurrentUser ? AppColors.primary : AppColors.lightSurface,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
