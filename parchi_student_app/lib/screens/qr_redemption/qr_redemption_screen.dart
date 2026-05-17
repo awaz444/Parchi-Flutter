@@ -52,8 +52,10 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   String? _branchName;
   String? _merchantLogo;
 
+  bool _isInitiating = false;
   RealtimeChannel? _realtimeChannel;
   Timer? _expiryTimer;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -79,7 +81,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     );
     _successFadeAnimation = CurvedAnimation(parent: _successFadeController, curve: Curves.easeOut);
 
-    _timerController = AnimationController(vsync: this, duration: const Duration(minutes: 5));
+    _timerController = AnimationController(vsync: this, duration: const Duration(minutes: 2));
 
     _loadOffers();
   }
@@ -91,6 +93,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     _successFadeController.dispose();
     _timerController.dispose();
     _expiryTimer?.cancel();
+    _pollTimer?.cancel();
     _realtimeChannel?.unsubscribe();
     super.dispose();
   }
@@ -100,6 +103,8 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   Future<void> _loadOffers() async {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}/qr-redemptions/branch/${widget.branchId}/offers');
+      // Pre-warm auth token concurrently — by the time _initiateRequest() runs it hits the cache
+      authService.getToken().then((_) {}).catchError((_) {});
       final response = await authService.publicGet(uri.toString());
       if (!mounted) return;
       final data = jsonDecode(response.body);
@@ -136,7 +141,8 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   }
 
   Future<void> _initiateRequest() async {
-    if (_selectedOfferId == null) return;
+    if (_selectedOfferId == null || _isInitiating) return;
+    _isInitiating = true;
     setState(() => _phase = _QrPhase.initiating);
 
     try {
@@ -204,28 +210,47 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
 
   void _subscribeToRealtime(String requestId) {
     final client = Supabase.instance.client;
+    // No server-side filter — row-level filters silently drop when RLS blocks them.
+    // We filter client-side instead, which always works.
     _realtimeChannel = client
         .channel('qr-student-$requestId')
         .onPostgresChanges(
           event: PostgresChangeEvent.update,
           schema: 'public',
           table: 'qr_redemption_requests',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'id',
-            value: requestId,
-          ),
           callback: (payload) {
             if (!mounted) return;
+            if (payload.newRecord['id'] != requestId) return;
             final newStatus = payload.newRecord['status'] as String?;
+            if (newStatus == 'pending') return;
             _handleStatusChange(newStatus);
           },
         )
         .subscribe();
+
+    // Polling fallback: fires every 3 s in case Realtime drops the event
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (!mounted || _phase != _QrPhase.pending) {
+        _pollTimer?.cancel();
+        return;
+      }
+      try {
+        final uri = Uri.parse('${ApiConfig.baseUrl}/qr-redemptions/status/$requestId');
+        final response = await authService.authenticatedGet(uri.toString());
+        if (!mounted) return;
+        final data = jsonDecode(response.body);
+        final status = data['data']?['status'] as String?;
+        if (status != null && status != 'pending') {
+          _pollTimer?.cancel();
+          _handleStatusChange(status);
+        }
+      } catch (_) {}
+    });
   }
 
   void _handleStatusChange(String? status) {
     _expiryTimer?.cancel();
+    _pollTimer?.cancel();
     _realtimeChannel?.unsubscribe();
 
     switch (status) {

@@ -37,6 +37,24 @@ import 'screens/force_update/force_update_screen.dart';
 
 import 'services/analytics_service.dart';
 
+// Shared redeem-navigation dedup — prevents double-push from onGenerateRoute + uriLinkStream.
+// onGenerateRoute fires synchronously (stripped UUID path); uriLinkStream fires async (full URI).
+// Both check this before pushing QrRedemptionScreen.
+String? _activeRedeemBranchId;
+DateTime? _redeemNavigatedAt;
+
+bool _tryClaimRedeemNav(String branchId) {
+  final now = DateTime.now();
+  if (_activeRedeemBranchId == branchId &&
+      _redeemNavigatedAt != null &&
+      now.difference(_redeemNavigatedAt!) < const Duration(seconds: 5)) {
+    return false;
+  }
+  _activeRedeemBranchId = branchId;
+  _redeemNavigatedAt = now;
+  return true;
+}
+
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -302,6 +320,32 @@ class _ParchiAppState extends State<ParchiApp> {
           }
         }
 
+        // Flutter strips parchi://redeem/{branchId} to just /{branchId} and calls onGenerateRoute.
+        // Detect that UUID path and push QrRedemptionScreen directly (same as _handleMerchantLink),
+        // using _tryClaimRedeemNav so the uriLinkStream handler doesn't push a second copy.
+        final uuidPathRe = RegExp(
+          r'^/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$',
+          caseSensitive: false,
+        );
+        final uuidMatch = uuidPathRe.firstMatch(settings.name ?? '');
+        if (uuidMatch != null) {
+          final branchId = uuidMatch.group(1)!;
+          if (_tryClaimRedeemNav(branchId)) {
+            return MaterialPageRoute(
+              builder: (_) => QrRedemptionScreen(branchId: branchId),
+            );
+          }
+          // Already claimed (e.g. uriLinkStream fired first) — pop this route immediately.
+          return MaterialPageRoute(
+            builder: (ctx) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+              });
+              return const SizedBox.shrink();
+            },
+          );
+        }
+
         // [Fix] Default fallback to AuthWrapper instead of null to prevent "Failed to handle route" crash
         return MaterialPageRoute(
           builder: (context) => const AuthWrapper(),
@@ -561,6 +605,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   // ── Deep-link handling (merchant) ─────────────────────────────────────────
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _merchantLinkSubscription;
+  // Static dedup guard — survives widget recreation during auth state transitions
+  static String? _lastHandledLinkUri;
+  static DateTime? _lastHandledLinkAt;
 
   @override
   void initState() {
@@ -598,6 +645,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
 
   void _handleMerchantLink(Uri uri) {
+    // uriLinkStream fires 3-6x for the same URI on Android — deduplicate
+    final uriStr = uri.toString();
+    final now = DateTime.now();
+    if (_lastHandledLinkUri == uriStr &&
+        _lastHandledLinkAt != null &&
+        now.difference(_lastHandledLinkAt!) < const Duration(seconds: 5)) {
+      return;
+    }
+    _lastHandledLinkUri = uriStr;
+    _lastHandledLinkAt = now;
+
     debugPrint('MainScreen _handleMerchantLink: $uri');
 
     // Only act on parchi:// or https://parchipakistan.com links
@@ -621,11 +679,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       branchId ??= uri.queryParameters['branchId'];
 
       if (branchId != null && branchId.isNotEmpty && mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => QrRedemptionScreen(branchId: branchId!),
-          ),
-        );
+        // _tryClaimRedeemNav prevents pushing a second QrRedemptionScreen when
+        // onGenerateRoute already handled the UUID path from the same deep link.
+        if (_tryClaimRedeemNav(branchId)) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => QrRedemptionScreen(branchId: branchId!),
+            ),
+          );
+        }
       }
       return;
     }
