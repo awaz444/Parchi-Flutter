@@ -176,6 +176,36 @@ class MerchantDetailsScreen extends ConsumerWidget {
                   ),
                 ),
 
+              // ── "AVAILABLE AT" Section Header ───────────────────────────
+              if (resolvedMerchant.branches.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 3,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          "AVAILABLE AT",
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111111),
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // ── Branch location list ───────────────────────────────────
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
@@ -320,31 +350,6 @@ class _MerchantIdentityBlock extends StatelessWidget {
             ),
           ],
 
-          const SizedBox(height: 20),
-
-          // Section header for branches
-          Row(
-            children: [
-              Container(
-                width: 3,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                "AVAILABLE AT",
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF111111),
-                  letterSpacing: 1.4,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

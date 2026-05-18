@@ -214,7 +214,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
           child: Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 34),
               child: user != null ? _buildStickyUserBar(user) : const SizedBox.shrink(),
             ),
           ),

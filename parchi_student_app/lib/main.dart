@@ -765,6 +765,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     return Scaffold(
       body: activePage,
+      resizeToAvoidBottomInset: false,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
         shape: const CircleBorder(),
@@ -853,8 +854,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 child: Center(
                   child: SvgPicture.asset(
                     'assets/medal-ribbon-star-svgrepo-com.svg',
-                    width: iconSize,
-                    height: iconSize,
+                    width: 28,
+                    height: 28,
                     colorFilter: ColorFilter.mode(
                       _currentIndex == 2 ? activeColor : inactiveColor,
                       BlendMode.srcIn,

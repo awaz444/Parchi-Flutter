@@ -223,105 +223,114 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.lightCanvas,
-      body: Stack(
-        children: [
-          // ── LAYER 1: Full-screen scrollable content ──────────────────────
-          HomeSheetContent(
-            scrollController: _scrollController,
-            searchQuery: _searchQuery,
-            headerSpacerHeight: collapsedHeaderHeight,
-            parchiCardWidget: parchiCardWidget,
-            isSearching: _isSearching,
-          ),
-
-          // ── LAYER 2: Fixed header overlay ────────────────────────────────
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ValueListenableBuilder<double>(
-              valueListenable: _expandProgress,
-              builder: (context, progress, child) {
-                if (isGuest) {
-                  return _GuestCompactHeader(
-                    scrollProgress: progress,
-                    onNotificationTap: _openNotifications,
-                    searchController: _searchController,
-                    searchFocus: _searchFocus,
-                    isSearching: _isSearching,
-                    onSearchChanged: _onSearchChanged,
-                    onCancelSearch: _cancelSearch,
-                    onSignInTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    ),
-                  );
-                }
-
-                return userAsync.when(
-                  data: (user) {
-                    final fname = user?.firstName ?? "Student";
-                    final lname = user?.lastName ?? "";
-                    final fullName = "$fname $lname".trim().toUpperCase();
-                    final pId = user?.parchiId ?? "PENDING";
-                    final uni = user?.university ?? "Unknown University";
-                    final initials = (fname.isNotEmpty ? fname[0] : "") +
-                        (lname.isNotEmpty ? lname[0] : "");
-
-                    return CompactParchiHeader(
-                      studentName: fullName.isEmpty ? "STUDENT" : fullName,
-                      studentId: pId,
-                      universityName: uni,
+      resizeToAvoidBottomInset: false,
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          if (_isSearching || _searchFocus.hasFocus) {
+            _cancelSearch();
+          }
+        },
+        child: Stack(
+          children: [
+            // ── LAYER 1: Full-screen scrollable content ──────────────────────
+            HomeSheetContent(
+              scrollController: _scrollController,
+              searchQuery: _searchQuery,
+              headerSpacerHeight: collapsedHeaderHeight,
+              parchiCardWidget: parchiCardWidget,
+              isSearching: _isSearching,
+            ),
+  
+            // ── LAYER 2: Fixed header overlay ────────────────────────────────
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: ValueListenableBuilder<double>(
+                valueListenable: _expandProgress,
+                builder: (context, progress, child) {
+                  if (isGuest) {
+                    return _GuestCompactHeader(
                       scrollProgress: progress,
                       onNotificationTap: _openNotifications,
-                      profilePicture: user?.profilePicture,
-                      studentInitials: initials.toUpperCase(),
+                      searchController: _searchController,
+                      searchFocus: _searchFocus,
+                      isSearching: _isSearching,
+                      onSearchChanged: _onSearchChanged,
+                      onCancelSearch: _cancelSearch,
+                      onSignInTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      ),
+                    );
+                  }
+  
+                  return userAsync.when(
+                    data: (user) {
+                      final fname = user?.firstName ?? "Student";
+                      final lname = user?.lastName ?? "";
+                      final fullName = "$fname $lname".trim().toUpperCase();
+                      final pId = user?.parchiId ?? "PENDING";
+                      final uni = user?.university ?? "Unknown University";
+                      final initials = (fname.isNotEmpty ? fname[0] : "") +
+                          (lname.isNotEmpty ? lname[0] : "");
+  
+                      return CompactParchiHeader(
+                        studentName: fullName.isEmpty ? "STUDENT" : fullName,
+                        studentId: pId,
+                        universityName: uni,
+                        scrollProgress: progress,
+                        onNotificationTap: _openNotifications,
+                        profilePicture: user?.profilePicture,
+                        studentInitials: initials.toUpperCase(),
+                        onProfileTap: _navigateToProfile,
+                        searchController: _searchController,
+                        searchFocus: _searchFocus,
+                        isSearching: _isSearching,
+                        onSearchChanged: _onSearchChanged,
+                        onCancelSearch: _cancelSearch,
+                        isLoading: homeUIState.isSkeletonLoading,
+                        hasUnreadNotifications:
+                            user?.hasUnreadNotifications ?? false,
+                      );
+                    },
+                    loading: () => CompactParchiHeader(
+                      studentName: "",
+                      studentId: "",
+                      universityName: "",
+                      scrollProgress: progress,
+                      onNotificationTap: _openNotifications,
+                      studentInitials: "",
                       onProfileTap: _navigateToProfile,
                       searchController: _searchController,
                       searchFocus: _searchFocus,
                       isSearching: _isSearching,
                       onSearchChanged: _onSearchChanged,
                       onCancelSearch: _cancelSearch,
-                      isLoading: homeUIState.isSkeletonLoading,
-                      hasUnreadNotifications:
-                          user?.hasUnreadNotifications ?? false,
-                    );
-                  },
-                  loading: () => CompactParchiHeader(
-                    studentName: "",
-                    studentId: "",
-                    universityName: "",
-                    scrollProgress: progress,
-                    onNotificationTap: _openNotifications,
-                    studentInitials: "",
-                    onProfileTap: _navigateToProfile,
-                    searchController: _searchController,
-                    searchFocus: _searchFocus,
-                    isSearching: _isSearching,
-                    onSearchChanged: _onSearchChanged,
-                    onCancelSearch: _cancelSearch,
-                    isLoading: true,
-                  ),
-                  error: (err, stack) => CompactParchiHeader(
-                    studentName: "",
-                    studentId: "",
-                    universityName: "",
-                    scrollProgress: progress,
-                    onNotificationTap: _openNotifications,
-                    studentInitials: "",
-                    onProfileTap: _navigateToProfile,
-                    searchController: _searchController,
-                    searchFocus: _searchFocus,
-                    isSearching: _isSearching,
-                    onSearchChanged: _onSearchChanged,
-                    onCancelSearch: _cancelSearch,
-                    isLoading: false,
-                    hasError: true,
-                  ),
-                );
-              },
+                      isLoading: true,
+                    ),
+                    error: (err, stack) => CompactParchiHeader(
+                      studentName: "",
+                      studentId: "",
+                      universityName: "",
+                      scrollProgress: progress,
+                      onNotificationTap: _openNotifications,
+                      studentInitials: "",
+                      onProfileTap: _navigateToProfile,
+                      searchController: _searchController,
+                      searchFocus: _searchFocus,
+                      isSearching: _isSearching,
+                      onSearchChanged: _onSearchChanged,
+                      onCancelSearch: _cancelSearch,
+                      isLoading: false,
+                      hasError: true,
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
