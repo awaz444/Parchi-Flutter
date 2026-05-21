@@ -29,11 +29,10 @@ import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'screens/qr_redemption/qr_redemption_screen.dart';
-import 'screens/qr_scan/qr_scan_screen.dart';
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 import 'package:package_info_plus/package_info_plus.dart';
 import 'screens/force_update/force_update_screen.dart';
-
+import 'widgets/common/parchi_qr_fab.dart';
 
 import 'services/analytics_service.dart';
 
@@ -766,35 +765,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return Scaffold(
       body: activePage,
       resizeToAvoidBottomInset: false,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        shape: const CircleBorder(),
-        elevation: 6,
-        onPressed: () {
-          if (!isAuthenticated) {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => const GuestLoginPrompt(
-                title: 'Sign in to scan QR codes',
-                subtitle: 'QR redemption is only available to signed-in students.',
-                icon: Icons.qr_code_scanner_rounded,
-              ),
-            );
-            return;
-          }
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const QrScanScreen()),
-          );
-        },
-        child: SvgPicture.asset(
-          'assets/scan-svgrepo-com.svg',
-          width: 26,
-          height: 26,
-          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-        ),
-      ),
+      floatingActionButton: const ParchiQrFab(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),

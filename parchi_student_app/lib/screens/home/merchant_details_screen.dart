@@ -10,6 +10,7 @@ import '../../utils/colours.dart';
 import '../../widgets/common/parchi_refresh_loader.dart';
 import '../../widgets/common/blinking_skeleton.dart';
 import '../../providers/merchants_provider.dart';
+import '../../widgets/common/parchi_qr_fab.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design concept: each branch is a physical redeemable coupon/ticket.
@@ -208,7 +209,7 @@ class MerchantDetailsScreen extends ConsumerWidget {
 
               // ── Branch location list ───────────────────────────────────
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) =>
@@ -221,6 +222,8 @@ class MerchantDetailsScreen extends ConsumerWidget {
           ),
         ),
       ),
+      floatingActionButton: const ParchiQrFab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
