@@ -11,6 +11,7 @@ import '../../widgets/common/parchi_refresh_loader.dart';
 import '../../widgets/common/blinking_skeleton.dart';
 import '../../providers/merchants_provider.dart';
 import '../../widgets/common/parchi_qr_fab.dart';
+import '../../widgets/common/how_to_claim_guide_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design concept: each branch is a physical redeemable coupon/ticket.
@@ -352,6 +353,10 @@ class _MerchantIdentityBlock extends StatelessWidget {
               ),
             ),
           ],
+
+          // How to claim banner
+          const SizedBox(height: 12),
+          const _HowToClaimBanner(),
 
         ],
       ),
@@ -1051,6 +1056,59 @@ class MerchantDetailsSkeleton extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// How to Claim Banner — shows guide dialog on tap
+// ─────────────────────────────────────────────────────────────────────────────
+class _HowToClaimBanner extends StatelessWidget {
+  const _HowToClaimBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showDialog(
+        context: context,
+        builder: (_) => const HowToClaimGuideDialog(),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Colors.black.withOpacity(0.07),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.help_outline,
+              size: 15,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'How to claim',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
       ),
     );
   }
