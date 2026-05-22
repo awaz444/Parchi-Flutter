@@ -32,6 +32,8 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   String? _offerTitle;
   String? _formattedDiscount;
   bool _isBonusApplied = false;
+  num? _bonusDiscountApplied;
+  String? _merchantBusinessName;
   String? _rejectionReason;
   String? _errorMessage;
   DateTime? _expiresAt;
@@ -113,6 +115,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         setState(() {
           _branchName = branchData['branch']?['branchName'];
           _merchantLogo = branchData['branch']?['merchant']?['logoPath'];
+          _merchantBusinessName = branchData['branch']?['merchant']?['businessName'];
           _offers = branchData['offers'] ?? [];
           _isLoadingOffers = false;
           if (_offers.length == 1) {
@@ -138,6 +141,29 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         _errorMessage = 'Failed to load branch offers.';
       });
     }
+  }
+
+  void _applyRedemptionSummary(Map<String, dynamic>? redemption) {
+    if (redemption == null) return;
+    setState(() {
+      _isBonusApplied = redemption['isBonusApplied'] ?? false;
+      _bonusDiscountApplied = redemption['bonusDiscountApplied'];
+
+      // Load offer fields if present in the response
+      if (redemption['offer'] != null) {
+        _offerTitle = redemption['offer']['title'] ?? _offerTitle;
+        _formattedDiscount = redemption['offer']['formattedDiscount'] ?? _formattedDiscount;
+      }
+
+      // Load branch/merchant fields if present in the response
+      if (redemption['branch'] != null) {
+        _branchName = redemption['branch']['branchName'] ?? _branchName;
+        if (redemption['branch']['merchant'] != null) {
+          _merchantBusinessName = redemption['branch']['merchant']['businessName'] ?? _merchantBusinessName;
+          _merchantLogo = redemption['branch']['merchant']['logoPath'] ?? _merchantLogo;
+        }
+      }
+    });
   }
 
   Future<void> _initiateRequest() async {
@@ -170,12 +196,12 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         if (result['autoApproved'] == true) {
           // Skip pending — jump straight to success
           HapticFeedback.heavyImpact();
+          _applyRedemptionSummary(result['redemption']);
           setState(() {
             _phase = _QrPhase.success;
           });
           _successFadeController.forward();
           _checkController.forward();
-          _scheduleAutoDismiss();
         } else {
           // Manual approval — go to pending and subscribe to Realtime
           final expiresAt = DateTime.tryParse(result['expiresAt'] ?? '');
@@ -242,25 +268,48 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         final status = data['data']?['status'] as String?;
         if (status != null && status != 'pending') {
           _pollTimer?.cancel();
-          _handleStatusChange(status);
+          _handleStatusChange(status, responseData: data);
         }
       } catch (_) {}
     });
   }
 
-  void _handleStatusChange(String? status) {
+  Future<void> _fetchFinalStatusAndShowSuccess() async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}/qr-redemptions/status/$_requestId');
+      final response = await authService.authenticatedGet(uri.toString());
+      if (!mounted) return;
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['data'] != null) {
+        _applyRedemptionSummary(data['data']['redemption']);
+      }
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _phase = _QrPhase.success);
+      _pulseController.stop();
+      _successFadeController.forward();
+      _checkController.forward();
+    }
+  }
+
+  void _handleStatusChange(String? status, {Map<String, dynamic>? responseData}) {
     _expiryTimer?.cancel();
     _pollTimer?.cancel();
     _realtimeChannel?.unsubscribe();
 
     switch (status) {
       case 'approved':
+      case 'auto_approved':
         HapticFeedback.heavyImpact();
-        setState(() => _phase = _QrPhase.success);
-        _pulseController.stop();
-        _successFadeController.forward();
-        _checkController.forward();
-        _scheduleAutoDismiss();
+        if (responseData != null && responseData['data']?['redemption'] != null) {
+          _applyRedemptionSummary(responseData['data']['redemption']);
+          setState(() => _phase = _QrPhase.success);
+          _pulseController.stop();
+          _successFadeController.forward();
+          _checkController.forward();
+        } else {
+          _fetchFinalStatusAndShowSuccess();
+        }
         break;
       case 'rejected':
         HapticFeedback.mediumImpact();
@@ -281,12 +330,6 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     _realtimeChannel?.unsubscribe();
     setState(() => _phase = _QrPhase.expired);
     _pulseController.stop();
-  }
-
-  void _scheduleAutoDismiss() {
-    Timer(const Duration(seconds: 4), () {
-      if (mounted) Navigator.of(context).pop();
-    });
   }
 
   Future<void> _cancelRequest() async {
@@ -669,83 +712,277 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   }
 
   Widget _buildSuccessContent() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleTransition(
-              scale: _checkAnimation,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.accent,
-                ),
-                child: const Icon(Icons.check_rounded, size: 72, color: Colors.white),
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          ScaleTransition(
+            scale: _checkAnimation,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accent,
               ),
+              child: const Icon(Icons.check_rounded, size: 60, color: Colors.white),
             ),
-            const SizedBox(height: 28),
-            const Text(
-              'Redeemed!',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Redeemed!',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildMerchantCard(),
+          const SizedBox(height: 16),
+          _buildOfferCard(),
+          const SizedBox(height: 16),
+          _buildBonusCard(),
+          const SizedBox(height: 32),
+          _buildDoneButton(),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMerchantCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 70,
+            width: 70,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              shape: BoxShape.circle,
+              image: _merchantLogo != null
+                  ? DecorationImage(
+                      image: NetworkImage(_merchantLogo!), fit: BoxFit.cover)
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: _merchantLogo == null
+                ? const Icon(Icons.store, size: 36, color: AppColors.textSecondary)
+                : null,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _merchantBusinessName ?? _branchName ?? "Parchi Merchant",
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (_merchantBusinessName != null && _branchName != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              _branchName!,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfferCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            "WHAT YOU UNLOCKED",
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_offerTitle != null) ...[
+            Text(
+              _offerTitle!,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
-            if (_offerTitle != null)
+            const SizedBox(height: 8),
+          ],
+          Text(
+            _formattedDiscount ?? "Discount",
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: AppColors.primary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBonusCard() {
+    if (_isBonusApplied) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFF9C4), Color(0xFFFFF176)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.amber.withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.star, color: Color(0xFFF57F17), size: 20),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFF59E0B), Color(0xFFFF6A39)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    "Bonus Unlocked!",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_bonusDiscountApplied != null) ...[
+              const SizedBox(height: 12),
               Text(
-                _offerTitle!,
-                style: const TextStyle(fontSize: 18, color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-            if (_formattedDiscount != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                _formattedDiscount!,
+                _bonusDiscountApplied! > 0
+                    ? "Rs. $_bonusDiscountApplied OFF"
+                    : "Free Item / Reward",
                 style: const TextStyle(
+                  color: Color(0xFFE65100),
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _bonusDiscountApplied! > 0 ? "Additional Loyalty Discount" : "Special Item Reward",
+                style: TextStyle(
+                  color: const Color(0xFFE65100).withValues(alpha: 0.8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
-            if (_isBonusApplied) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF59E0B), Color(0xFFFF6A39)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '🎉 Bonus Unlocked!',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-              ),
-            ],
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, color: AppColors.textSecondary, size: 18),
+            SizedBox(width: 8),
+            Text(
+              "Standard Offer (No loyalty bonus this time)",
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
+      );
+    }
+  }
+
+  Widget _buildDoneButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () => Navigator.of(context).pop(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }
