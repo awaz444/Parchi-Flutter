@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/colours.dart';
 
@@ -155,15 +154,8 @@ class _HowToClaimGuideDialogState extends ConsumerState<HowToClaimGuideDialog> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 12, 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary.withOpacity(0.08),
-            AppColors.secondary.withOpacity(0.12),
-          ],
-        ),
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -171,23 +163,13 @@ class _HowToClaimGuideDialogState extends ConsumerState<HowToClaimGuideDialog> {
           Container(
             width: 44,
             height: 44,
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
-            child: SvgPicture.asset(
-              'assets/parchi-icon.svg',
-              colorFilter: const ColorFilter.mode(
-                AppColors.primary,
-                BlendMode.srcIn,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/parchi-app-icon.png',
+                fit: BoxFit.cover,
               ),
             ),
           ),
@@ -201,17 +183,17 @@ class _HowToClaimGuideDialogState extends ConsumerState<HowToClaimGuideDialog> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF111111),
+                    color: Colors.white,
                     letterSpacing: -0.3,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Step ${_currentStep + 1} of $_stepCount',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary.withOpacity(0.85),
+                    color: AppColors.secondary,
                   ),
                 ),
               ],
@@ -225,7 +207,7 @@ class _HowToClaimGuideDialogState extends ConsumerState<HowToClaimGuideDialog> {
               color: AppColors.textSecondary.withOpacity(0.8),
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.7),
+              backgroundColor: Colors.white.withOpacity(0.9),
               shape: const CircleBorder(),
             ),
           ),
@@ -340,14 +322,7 @@ class _HowToClaimGuideDialogState extends ConsumerState<HowToClaimGuideDialog> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary.withOpacity(0.14),
-                    AppColors.secondary.withOpacity(0.25),
-                  ],
-                ),
+                color: AppColors.primary,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -359,7 +334,7 @@ class _HowToClaimGuideDialogState extends ConsumerState<HowToClaimGuideDialog> {
               ),
               child: Icon(
                 data.icon,
-                color: AppColors.primary,
+                color: AppColors.secondary,
                 size: 34,
               ),
             ),
@@ -402,8 +377,8 @@ class _HowToClaimGuideDialogState extends ConsumerState<HowToClaimGuideDialog> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primary.withOpacity(0.06),
                   AppColors.secondary.withOpacity(0.08),
+                  AppColors.primary.withOpacity(0.06),
                 ],
               ),
               borderRadius: BorderRadius.circular(14),

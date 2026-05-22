@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../utils/colours.dart';
 
 class AppIntroModal extends StatelessWidget {
@@ -37,16 +36,24 @@ class AppIntroModal extends StatelessWidget {
               child: Container(
                 width: 60,
                 height: 60,
-                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                child: SvgPicture.asset(
-                  'assets/parchi-icon.svg',
-                  colorFilter: const ColorFilter.mode(
-                    AppColors.primary,
-                    BlendMode.srcIn,
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/parchi-app-icon.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
