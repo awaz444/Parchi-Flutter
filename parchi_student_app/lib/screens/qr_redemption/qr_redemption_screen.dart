@@ -41,9 +41,11 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   // Animations
   late final AnimationController _pulseController;
   late final AnimationController _checkController;
+  late final AnimationController _morphController;
   late final AnimationController _successFadeController;
   late final Animation<double> _pulseAnimation;
   late final Animation<double> _checkAnimation;
+  late final Animation<double> _morphAnimation;
   late final Animation<double> _successFadeAnimation;
   late final AnimationController _timerController;
 
@@ -77,6 +79,22 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     );
     _checkAnimation = CurvedAnimation(parent: _checkController, curve: Curves.elasticOut);
 
+    _morphController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _morphAnimation = CurvedAnimation(parent: _morphController, curve: Curves.easeInOutBack);
+
+    _checkController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            _morphController.forward();
+          }
+        });
+      }
+    });
+
     _successFadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
@@ -92,6 +110,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   void dispose() {
     _pulseController.dispose();
     _checkController.dispose();
+    _morphController.dispose();
     _successFadeController.dispose();
     _timerController.dispose();
     _expiryTimer?.cancel();
@@ -364,23 +383,31 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
       );
     }
 
+    final bool isSuccess = _phase == _QrPhase.success;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: isSuccess ? const Color(0xFFFAFAFE) : AppColors.backgroundLight,
+      extendBodyBehindAppBar: isSuccess,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: isSuccess ? Colors.transparent : AppColors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
+          icon: Icon(
+            Icons.close,
+            color: isSuccess ? const Color(0xFF2D2A3A) : AppColors.textPrimary,
+          ),
           onPressed: _phase == _QrPhase.pending ? _cancelRequest : () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          _branchName ?? 'Redeem Offer',
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-        ),
+        title: isSuccess
+            ? null
+            : Text(
+                _branchName ?? 'Redeem Offer',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
         centerTitle: true,
       ),
       body: _buildBody(),
@@ -712,277 +739,421 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   }
 
   Widget _buildSuccessContent() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        children: [
-          const SizedBox(height: 16),
-          ScaleTransition(
-            scale: _checkAnimation,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accent,
-              ),
-              child: const Icon(Icons.check_rounded, size: 60, color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Redeemed!',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildMerchantCard(),
-          const SizedBox(height: 16),
-          _buildOfferCard(),
-          const SizedBox(height: 16),
-          _buildBonusCard(),
-          const SizedBox(height: 32),
-          _buildDoneButton(),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMerchantCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            height: 70,
-            width: 70,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              shape: BoxShape.circle,
-              image: _merchantLogo != null
-                  ? DecorationImage(
-                      image: NetworkImage(_merchantLogo!), fit: BoxFit.cover)
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: _merchantLogo == null
-                ? const Icon(Icons.store, size: 36, color: AppColors.textSecondary)
-                : null,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _merchantBusinessName ?? _branchName ?? "Parchi Merchant",
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (_merchantBusinessName != null && _branchName != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _branchName!,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
+      height: MediaQuery.of(context).size.height,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFFEEF2FE), // Very soft Parchi blue tint
+            Color(0xFFF9FAFF),
+            Colors.white,
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOfferCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            "WHAT YOU UNLOCKED",
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (_offerTitle != null) ...[
-            Text(
-              _offerTitle!,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-          ],
-          Text(
-            _formattedDiscount ?? "Discount",
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: AppColors.primary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBonusCard() {
-    if (_isBonusApplied) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFF9C4), Color(0xFFFFF176)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.amber.withValues(alpha: 0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
+      ),
+      child: SafeArea(
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.star, color: Color(0xFFF57F17), size: 20),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFF59E0B), Color(0xFFFF6A39)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    "Bonus Unlocked!",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                      fontSize: 12,
-                    ),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 16),
+                      const Text(
+                        'ALL DONE!',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          color: Color(0xFF2D2A3A),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Confetti/particles floating around the checkmark
+                          ..._buildConfettiParticles(),
+
+                          // Outer glowing checkmark
+                          ScaleTransition(
+                            scale: _checkAnimation,
+                            child: _FlippingSuccessIcon(
+                              animation: _morphAnimation,
+                              front: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFFE2FBE9),
+                                  border: Border.all(color: const Color(0xFFB3F5C7), width: 2),
+                                ),
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF2ECC71), Color(0xFF27AE60)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF2ECC71).withValues(alpha: 0.3),
+                                        blurRadius: 20,
+                                        spreadRadius: 4,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    size: 46,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              back: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFFE8F1FF), // Soft Parchi blue halo
+                                  border: Border.all(color: const Color(0xFFB3D4FF), width: 2),
+                                ),
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0069db).withValues(alpha: 0.15),
+                                        blurRadius: 20,
+                                        spreadRadius: 4,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/parchi-app-icon.png',
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        _formattedDiscount ?? "Discount",
+                        style: const TextStyle(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2D2A3A),
+                          letterSpacing: -0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Discount Unlocked',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8E8E93),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      if (_offerTitle != null) ...[
+                        const SizedBox(height: 10),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            _offerTitle!,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF8E8E93),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 28),
+                      Container(
+                        width: 48,
+                        height: 1.5,
+                        color: const Color(0xFFE5E5EA), // Light grey divider line
+                      ),
+                      const SizedBox(height: 28),
+                      const Text(
+                        'REDEEMED AT',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF8E8E93),
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _merchantBusinessName ?? _branchName ?? "Parchi Merchant",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2D2A3A),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (_merchantBusinessName != null && _branchName != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          _branchName!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF8E8E93),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      if (_isBonusApplied) ...[
+                        const SizedBox(height: 48),
+                        _buildPremiumBonusSection(),
+                        const SizedBox(height: 48),
+                      ] else ...[
+                        const SizedBox(height: 32),
+                      ],
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-            if (_bonusDiscountApplied != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _bonusDiscountApplied! > 0
-                    ? "Rs. $_bonusDiscountApplied OFF"
-                    : "Free Item / Reward",
-                style: const TextStyle(
-                  color: Color(0xFFE65100),
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _bonusDiscountApplied! > 0 ? "Additional Loyalty Discount" : "Special Item Reward",
-                style: TextStyle(
-                  color: const Color(0xFFE65100).withValues(alpha: 0.8),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: _buildActionButtons(),
+            ),
           ],
         ),
-      );
-    } else {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.info_outline, color: AppColors.textSecondary, size: 18),
-            SizedBox(width: 8),
-            Text(
-              "Standard Offer (No loyalty bonus this time)",
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+      ),
+    );
   }
 
-  Widget _buildDoneButton() {
+  List<Widget> _buildConfettiParticles() {
+    return [
+      // Left orange bar
+      Positioned(
+        top: 30,
+        left: 15,
+        child: Transform.rotate(
+          angle: -0.4,
+          child: Container(
+            width: 8,
+            height: 18,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF5722),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      ),
+      // Left pink dot
+      Positioned(
+        bottom: 40,
+        left: 25,
+        child: Container(
+          width: 9,
+          height: 9,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFF4081),
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+      // Right pink crescent-like shape
+      Positioned(
+        top: 40,
+        right: 15,
+        child: Transform.rotate(
+          angle: 0.6,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF4081).withValues(alpha: 0.4),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ),
+      // Right orange bar
+      Positioned(
+        bottom: 30,
+        right: 20,
+        child: Transform.rotate(
+          angle: 0.5,
+          child: Container(
+            width: 8,
+            height: 16,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF5722),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      ),
+      // Left blue bar
+      Positioned(
+        top: 90,
+        left: 5,
+        child: Transform.rotate(
+          angle: 0.8,
+          child: Container(
+            width: 6,
+            height: 12,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ),
+      ),
+      // Right yellow star
+      const Positioned(
+        top: 100,
+        right: 5,
+        child: Icon(
+          Icons.star_rounded,
+          color: Color(0xFFFFD600),
+          size: 14,
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildPremiumBonusSection() {
+    return CustomPaint(
+      painter: TicketPainter(
+        borderColor: const Color(0xFFB8860B),
+        borderRadius: 16,
+        clipRadius: 10,
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.only(left: 20, right: 16, top: 16, bottom: 16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2C2205).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF2C2205).withValues(alpha: 0.15),
+                  width: 1,
+                ),
+              ),
+              child: const Icon(
+                Icons.stars_rounded,
+                color: Color(0xFF2C2205),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'LOYALTY BONUS UNLOCKED',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF2C2205),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Additional discount applied!',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF4A3B12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            if (_bonusDiscountApplied != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2C2205), // Dark luxury bronze contrast capsule
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  _bonusDiscountApplied! > 0
+                      ? "+ Rs. ${_bonusDiscountApplied!.toInt()}"
+                      : "Free Reward",
+                  style: const TextStyle(
+                    color: Color(0xFFFFF6D1), // Champagne text on dark capsule
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
     return SizedBox(
       width: double.infinity,
+      height: 50,
       child: ElevatedButton(
         onPressed: () => Navigator.of(context).pop(),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
         ),
-        child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        child: const Text(
+          'DONE',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.0,
+          ),
+        ),
       ),
     );
   }
@@ -1136,3 +1307,209 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     );
   }
 }
+
+class _FlippingSuccessIcon extends AnimatedWidget {
+  final Widget front;
+  final Widget back;
+
+  const _FlippingSuccessIcon({
+    required Animation<double> animation,
+    required this.front,
+    required this.back,
+  }) : super(listenable: animation);
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = listenable as Animation<double>;
+    final double value = animation.value;
+    final double angle = value * 3.141592653589793;
+    final bool isFront = angle < 3.141592653589793 / 2;
+
+    return Transform(
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, 0.001) // perspective
+        ..rotateY(angle),
+      alignment: Alignment.center,
+      child: isFront
+          ? front
+          : Transform(
+              transform: Matrix4.identity()..rotateY(3.141592653589793),
+              alignment: Alignment.center,
+              child: back,
+            ),
+    );
+  }
+}
+
+class TicketPainter extends CustomPainter {
+  final Color borderColor;
+  final double borderRadius;
+  final double clipRadius;
+
+  TicketPainter({
+    required this.borderColor,
+    this.borderRadius = 16.0,
+    this.clipRadius = 10.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Draw shadow first
+    final shadowPaint = Paint()
+      ..color = const Color(0xFFFF8F00).withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    
+    final path = Path();
+    
+    // Construct the ticket path with circular side notches
+    path.moveTo(borderRadius, 0);
+    path.lineTo(size.width - borderRadius, 0);
+    
+    path.arcToPoint(
+      Offset(size.width, borderRadius),
+      radius: Radius.circular(borderRadius),
+      clockwise: true,
+    );
+    
+    path.lineTo(size.width, size.height / 2 - clipRadius);
+    path.arcToPoint(
+      Offset(size.width, size.height / 2 + clipRadius),
+      radius: Radius.circular(clipRadius),
+      clockwise: false,
+    );
+    
+    path.lineTo(size.width, size.height - borderRadius);
+    path.arcToPoint(
+      Offset(size.width - borderRadius, size.height),
+      radius: Radius.circular(borderRadius),
+      clockwise: true,
+    );
+    
+    path.lineTo(borderRadius, size.height);
+    
+    path.arcToPoint(
+      Offset(0, size.height - borderRadius),
+      radius: Radius.circular(borderRadius),
+      clockwise: true,
+    );
+    
+    path.lineTo(0, size.height / 2 + clipRadius);
+    path.arcToPoint(
+      Offset(0, size.height / 2 - clipRadius),
+      radius: Radius.circular(clipRadius),
+      clockwise: false,
+    );
+    
+    path.lineTo(0, borderRadius);
+    path.arcToPoint(
+      Offset(borderRadius, 0),
+      radius: Radius.circular(borderRadius),
+      clockwise: true,
+    );
+    
+    path.close();
+
+    // Paint shadow shifted down slightly
+    canvas.save();
+    canvas.translate(0, 5);
+    canvas.drawPath(path, shadowPaint);
+    canvas.restore();
+
+    // 2. Draw ticket body with metallic gradient
+    final gradient = const LinearGradient(
+      colors: [
+        Color(0xFFFFF7C2), // Light champagne/gold highlight
+        Color(0xFFFFD54F), // Bright sunshine gold
+        Color(0xFFFF8F00), // Rich orange gold
+      ],
+      stops: [0.0, 0.45, 1.0],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ).createShader(Offset.zero & size);
+
+    final paint = Paint()
+      ..shader = gradient
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawPath(path, paint);
+
+    // 3. Draw inner shiny glow layer
+    final glowPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    
+    final innerPath = Path();
+    const inset = 4.0;
+    const innerRadius = 12.0;
+    
+    innerPath.moveTo(innerRadius + inset, inset);
+    innerPath.lineTo(size.width - innerRadius - inset, inset);
+    innerPath.arcToPoint(
+      Offset(size.width - inset, innerRadius + inset),
+      radius: const Radius.circular(innerRadius),
+      clockwise: true,
+    );
+    innerPath.lineTo(size.width - inset, size.height / 2 - clipRadius - 2);
+    innerPath.arcToPoint(
+      Offset(size.width - inset, size.height / 2 + clipRadius + 2),
+      radius: Radius.circular(clipRadius + 2),
+      clockwise: false,
+    );
+    innerPath.lineTo(size.width - inset, size.height - innerRadius - inset);
+    innerPath.arcToPoint(
+      Offset(size.width - innerRadius - inset, size.height - inset),
+      radius: const Radius.circular(innerRadius),
+      clockwise: true,
+    );
+    innerPath.lineTo(innerRadius + inset, size.height - inset);
+    innerPath.arcToPoint(
+      Offset(inset, size.height - innerRadius - inset),
+      radius: const Radius.circular(innerRadius),
+      clockwise: true,
+    );
+    innerPath.lineTo(inset, size.height / 2 + clipRadius + 2);
+    innerPath.arcToPoint(
+      Offset(inset, size.height / 2 - clipRadius - 2),
+      radius: Radius.circular(clipRadius + 2),
+      clockwise: false,
+    );
+    innerPath.lineTo(inset, innerRadius + inset);
+    innerPath.arcToPoint(
+      const Offset(innerRadius + inset, inset),
+      radius: const Radius.circular(innerRadius),
+      clockwise: true,
+    );
+    innerPath.close();
+    
+    canvas.drawPath(innerPath, glowPaint);
+
+    // 4. Draw dark gold border
+    final borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8;
+    
+    canvas.drawPath(path, borderPaint);
+
+    // 5. Draw vertical dash divider line
+    final dashPaint = Paint()
+      ..color = borderColor.withValues(alpha: 0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    
+    const dashHeight = 4.0;
+    const dashSpace = 4.0;
+    double startY = 8.0;
+    final double dashX = size.width - 108.0; // Leaves nice space for capsule on the right
+    while (startY < size.height - 8.0) {
+      canvas.drawLine(Offset(dashX, startY), Offset(dashX, startY + dashHeight), dashPaint);
+      startY += dashHeight + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
