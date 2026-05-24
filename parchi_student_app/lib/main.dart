@@ -319,11 +319,12 @@ class _ParchiAppState extends State<ParchiApp> {
           }
         }
 
-        // Flutter strips parchi://redeem/{branchId} to just /{branchId} and calls onGenerateRoute.
-        // Detect that UUID path and push QrRedemptionScreen directly (same as _handleMerchantLink),
-        // using _tryClaimRedeemNav so the uriLinkStream handler doesn't push a second copy.
+        // Flutter strips parchi://redeem/{branchId} to just /{branchId} (custom scheme)
+        // or passes /redeem/{branchId} (HTTPS App Links) and calls onGenerateRoute.
+        // Detect both patterns and push QrRedemptionScreen, using _tryClaimRedeemNav
+        // so the uriLinkStream handler doesn't push a second copy.
         final uuidPathRe = RegExp(
-          r'^/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$',
+          r'^(?:/redeem)?/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$',
           caseSensitive: false,
         );
         final uuidMatch = uuidPathRe.firstMatch(settings.name ?? '');
