@@ -1,7 +1,7 @@
 name: parchi_student_app
 description: "A student discount app."
 publish_to: 'none'
-version: 2.2.0+38
+version: 2.2.1+39
 environment:
   sdk: ^3.0.0 # Adjusted to ensure compatibility
 
