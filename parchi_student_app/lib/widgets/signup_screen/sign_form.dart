@@ -225,7 +225,6 @@ class _SignupFormState extends State<SignupForm> {
       setState(() {
         _isLoading = true;
       });
-      analyticsService.logEvent('signup_step_1_complete');
       await Future.delayed(const Duration(milliseconds: 500));
 
 

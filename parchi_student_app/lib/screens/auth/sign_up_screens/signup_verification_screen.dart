@@ -6,6 +6,7 @@ import '../../../utils/colours.dart';
 import '../../../utils/toast_utils.dart'; // [NEW] Import ToastUtils
 import 'verification_success_screen.dart'; // [NEW]
 import '../../../services/analytics_service.dart';
+import '../../../services/signup_draft_service.dart';
 
 
 class SignupVerificationScreen extends StatefulWidget {
@@ -98,7 +99,18 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
 
     _setupDeepLinkListener();
     _startResendTimer(); // Start timer immediately on load
-    analyticsService.logEvent('signup_verification_sent');
+    _logVerificationSentOnce();
+  }
+
+  Future<void> _logVerificationSentOnce() async {
+    final email = widget.email?.trim();
+    if (email != null && email.isNotEmpty) {
+      if (await signupDraftService.hasLoggedVerificationSent(email)) return;
+      await analyticsService.logEvent('signup_verification_sent');
+      await signupDraftService.markVerificationSentLogged(email);
+      return;
+    }
+    await analyticsService.logEvent('signup_verification_sent');
   }
 
 
@@ -149,6 +161,11 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
 
       analyticsService.logEvent('signup_verification_verified');
       analyticsService.logEvent('signup_completed');
+
+      final email = widget.email?.trim();
+      if (email != null && email.isNotEmpty) {
+        signupDraftService.clearVerificationSentFlag(email);
+      }
 
       // Restart animation for the checkmark
       _controller.reset();

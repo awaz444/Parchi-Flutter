@@ -21,6 +21,9 @@ class SignupDraftService {
   static const String _keyIsStudentIdVerification =
       '${_prefix}is_student_id_verification';
 
+  String _verificationSentKey(String email) =>
+      '${_prefix}verification_sent_${email.toLowerCase()}';
+
   // Password lives in secure storage only
   static const String _keyPasswordSecure = 'signup_draft_password';
 
@@ -99,6 +102,25 @@ class SignupDraftService {
       isStudentIdVerification:
           prefs.getBool(_keyIsStudentIdVerification),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Verification analytics (once per signup attempt)
+  // ---------------------------------------------------------------------------
+
+  Future<bool> hasLoggedVerificationSent(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_verificationSentKey(email)) ?? false;
+  }
+
+  Future<void> markVerificationSentLogged(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_verificationSentKey(email), true);
+  }
+
+  Future<void> clearVerificationSentFlag(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_verificationSentKey(email));
   }
 
   // ---------------------------------------------------------------------------
