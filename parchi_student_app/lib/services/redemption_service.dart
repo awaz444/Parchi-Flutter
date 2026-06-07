@@ -41,9 +41,12 @@ class RedemptionService {
   }
 
   // Get Redemption Stats
-  Future<RedemptionStats> getStats() async {
+  Future<RedemptionStats> getStats({String period = 'alltime'}) async {
     try {
-      final response = await authService.authenticatedGet(ApiConfig.redemptionStatsEndpoint);
+      final uri = Uri.parse(ApiConfig.redemptionStatsEndpoint).replace(
+        queryParameters: period != 'alltime' ? {'period': period} : {},
+      );
+      final response = await authService.authenticatedGet(uri.toString());
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 

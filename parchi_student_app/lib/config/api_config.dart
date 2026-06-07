@@ -44,6 +44,12 @@ class ApiConfig {
   // Leaderboard Endpoints
   static String get leaderboardEndpoint => '$baseUrl/students/leaderboard';
 
+  // Selfie Change Endpoints
+  static String get selfieChangeRequestEndpoint =>
+      '$baseUrl/students/selfie-change-request';
+  static String get selfieChangeStatusEndpoint =>
+      '$baseUrl/students/selfie-change-request/status';
+
   // Notification Endpoints
   static String get studentNotificationsEndpoint => '$baseUrl/student/notifications';
   static String markNotificationReadEndpoint(String id) =>

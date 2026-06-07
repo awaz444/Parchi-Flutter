@@ -9,6 +9,9 @@ import '../../services/auth_service.dart';
 import '../../providers/user_provider.dart';
 import 'Change_password/change_password_screen.dart';
 import 'pfp_change/profile_picture_upload_screen.dart';
+import 'selfie_change/selfie_change_upload_sheet.dart';
+import '../../services/selfie_change_service.dart';
+import '../../services/navigation_service.dart';
 import '../../utils/toast_utils.dart'; // [NEW] Added ToastUtils
 import '../../widgets/common/spinning_loader.dart'; // [REQUIRED]
 import 'about_us_screen.dart'; // [NEW]
@@ -23,7 +26,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RouteAware {
   // GENERIC MODAL CONTROLLER (Handles BOTH PFP and Password sheets)
   late AnimationController _modalController;
 
@@ -34,11 +37,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   // [NEW] Track uploading state from child sheet
   bool _isUploadingPfp = false;
   File? _localPreviewImage; // [NEW] Preview local selection
+  bool _hasPendingSelfieRequest = false;
+  bool _isLoadingSelfieStatus = true;
 
+  bool get _canSubmitSelfieChange =>
+      !_isLoadingSelfieStatus && !_hasPendingSelfieRequest;
 
   @override
   void initState() {
     super.initState();
+    _loadSelfieChangeStatus();
     // Initialize the shared modal animation controller
     _modalController = AnimationController(
       vsync: this,
@@ -48,14 +56,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      NavigationService.routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
   void dispose() {
+    NavigationService.routeObserver.unsubscribe(this);
     _modalController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    _loadSelfieChangeStatus(showLoading: false);
   }
 
   // ---------------------------------------------------------
   // LOGIC: OPENING SHEETS
   // ---------------------------------------------------------
+
+  Future<void> _loadSelfieChangeStatus({bool showLoading = true}) async {
+    if (showLoading && mounted) {
+      setState(() => _isLoadingSelfieStatus = true);
+    }
+    try {
+      final status = await selfieChangeService.getStatus();
+      if (mounted) {
+        setState(() {
+          _hasPendingSelfieRequest = status.hasPendingRequest;
+          _isLoadingSelfieStatus = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingSelfieStatus = false);
+    }
+  }
+
+  void _openSelfieChangeSheet() {
+    if (!_canSubmitSelfieChange) return;
+    setState(() {
+      _activeSheetContent = SelfieChangeUploadSheet(
+        onClose: _closeModal,
+        onSubmitted: _loadSelfieChangeStatus,
+      );
+      _showFocusedAvatar = false;
+    });
+    _modalController.forward(from: 0.0);
+  }
 
   // 1. Open Profile Picture Sheet (With Focused Avatar)
   void _openPfpSheet() {
@@ -274,6 +326,82 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         ),
 
                         const SizedBox(height: 20),
+
+                        // Verification selfie update
+                        GestureDetector(
+                          onTap: _canSubmitSelfieChange ? _openSelfieChangeSheet : null,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: _isLoadingSelfieStatus || _hasPendingSelfieRequest
+                                  ? AppColors.surfaceVariant.withOpacity(0.5)
+                                  : AppColors.backgroundLight,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: _hasPendingSelfieRequest
+                                    ? AppColors.parchiGold.withOpacity(0.5)
+                                    : AppColors.surfaceVariant,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                if (_isLoadingSelfieStatus)
+                                  const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: SpinningLoader(size: 18),
+                                  )
+                                else
+                                  Icon(
+                                    _hasPendingSelfieRequest
+                                        ? Icons.hourglass_top
+                                        : Icons.verified_user_outlined,
+                                    color: _hasPendingSelfieRequest
+                                        ? AppColors.parchiGold
+                                        : AppColors.primary,
+                                    size: 22,
+                                  ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _isLoadingSelfieStatus
+                                            ? "Checking Request Status"
+                                            : _hasPendingSelfieRequest
+                                                ? "Selfie Change Pending"
+                                                : "Update Verification Selfie",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      Text(
+                                        _isLoadingSelfieStatus
+                                            ? "Please wait..."
+                                            : _hasPendingSelfieRequest
+                                                ? "Your request is under admin review"
+                                                : "Submit a new selfie for verification",
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (_canSubmitSelfieChange)
+                                  const Icon(Icons.chevron_right,
+                                      color: AppColors.textSecondary),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
 
                         // Actions Row
                         Row(

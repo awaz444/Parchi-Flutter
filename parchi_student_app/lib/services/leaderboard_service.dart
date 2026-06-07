@@ -9,11 +9,13 @@ class LeaderboardService {
   Future<LeaderboardResponse> getLeaderboard({
     int page = 1,
     int limit = 10,
+    String period = 'alltime',
   }) async {
     try {
       final queryParams = {
         'page': page.toString(),
         'limit': limit.toString(),
+        'period': period,
       };
 
       final uri = Uri.parse(ApiConfig.leaderboardEndpoint)

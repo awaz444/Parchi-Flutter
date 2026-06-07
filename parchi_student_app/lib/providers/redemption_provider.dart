@@ -9,6 +9,10 @@ final redemptionStatsProvider = FutureProvider<RedemptionStats>((ref) async {
   return await redemptionService.getStats();
 });
 
+final redemptionStatsMonthlyProvider = FutureProvider<RedemptionStats>((ref) async {
+  return await redemptionService.getStats(period: 'monthly');
+});
+
 // ---------------------------------------------------------------------------
 // Paginated history state
 // ---------------------------------------------------------------------------

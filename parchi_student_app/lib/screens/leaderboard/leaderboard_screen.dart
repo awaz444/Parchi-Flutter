@@ -19,16 +19,27 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 }
 
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   bool _isRefreshing = false;
   bool _showBackToTop = false;
   late final ScrollController _scrollController;
+  late final TabController _tabController;
   final GlobalKey _userRowKey = GlobalKey();
+  String _period = 'alltime';
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      final newPeriod = _tabController.index == 0 ? 'alltime' : 'monthly';
+      if (newPeriod != _period) {
+        setState(() => _period = newPeriod);
+        _scrollController.jumpTo(0);
+      }
+    });
   }
 
   void _onScroll() {
@@ -49,6 +60,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   @override
   void dispose() {
     _scrollController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -63,7 +75,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Future<void> _loadMore() async {
-    ref.read(leaderboardProvider.notifier).loadMore();
+    ref.read(leaderboardProvider(_period).notifier).loadMore();
   }
 
   Future<void> _refresh() async {
@@ -74,8 +86,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     setState(() => _isRefreshing = true);
     try {
       await Future.wait([
-        ref.read(leaderboardProvider.notifier).refresh(),
-        ref.refresh(redemptionStatsProvider.future),
+        ref.read(leaderboardProvider(_period).notifier).refresh(),
+        if (_period == 'monthly')
+          ref.refresh(redemptionStatsMonthlyProvider.future)
+        else
+          ref.refresh(redemptionStatsProvider.future),
       ]);
     } catch (e) {
       debugPrint("Leaderboard refresh error: $e");
@@ -105,13 +120,24 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             fontWeight: FontWeight.w800,
           ),
         ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.primary,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          tabs: const [
+            Tab(text: "All Time"),
+            Tab(text: "Monthly"),
+          ],
+        ),
       ),
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    final state = ref.watch(leaderboardProvider);
+    final state = ref.watch(leaderboardProvider(_period));
 
     final bool showSkeleton = _isRefreshing || (state.isLoading && state.items.isEmpty);
     final bool hasError = state.error != null && state.items.isEmpty && !showSkeleton;
@@ -215,7 +241,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 34),
-              child: user != null ? _buildStickyUserBar(user) : const SizedBox.shrink(),
+              child: user != null ? _buildStickyUserBar(user, _period) : const SizedBox.shrink(),
             ),
           ),
         ),
@@ -296,8 +322,10 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     return 'You';
   }
 
-  Widget _buildStickyUserBar(dynamic user) {
-    final statsAsync = ref.watch(redemptionStatsProvider);
+  Widget _buildStickyUserBar(dynamic user, String period) {
+    final statsAsync = period == 'monthly'
+        ? ref.watch(redemptionStatsMonthlyProvider)
+        : ref.watch(redemptionStatsProvider);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -414,7 +442,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   }
 
   Widget _buildLoadMoreIndicator() {
-    final state = ref.watch(leaderboardProvider);
+    final state = ref.watch(leaderboardProvider(_period));
     if (!state.hasMore) return const SizedBox.shrink();
 
     return Container(

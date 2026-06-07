@@ -212,6 +212,7 @@ class _ParchiAppState extends State<ParchiApp> {
           NavigationService.navigatorKey, // [NEW] Global Navigator Key
       scaffoldMessengerKey:
           NavigationService.messengerKey, // [NEW] Global Messenger Key
+      navigatorObservers: [NavigationService.routeObserver],
       debugShowCheckedModeBanner: false,
       title: 'Parchi',
       routes: {
