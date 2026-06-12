@@ -71,6 +71,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
+            errorBuilder: (context, error) => _buildScannerError(error),
           ),
           CustomPaint(painter: _ScanOverlayPainter()),
           SafeArea(
@@ -84,6 +85,51 @@ class _QrScanScreenState extends State<QrScanScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildScannerError(MobileScannerException error) {
+    final isPermissionDenied =
+        error.errorCode == MobileScannerErrorCode.permissionDenied;
+
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_off_rounded,
+                  color: Colors.white, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                isPermissionDenied
+                    ? 'Camera permission is required to scan QR codes.'
+                    : error.errorCode.message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              if (isPermissionDenied) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'Allow camera access in your device settings, then try again.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () => _controller.start(),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                child: const Text('Try again'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
