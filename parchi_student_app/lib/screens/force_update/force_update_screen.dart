@@ -88,7 +88,7 @@ class ForceUpdateScreen extends StatelessWidget {
   void _launchStore() {
     final url = Platform.isAndroid
         ? 'https://play.google.com/store/apps/details?id=com.parchi.student'
-        : 'https://apps.apple.com/app/idYOUR_APP_ID';
+        : 'https://apps.apple.com/app/parchi-the-student-app/id6760251460';
     launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 }
