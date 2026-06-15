@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/api_config.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/redemption_provider.dart';
+import '../../providers/leaderboard_provider.dart';
 import '../../services/auth_service.dart';
 import '../../utils/colours.dart';
 import '../../widgets/common/guest_login_prompt.dart';
@@ -185,6 +187,22 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     });
   }
 
+  /// Refresh home/profile/history stats so QR redemptions appear without pull-to-refresh.
+  Future<void> _refreshRedemptionProviders() async {
+    try {
+      await Future.wait([
+        ref.refresh(redemptionStatsProvider.future),
+        ref.refresh(redemptionStatsMonthlyProvider.future),
+        ref.refresh(userProfileProvider.future),
+        ref.read(redemptionHistoryProvider.notifier).refresh(),
+        ref.read(leaderboardProvider('alltime').notifier).refresh(),
+        ref.read(leaderboardProvider('monthly').notifier).refresh(),
+      ]);
+    } catch (_) {
+      // Non-critical — pull-to-refresh remains available
+    }
+  }
+
   Future<void> _initiateRequest() async {
     if (_selectedOfferId == null || _isInitiating) return;
     _isInitiating = true;
@@ -216,6 +234,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
           // Skip pending — jump straight to success
           HapticFeedback.heavyImpact();
           _applyRedemptionSummary(result['redemption']);
+          _refreshRedemptionProviders();
           setState(() {
             _phase = _QrPhase.success;
           });
@@ -303,6 +322,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         _applyRedemptionSummary(data['data']['redemption']);
       }
     } catch (_) {}
+    _refreshRedemptionProviders();
     if (mounted) {
       setState(() => _phase = _QrPhase.success);
       _pulseController.stop();
@@ -322,6 +342,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         HapticFeedback.heavyImpact();
         if (responseData != null && responseData['data']?['redemption'] != null) {
           _applyRedemptionSummary(responseData['data']['redemption']);
+          _refreshRedemptionProviders();
           setState(() => _phase = _QrPhase.success);
           _pulseController.stop();
           _successFadeController.forward();

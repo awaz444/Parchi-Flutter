@@ -23,6 +23,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   bool _isRefreshing = false; // [NEW] State for custom refresh UX
+  final Set<String> _expandedIds = {};
 
   @override
   void initState() {
@@ -73,39 +74,46 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _onNotificationTap(NotificationItem notif) async {
-    // 1. Optimistic UI Update
-    if (!notif.isRead) {
+    final isExpanded = _expandedIds.contains(notif.id);
+
+    setState(() {
+      if (isExpanded) {
+        _expandedIds.remove(notif.id);
+      } else {
+        _expandedIds.add(notif.id);
+      }
+    });
+
+    // Mark as read when first expanded
+    if (!notif.isRead && !isExpanded) {
       setState(() {
-        // Create a new list with modified item
         _notifications = _notifications.map((item) {
           if (item.id == notif.id) {
-             return NotificationItem(
-               id: item.id,
-               title: item.title,
-               content: item.content,
-               imageUrl: item.imageUrl,
-               linkUrl: item.linkUrl,
-               type: item.type,
-               createdAt: item.createdAt,
-               isRead: true, // Mark as read
-             );
+            return NotificationItem(
+              id: item.id,
+              title: item.title,
+              content: item.content,
+              imageUrl: item.imageUrl,
+              linkUrl: item.linkUrl,
+              type: item.type,
+              createdAt: item.createdAt,
+              isRead: true,
+            );
           }
           return item;
         }).toList();
       });
-      // 2. Fire and Forget API Call
       await _api.markAsRead(notif.id);
     }
+  }
 
-    // 3. Handle Navigation — open linkUrl in browser on Android & iOS
-    if (notif.linkUrl != null && notif.linkUrl!.isNotEmpty) {
-      final uri = Uri.tryParse(notif.linkUrl!);
-      if (uri != null) {
-        try {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } catch (_) {
-          // silently ignore if the URL can't be opened
-        }
+  Future<void> _openNotificationLink(String linkUrl) async {
+    final uri = Uri.tryParse(linkUrl);
+    if (uri != null) {
+      try {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        // silently ignore if the URL can't be opened
       }
     }
   }
@@ -287,6 +295,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final backgroundColor = item.isRead ? Colors.transparent : AppColors.primary.withOpacity(0.05);
     final titleWeight = item.isRead ? FontWeight.w600 : FontWeight.bold;
     final textColor = item.isRead ? AppColors.textPrimary : AppColors.textPrimary;
+    final isExpanded = _expandedIds.contains(item.id);
 
     return InkWell(
       onTap: () => _onNotificationTap(item),
@@ -344,16 +353,34 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Description
                   Text(
                     item.content,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: isExpanded ? null : 2,
+                    overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                   ),
+                  if (isExpanded &&
+                      item.linkUrl != null &&
+                      item.linkUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _openNotificationLink(item.linkUrl!),
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('Open'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 32),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 6),
                   Text(
                     _formatDate(item.createdAt),
@@ -363,6 +390,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            AnimatedRotation(
+              turns: isExpanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const Icon(
+                Icons.keyboard_arrow_down,
+                color: AppColors.textSecondary,
+                size: 22,
               ),
             ),
           ],

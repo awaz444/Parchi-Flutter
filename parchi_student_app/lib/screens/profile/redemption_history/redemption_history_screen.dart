@@ -314,6 +314,8 @@ class _RedemptionHistoryScreenState
               builder: (_) => RedemptionDetailScreen(redemptionId: item.id),
             ));
       },
+      splashColor: AppColors.primary.withOpacity(0.12),
+      highlightColor: AppColors.primary.withOpacity(0.06),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
@@ -394,7 +396,13 @@ class _RedemptionHistoryScreenState
                     ),
                   )
               ],
-            )
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.textSecondary.withOpacity(0.7),
+              size: 22,
+            ),
           ],
         ),
       ),
