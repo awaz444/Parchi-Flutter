@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../utils/colours.dart';
 import '../qr_redemption/qr_redemption_screen.dart';
 
@@ -121,12 +122,24 @@ class _QrScanScreenState extends State<QrScanScreen> {
               ],
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: () => _controller.start(),
+                onPressed: isPermissionDenied
+                    ? () => openAppSettings()
+                    : () => _controller.start(),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                 ),
-                child: const Text('Try again'),
+                child: Text(isPermissionDenied ? 'Open Settings' : 'Try again'),
               ),
+              if (isPermissionDenied) ...[
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => _controller.start(),
+                  child: const Text(
+                    'Try again',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
