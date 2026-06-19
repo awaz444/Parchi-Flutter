@@ -12,6 +12,8 @@ import '../home_screen_restraunts_widgets/restaurant_big_card.dart';
 import '../home_screen_restraunts_widgets/restaurant_medium_card.dart';
 import '../common/blinking_skeleton.dart';
 import 'filter_bottom_sheet.dart';
+// import 'CLIENT_DEMO_ad_banner_16x9_mockup.dart'; // CLIENT DEMO ONLY — disabled
+// import '../../widgets/home_screen_restraunts_widgets/CLIENT_DEMO_ad_card_1x1_mockup.dart'; // CLIENT DEMO ONLY — disabled
 
 import '../../screens/home/merchant_details_screen.dart';
 import '../../models/merchant_detail_model.dart';
@@ -458,6 +460,16 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
             ),
           ),
 
+          // ── CLIENT DEMO MOCKUP: 16:9 ad banner under the Parchi Card ──────
+          // Disabled.
+          // if (!widget.isSearching)
+          //   const SliverToBoxAdapter(
+          //     child: Padding(
+          //       padding: EdgeInsets.only(top: 12),
+          //       child: AdBanner16x9Mockup(),
+          //     ),
+          //   ),
+
           // ── Gap between card and first section ───────────────────────────
           if (!widget.isSearching)
             const SliverToBoxAdapter(child: SizedBox(height: 18)),
@@ -551,6 +563,11 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                   sliver: SliverGrid(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
+                        // CLIENT DEMO MOCKUP (disabled): last grid box was a
+                        // 1:1 ad instead of a brand.
+                        // if (index == displayBrands.length - 1) {
+                        //   return const AdCard1x1Mockup();
+                        // }
                         final brand = displayBrands[index];
                         return GestureDetector(
                           onTap: () => _onMerchantTap(context, brand.id),

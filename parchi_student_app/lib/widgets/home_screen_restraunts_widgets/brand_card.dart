@@ -6,11 +6,13 @@ import '../common/blinking_skeleton.dart';
 class BrandCard extends StatelessWidget {
   final String name;
   final String image;
+  final bool showName;
 
   const BrandCard({
     super.key,
     required this.name,
     required this.image,
+    this.showName = true,
   });
 
   @override
@@ -52,23 +54,25 @@ class BrandCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        if (showName) ...[
+          const SizedBox(height: 8),
 
-        // Brand Name (Outside the card)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: Text(
-            name,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+          // Brand Name (Outside the card)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Text(
+              name,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
