@@ -11,6 +11,7 @@ import '../../providers/leaderboard_provider.dart';
 import '../../services/auth_service.dart';
 import '../../utils/colours.dart';
 import '../../widgets/common/guest_login_prompt.dart';
+import '../../models/redemption_model.dart';
 
 // ── Phase enum ─────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   String? _formattedDiscount;
   bool _isBonusApplied = false;
   num? _bonusDiscountApplied;
+  String? _bonusDiscountType;
   String? _merchantBusinessName;
   String? _rejectionReason;
   String? _errorMessage;
@@ -169,6 +171,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     setState(() {
       _isBonusApplied = redemption['isBonusApplied'] ?? false;
       _bonusDiscountApplied = redemption['bonusDiscountApplied'];
+      _bonusDiscountType = redemption['bonusDiscountType'];
 
       // Load offer fields if present in the response
       if (redemption['offer'] != null) {
@@ -1136,9 +1139,10 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                   ],
                 ),
                 child: Text(
-                  _bonusDiscountApplied! > 0
-                      ? "+ Rs. ${_bonusDiscountApplied!.toInt()}"
-                      : "Free Reward",
+                  formatBonusDiscountLabel(
+                    _bonusDiscountApplied ?? 0,
+                    _bonusDiscountType,
+                  ),
                   style: const TextStyle(
                     color: Color(0xFFFFF6D1), // Champagne text on dark capsule
                     fontSize: 14,

@@ -1,5 +1,31 @@
 import 'offer_model.dart';
 
+String formatBonusDiscountLabel(num value, String? discountType) {
+  if (discountType == null) return 'Bonus Unlocked';
+  final type = discountType.toLowerCase();
+  if (value <= 0 || type == 'item') return 'Free Reward';
+  if (type == 'percentage') return '+ ${value.toInt()}%';
+  if (type == 'fixed' || type == 'pkr') return '+ Rs. ${value.toInt()}';
+  return 'Bonus Unlocked';
+}
+
+String formatBonusDiscountOffLabel(num value, String? discountType) {
+  if (discountType == null) return 'Bonus Unlocked';
+  final type = discountType.toLowerCase();
+  if (value <= 0 || type == 'item') return 'Free Item / Reward';
+  if (type == 'percentage') return '${value.toInt()}% OFF';
+  if (type == 'fixed' || type == 'pkr') return 'Rs. ${value.toInt()} OFF';
+  return 'Bonus Unlocked';
+}
+
+String formatBonusDiscountSubtitle(String? discountType) {
+  if (discountType == null) return 'Additional discount applied';
+  final type = discountType.toLowerCase();
+  if (type == 'item') return 'Special Item Reward';
+  if (type == 'fixed' || type == 'pkr') return 'Additional Cash Discount';
+  return 'Additional Discount';
+}
+
 class RedemptionModel {
   final String id;
   final OfferModel?
@@ -8,6 +34,7 @@ class RedemptionModel {
   final DateTime redeemedAt;
   final bool isBonusApplied;
   final num bonusDiscountApplied;
+  final String? bonusDiscountType;
   final String? verifiedBy;
   final String? notes;
   final String status;
@@ -21,6 +48,7 @@ class RedemptionModel {
     required this.redeemedAt,
     this.isBonusApplied = false,
     this.bonusDiscountApplied = 0,
+    this.bonusDiscountType,
     this.verifiedBy,
     this.notes,
     required this.status,
@@ -40,6 +68,8 @@ class RedemptionModel {
           json['is_bonus_applied'] ?? json['isBonusApplied'] ?? false,
       bonusDiscountApplied:
           json['bonus_discount_applied'] ?? json['bonusDiscountApplied'] ?? 0,
+      bonusDiscountType:
+          json['bonus_discount_type'] ?? json['bonusDiscountType'],
       verifiedBy: json['verified_by'] ?? json['verifiedBy'],
       notes: json['notes'],
       status: json['status'] ??

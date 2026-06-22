@@ -214,9 +214,10 @@ class RedemptionDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    redemption.bonusDiscountApplied > 0
-                        ? "Rs. ${redemption.bonusDiscountApplied} OFF"
-                        : "Free Item / Reward",
+                    formatBonusDiscountOffLabel(
+                      redemption.bonusDiscountApplied,
+                      redemption.bonusDiscountType,
+                    ),
                     style: const TextStyle(
                       color: Color(0xFFE65100),
                       fontSize: 24,
@@ -225,9 +226,7 @@ class RedemptionDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    redemption.bonusDiscountApplied > 0
-                        ? "Additional Cash Discount"
-                        : "Special Item Reward",
+                    formatBonusDiscountSubtitle(redemption.bonusDiscountType),
                     style: TextStyle(
                       color: const Color(0xFFE65100).withOpacity(0.8),
                       fontSize: 12,
