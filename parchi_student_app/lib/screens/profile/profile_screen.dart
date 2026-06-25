@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/colours.dart';
-import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 import '../../providers/user_provider.dart';
 import 'Change_password/change_password_screen.dart';
 import 'pfp_change/profile_picture_upload_screen.dart';
@@ -724,8 +724,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           builder: (_) => const Center(
               child: CircularProgressIndicator())); // Default color is primary
       try {
-        await authService.logout();
-        ref.read(userProfileProvider.notifier).clearUser();
+        await SessionService.signOut(ref: ref);
         if (context.mounted) {
           Navigator.of(context).pop(); // pops loading dialog
           Navigator.of(context).pop(); // pops ProfileScreen → back to HomeScreen

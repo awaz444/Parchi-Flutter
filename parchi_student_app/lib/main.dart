@@ -22,12 +22,14 @@ import 'screens/profile/redemption_history/redemption_history_screen.dart'; // [
 import 'screens/splash/splash_screen.dart'; // [NEW] Splash Screen
 import 'screens/auth/login_screens/login_screen.dart';
 import 'services/auth_service.dart';
+import 'services/session_service.dart';
 import 'services/navigation_service.dart'; // [NEW] Use generic navigation service
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_handler_service.dart';
 import 'firebase_options.dart'; // [NEW] Import generated options
 import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] Import Verification Screen
 import 'providers/user_provider.dart'; // [NEW] For guest detection
+import 'providers/redemption_provider.dart';
 import 'screens/qr_redemption/qr_redemption_screen.dart';
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 import 'package:package_info_plus/package_info_plus.dart';
@@ -502,9 +504,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
           debugPrint('Error syncing auth state: $e');
         }
       } else if (event == AuthChangeEvent.signedOut) {
-        if (mounted) {
-          _checkAuthState();
+        try {
+          await authService.removeToken();
+          final container = ProviderScope.containerOf(context, listen: false);
+          container.read(userProfileProvider.notifier).clearUser();
+          container.invalidate(redemptionHistoryProvider);
+          container.invalidate(redemptionStatsProvider);
+          container.invalidate(redemptionStatsMonthlyProvider);
+        } catch (_) {
+          // Best-effort cleanup.
         }
+
+        if (mounted) _checkAuthState();
       } else if (event == AuthChangeEvent.passwordRecovery) {
         if (mounted) {
           Navigator.of(context).push(
@@ -525,7 +536,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // Show the snackbar with the real reason using the custom Universal Toast
       ToastUtils.handleApiError(null, errorMessage);
 
-      // Navigate to login screen — tokens are already cleared by AuthService.logout()
+      // Ensure we clear cached provider state as well (not just tokens).
+      await SessionService.signOut(
+        context: NavigationService.navigatorKey.currentContext,
+      );
+
       NavigationService.navigatorKey.currentState?.pushNamedAndRemoveUntil(
         '/login',
         (route) => false,

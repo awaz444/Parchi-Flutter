@@ -11,6 +11,13 @@ class UserProfile extends _$UserProfile {
     // 1. Serve from local storage immediately (zero network latency on startup)
     final cached = await authService.getUser();
     if (cached != null) {
+      // If we have a cached user but no token, treat it as a stale session.
+      final token = await authService.getToken().catchError((_) => null);
+      if (token == null) {
+        await authService.removeToken();
+        return null;
+      }
+
       // 2. Refresh from API in the background without blocking the UI
       _refreshInBackground();
       return cached;
@@ -30,8 +37,14 @@ class UserProfile extends _$UserProfile {
   void _refreshInBackground() {
     authService.getProfile().then((profile) {
       state = AsyncValue.data(profile.user);
-    }).catchError((_) {
-      // Ignore background refresh errors — cached data is already showing
+    }).catchError((_) async {
+      // If the token is missing/expired, clear cached user so the UI doesn't
+      // look authenticated while authenticated endpoints fail.
+      final token = await authService.getToken().catchError((_) => null);
+      if (token == null) {
+        await authService.removeToken();
+        state = const AsyncValue.data(null);
+      }
     });
   }
 

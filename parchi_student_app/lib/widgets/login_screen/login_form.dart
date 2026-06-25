@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/colours.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
+import '../../services/session_service.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/toast_utils.dart';
 
@@ -56,7 +57,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
         if (user == null) throw Exception("Failed to load user.");
         if (user.role.toLowerCase() != 'student') {
-          await authService.logout();
+          await SessionService.signOut(ref: ref);
           throw Exception("Access denied. Students only.");
         }
 

@@ -4,6 +4,7 @@ import '../../../utils/colours.dart';
 import '../../../widgets/common/spinning_loader.dart';
 import '../../../widgets/common/tap_to_dismiss_keyboard.dart';
 import '../login_screens/login_screen.dart';
+import '../../../services/session_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String? accessToken;
@@ -93,8 +94,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             actions: [
               TextButton(
                 onPressed: () async {
-                  // Sign out so they can log in properly via AuthService
-                  await Supabase.instance.client.auth.signOut();
+                  await SessionService.signOut(context: context);
                   if (context.mounted) {
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(

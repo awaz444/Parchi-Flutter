@@ -9,15 +9,18 @@ import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import '../../../widgets/common/parchi_loader.dart';
 import '../../../widgets/common/blinking_skeleton.dart';
 import '../../../widgets/common/hagrid_text.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/user_provider.dart';
+import '../../../widgets/common/guest_login_prompt.dart';
 
-class NotificationScreen extends StatefulWidget {
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  State<NotificationScreen> createState() => _NotificationScreenState();
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> {
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   final StudentNotificationsService _api = StudentNotificationsService();
   List<NotificationItem> _notifications = [];
   bool _isLoading = true;
@@ -28,10 +31,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchNotifications();
+    // Load only when authenticated; otherwise show the guest prompt.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final user = ref.read(userProfileProvider).value;
+      if (user != null) _fetchNotifications();
+    });
   }
 
   Future<void> _fetchNotifications() async {
+    final user = ref.read(userProfileProvider).value;
+    if (user == null) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = null;
+      });
+      return;
+    }
+
     // Only show full loading skeleton on initial load or if empty
     if (_notifications.isEmpty) {
       setState(() {
@@ -120,6 +138,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userAsync = ref.watch(userProfileProvider);
+    final bool isGuest = userAsync.maybeWhen(
+      data: (user) => user == null,
+      orElse: () => false,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.lightCanvas,
       appBar: AppBar(
@@ -140,7 +164,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ),
       ),
-      body: _buildBody(),
+      body: isGuest
+          ? const GuestLoginPrompt(
+              title: 'Sign in to view notifications',
+              subtitle:
+                  'Your notifications are only available when you are signed in.',
+              icon: Icons.notifications_rounded,
+            )
+          : _buildBody(),
     );
   }
 

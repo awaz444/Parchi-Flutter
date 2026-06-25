@@ -200,7 +200,7 @@ class _RedemptionHistoryScreenState
               return _buildListSkeleton();
             }
             if (historyState.error != null && historyState.items.isEmpty) {
-              return _buildListSkeleton();
+              return _buildErrorState(historyState.error!);
             }
             if (historyState.items.isEmpty) return _buildEmptyState();
 
@@ -420,6 +420,35 @@ class _RedemptionHistoryScreenState
           const Text("No redemption history yet",
               style: TextStyle(color: AppColors.textSecondary)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _startRefreshSequence,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textOnPrimary,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

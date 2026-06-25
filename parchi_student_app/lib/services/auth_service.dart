@@ -140,6 +140,7 @@ class AuthService {
 
   // Store user data
   Future<void> setUser(User user) async {
+    if (_isLoggingOut) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userKey, jsonEncode(user.toJson()));
   }
@@ -180,11 +181,6 @@ class AuthService {
     
     try {
       await _secureStorage.delete(key: _tokenExpiresAtKey);
-    } catch (_) {}
-    
-    // Attempt a full clear in case of Android keystore corruption
-    try {
-      await _secureStorage.deleteAll();
     } catch (_) {}
   }
 
@@ -637,7 +633,9 @@ class AuthService {
         final profileResponse = ProfileResponse.fromJson(responseData);
 
         // Update stored user data
-        await setUser(profileResponse.user);
+        if (!_isLoggingOut) {
+          await setUser(profileResponse.user);
+        }
 
         return profileResponse;
       } else {
