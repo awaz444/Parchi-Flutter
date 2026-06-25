@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/colours.dart';
 import '../../providers/merchants_provider.dart';
+import '../../providers/categories_provider.dart';
+import '../../models/category_model.dart';
 
 class FilterBottomSheet extends ConsumerStatefulWidget {
   const FilterBottomSheet({super.key});
@@ -14,20 +16,16 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   String? _tempCategory;
   String? _tempSubCategory;
 
-  final Map<String, List<String>> _categoryMap = {
-    "Food & Beverage": ["Fast Food", "Cafe", "Restaurant", "Bakery", "Desserts", "Coffee Shop"],
-    "Retail": ["Fashion", "Electronics", "Grocery", "Home & Living", "Beauty"],
-    "Health": ["Pharmacy", "Clinic", "Gym & Fitness", "Wellness", "Diagnostics"],
-    "Services": ["Salon", "Laundry", "Auto Service", "Education", "Repairs"],
-    "Entertainment": ["Gaming", "Cinema", "Travel", "Sports", "Events"],
-  };
-
   final Map<String, IconData> _categoryIcons = {
     "Food & Beverage": Icons.fastfood_rounded,
+    "Food & Beverages": Icons.fastfood_rounded,
     "Retail": Icons.shopping_bag_rounded,
     "Health": Icons.medical_services_rounded,
     "Services": Icons.miscellaneous_services_rounded,
     "Entertainment": Icons.movie_rounded,
+    "Sports": Icons.sports_soccer_rounded,
+    "Fitness & Wellness": Icons.fitness_center_rounded,
+    "Lifestyle": Icons.style_rounded,
   };
 
   @override
@@ -60,8 +58,106 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
     });
   }
 
+  List<MerchantCategory> _getStaticCategoriesFallback() {
+    return [
+      MerchantCategory(
+        id: '1',
+        name: 'Food & Beverages',
+        sortOrder: 1,
+        isActive: true,
+        subcategories: [
+          'Fast Food', 'Pizza', 'Burgers', 'Desi', 'Asian', 'BBQ',
+          'Cafés', 'Coffee Shops', 'Desserts & Ice Cream', 'Bakery', 'Juices & Smoothies'
+        ].asMap().entries.map((e) => MerchantSubcategory(
+          id: '1-${e.key}',
+          categoryId: '1',
+          name: e.value,
+          sortOrder: e.key + 1,
+          isActive: true,
+        )).toList(),
+      ),
+      MerchantCategory(
+        id: '2',
+        name: 'Sports',
+        sortOrder: 2,
+        isActive: true,
+        subcategories: [
+          'Indoor sports clubs', 'Snooker clubs', 'Football', 'Cricket',
+          'Badminton', 'Tennis & Padel', 'Swimming', 'Martial Arts',
+          'Sportswear', 'Sports Equipment', 'Coaching & Academies'
+        ].asMap().entries.map((e) => MerchantSubcategory(
+          id: '2-${e.key}',
+          categoryId: '2',
+          name: e.value,
+          sortOrder: e.key + 1,
+          isActive: true,
+        )).toList(),
+      ),
+      MerchantCategory(
+        id: '3',
+        name: 'Entertainment',
+        sortOrder: 3,
+        isActive: true,
+        subcategories: [
+          'Cinemas', 'Gaming', 'Escape Rooms', 'Bowling', 'Go-Karting',
+          'Theme Parks', 'Board Games', 'Events & Concerts', 'VR Experiences'
+        ].asMap().entries.map((e) => MerchantSubcategory(
+          id: '3-${e.key}',
+          categoryId: '3',
+          name: e.value,
+          sortOrder: e.key + 1,
+          isActive: true,
+        )).toList(),
+      ),
+      MerchantCategory(
+        id: '4',
+        name: 'Fitness & Wellness',
+        sortOrder: 4,
+        isActive: true,
+        subcategories: [
+          'Gyms', 'CrossFit', 'Physiotherapy', 'Wellness Centers'
+        ].asMap().entries.map((e) => MerchantSubcategory(
+          id: '4-${e.key}',
+          categoryId: '4',
+          name: e.value,
+          sortOrder: e.key + 1,
+          isActive: true,
+        )).toList(),
+      ),
+      MerchantCategory(
+        id: '5',
+        name: 'Lifestyle',
+        sortOrder: 5,
+        isActive: true,
+        subcategories: [
+          'Beauty & Grooming', 'Salons & Barbers', 'Skincare & Cosmetics',
+          'Perfumes', 'Accessories', 'Gifts', 'Books & Stationery', 'Tech Accessories'
+        ].asMap().entries.map((e) => MerchantSubcategory(
+          id: '5-${e.key}',
+          categoryId: '5',
+          name: e.value,
+          sortOrder: e.key + 1,
+          isActive: true,
+        )).toList(),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final categories = categoriesAsync.value ?? _getStaticCategoriesFallback();
+
+    // Find active subcategories for selected category
+    List<String> subcategories = [];
+    if (_tempCategory != null) {
+      final matchedCat = categories.firstWhere(
+        (cat) => cat.name == _tempCategory,
+        orElse: () => MerchantCategory(id: '', name: '', sortOrder: 0, isActive: false, subcategories: []),
+      );
+      subcategories = matchedCat.subcategories.where((sub) => sub.isActive).map((sub) => sub.name).toList();
+    }
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.lightSurface,
@@ -116,7 +212,7 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
           ),
           const SizedBox(height: 20),
 
-          // Categories Grid
+          // Categories Wrap
           const Text(
             "Category",
             style: TextStyle(
@@ -129,10 +225,10 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children: _categoryMap.keys.map((cat) {
-              final isSelected = _tempCategory == cat;
+            children: categories.where((c) => c.isActive).map((cat) {
+              final isSelected = _tempCategory == cat.name;
               return GestureDetector(
-                onTap: () => _onCategorySelected(cat),
+                onTap: () => _onCategorySelected(cat.name),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -154,13 +250,13 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        _categoryIcons[cat],
+                        _categoryIcons[cat.name] ?? Icons.category_rounded,
                         size: 18,
                         color: isSelected ? Colors.white : AppColors.textPrimary,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        cat,
+                        cat.name,
                         style: TextStyle(
                           color: isSelected ? Colors.white : AppColors.textPrimary,
                           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
@@ -173,11 +269,11 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
             }).toList(),
           ),
 
-          // Subcategories (Animate appearance)
+          // Subcategories
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            child: _tempCategory != null
+            child: _tempCategory != null && subcategories.isNotEmpty
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -194,7 +290,7 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
-                          children: _categoryMap[_tempCategory]!.map((sub) {
+                          children: subcategories.map((sub) {
                             final isSelected = _tempSubCategory == sub;
                             return Padding(
                               padding: const EdgeInsets.only(right: 8.0),

@@ -57,4 +57,7 @@ class ApiConfig {
       
   // Institutes Endpoint
   static String get institutesEndpoint => '$baseUrl/institutes';
+
+  // Categories Endpoint
+  static String get categoriesEndpoint => '$baseUrl/categories';
 }
