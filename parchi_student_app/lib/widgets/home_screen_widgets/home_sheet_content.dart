@@ -705,7 +705,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      "All Restaurants",
+                      "Explore",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

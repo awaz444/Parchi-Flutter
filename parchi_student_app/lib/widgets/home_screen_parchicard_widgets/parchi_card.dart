@@ -853,7 +853,7 @@ class CompactParchiHeader extends StatelessWidget {
                             onChanged: onSearchChanged,
                               textAlignVertical: TextAlignVertical.center,
                               decoration: InputDecoration(
-                                hintText: "Search restaurants...",
+                                hintText: "Search",
                                 hintStyle: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 13,
