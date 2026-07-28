@@ -27,6 +27,7 @@ class SignupScreenTwo extends StatefulWidget {
   final String university;
   final String educationalGrade;
   final String dateOfBirth;
+  final String gender;
 
   const SignupScreenTwo({
     super.key,
@@ -38,6 +39,7 @@ class SignupScreenTwo extends StatefulWidget {
     required this.university,
     required this.educationalGrade,
     required this.dateOfBirth,
+    required this.gender,
   });
 
   @override
@@ -233,6 +235,7 @@ class _SignupScreenTwoState extends State<SignupScreenTwo> {
         university: widget.university,
         educationalGrade: widget.educationalGrade,
         dateOfBirth: widget.dateOfBirth,
+        gender: widget.gender,
         studentIdCardFront: _studentIdImage!,
         studentIdCardBack: backImageToUpload,
         selfieImage: _selfieImage!,

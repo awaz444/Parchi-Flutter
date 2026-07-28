@@ -376,6 +376,7 @@ class AuthService {
     required String university,
     required String educationalGrade,
     required String dateOfBirth,
+    required String gender,
     required String studentIdCardFrontUrl,
     required String studentIdCardBackUrl,
     required String cnicFrontImageUrl,
@@ -395,6 +396,7 @@ class AuthService {
         'university': university,
         'educationalGrade': educationalGrade,
         'dateOfBirth': dateOfBirth,
+        'gender': gender,
         'platform': Platform.isIOS ? 'ios' : 'android',
 
         'studentIdCardFrontUrl': studentIdCardFrontUrl,
@@ -443,6 +445,7 @@ class AuthService {
     required String university,
     required String educationalGrade,
     required String dateOfBirth,
+    required String gender,
 
     required File studentIdCardFront,
     required File studentIdCardBack,
@@ -463,6 +466,7 @@ class AuthService {
       request.fields['university'] = university;
       request.fields['educationalGrade'] = educationalGrade;
       request.fields['dateOfBirth'] = dateOfBirth;
+      request.fields['gender'] = gender;
       request.fields['platform'] = Platform.isIOS ? 'ios' : 'android';
 
 

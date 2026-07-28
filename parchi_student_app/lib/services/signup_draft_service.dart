@@ -15,6 +15,7 @@ class SignupDraftService {
   static const String _keyUniversity = '${_prefix}university';
   static const String _keyGrade = '${_prefix}grade';
   static const String _keyDob = '${_prefix}dob';
+  static const String _keyGender = '${_prefix}gender';
   static const String _keyStudentIdFront = '${_prefix}student_id_front';
   static const String _keyStudentIdBack = '${_prefix}student_id_back';
   static const String _keySelfie = '${_prefix}selfie';
@@ -46,6 +47,7 @@ class SignupDraftService {
     String? university,
     String? grade,
     String? dob,
+    String? gender,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     if (firstName != null) prefs.setString(_keyFirstName, firstName);
@@ -55,6 +57,7 @@ class SignupDraftService {
     if (university != null) prefs.setString(_keyUniversity, university);
     if (grade != null) prefs.setString(_keyGrade, grade);
     if (dob != null) prefs.setString(_keyDob, dob);
+    if (gender != null) prefs.setString(_keyGender, gender);
     if (password != null) {
       _secureStorage.write(key: _keyPasswordSecure, value: password);
     }
@@ -96,6 +99,7 @@ class SignupDraftService {
       university: prefs.getString(_keyUniversity),
       grade: prefs.getString(_keyGrade),
       dob: prefs.getString(_keyDob),
+      gender: prefs.getString(_keyGender),
       studentIdFrontPath: prefs.getString(_keyStudentIdFront),
       studentIdBackPath: prefs.getString(_keyStudentIdBack),
       selfiePath: prefs.getString(_keySelfie),
@@ -137,6 +141,7 @@ class SignupDraftService {
       _keyUniversity,
       _keyGrade,
       _keyDob,
+      _keyGender,
       _keyStudentIdFront,
       _keyStudentIdBack,
       _keySelfie,
@@ -161,6 +166,7 @@ class SignupDraft {
   final String? university;
   final String? grade;
   final String? dob;
+  final String? gender;
   final String? studentIdFrontPath;
   final String? studentIdBackPath;
   final String? selfiePath;
@@ -175,6 +181,7 @@ class SignupDraft {
     this.university,
     this.grade,
     this.dob,
+    this.gender,
     this.studentIdFrontPath,
     this.studentIdBackPath,
     this.selfiePath,

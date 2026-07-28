@@ -31,6 +31,7 @@ class _SignupFormState extends State<SignupForm> {
   final _dobController = TextEditingController(); // NEW
   String? _selectedUniversity;
   String? _selectedGrade;
+  String? _selectedGender;
 
   DateTime? _selectedDate; // NEW
   bool _isPasswordVisible = false;
@@ -141,6 +142,7 @@ class _SignupFormState extends State<SignupForm> {
       if (draft.phone != null) _phoneController.text = draft.phone!;
       if (draft.university != null) _selectedUniversity = draft.university;
       if (draft.grade != null) _selectedGrade = draft.grade;
+      if (draft.gender != null) _selectedGender = draft.gender;
       if (draft.dob != null) {
         _dobController.text = draft.dob!;
         try {
@@ -183,6 +185,7 @@ class _SignupFormState extends State<SignupForm> {
       university: _selectedUniversity,
       grade: _selectedGrade,
       dob: _dobController.text,
+      gender: _selectedGender,
     );
   }
 
@@ -195,6 +198,7 @@ class _SignupFormState extends State<SignupForm> {
         _phoneController.text.trim().isEmpty || // Phone is now mandatory
         _selectedGrade == null || // Grade mandatory
         _dobController.text.isEmpty || // DOB mandatory
+        _selectedGender == null || // Gender mandatory
         _selectedUniversity == null) {
 
       ToastUtils.showErrorToast(context, label: "Validation Error", message: "Please Fill Out All The Fields");
@@ -242,7 +246,7 @@ class _SignupFormState extends State<SignupForm> {
             university: _selectedUniversity!,
             educationalGrade: _selectedGrade!,
             dateOfBirth: _dobController.text.trim(),
-
+            gender: _selectedGender!,
           ),
         ),
       );
@@ -311,6 +315,9 @@ class _SignupFormState extends State<SignupForm> {
               const SizedBox(height: 12),
               const SizedBox(height: 12),
               _buildGradeDropdown(),
+
+              const SizedBox(height: 12),
+              _buildGenderDropdown(),
 
               const SizedBox(height: 12),
               // Date of Birth (Mandatory)
@@ -684,6 +691,110 @@ prefixIcon: prefixText == null
                 style: TextStyle(
                   fontSize: 16,
                   color: _selectedGrade != null
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary.withOpacity(0.7),
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showGenderPicker(BuildContext context) {
+    const List<String> genders = ["Male", "Female", "Other"];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.backgroundLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.textSecondary.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                "Select Gender",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...genders.map((gender) {
+                final isSelected = _selectedGender == gender;
+                return InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() => _selectedGender = gender);
+                    _saveDraft();
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary.withOpacity(0.1) : null,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          gender,
+                          style: TextStyle(
+                            color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isSelected)
+                          const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGenderDropdown() {
+    return GestureDetector(
+      onTap: () => _showGenderPicker(context),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+            color: AppColors.textSecondary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          children: [
+            const Icon(Icons.wc_outlined, color: AppColors.textSecondary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _selectedGender ?? "Select Gender",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: _selectedGender != null
                       ? AppColors.textPrimary
                       : AppColors.textSecondary.withOpacity(0.7),
                 ),
