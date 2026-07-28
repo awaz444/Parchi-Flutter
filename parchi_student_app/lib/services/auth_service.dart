@@ -395,6 +395,7 @@ class AuthService {
         'university': university,
         'educationalGrade': educationalGrade,
         'dateOfBirth': dateOfBirth,
+        'platform': Platform.isIOS ? 'ios' : 'android',
 
         'studentIdCardFrontUrl': studentIdCardFrontUrl,
         'studentIdCardBackUrl': studentIdCardBackUrl,
@@ -462,6 +463,7 @@ class AuthService {
       request.fields['university'] = university;
       request.fields['educationalGrade'] = educationalGrade;
       request.fields['dateOfBirth'] = dateOfBirth;
+      request.fields['platform'] = Platform.isIOS ? 'ios' : 'android';
 
 
       request.files.add(
