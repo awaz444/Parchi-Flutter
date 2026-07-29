@@ -416,6 +416,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final String localVersion = packageInfo.version; // e.g. "2.1.0"
+      final int? localBuildNumber = int.tryParse(packageInfo.buildNumber);
 
       // Use NestJS backend — avoids Supabase schema-cache issues (PGRST002)
       final response = await http.get(
@@ -431,9 +432,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
       final String minAndroid = data['minAndroidVersion'] ?? '1.0.0';
       final String minIos = data['minIosVersion'] ?? '1.0.0';
+      final int minAndroidBuild = (data['minAndroidBuildNumber'] as num?)?.toInt() ?? 1;
+      final int minIosBuild = (data['minIosBuildNumber'] as num?)?.toInt() ?? 1;
       final bool isMaintenance = data['isUnderMaintenance'] ?? false;
 
       final String minRequired = Platform.isAndroid ? minAndroid : minIos;
+      final int minRequiredBuild = Platform.isAndroid ? minAndroidBuild : minIosBuild;
 
       if (isMaintenance) {
           if (mounted) {
@@ -448,7 +452,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return;
         }
 
-        if (_isVersionLessThan(localVersion, minRequired)) {
+        final bool buildOutdated =
+            localBuildNumber != null && localBuildNumber < minRequiredBuild;
+
+        if (buildOutdated || _isVersionLessThan(localVersion, minRequired)) {
           if (mounted) {
             setState(() {
               _requiresUpdate = true;
