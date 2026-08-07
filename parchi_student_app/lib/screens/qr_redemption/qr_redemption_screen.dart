@@ -272,6 +272,8 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         _phase = _QrPhase.error;
         _errorMessage = 'Network error. Please try again.';
       });
+    } finally {
+      _isInitiating = false;
     }
   }
 
@@ -467,7 +469,9 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
       return _buildError();
     }
 
-    if (_offers.length > 1 && _selectedOfferId == null) {
+    // Keep picker visible until initiate starts — selecting an offer only
+    // sets _selectedOfferId; Continue calls _initiateRequest.
+    if (_offers.length > 1 && !_isInitiating) {
       return _buildOfferPicker();
     }
 
