@@ -21,6 +21,7 @@ import '../../models/student_merchant_model.dart';
 
 import '../../providers/home_ui_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/categories_provider.dart';
 
 class HomeSheetContent extends ConsumerStatefulWidget {
   final ScrollController scrollController;
@@ -386,6 +387,8 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
     final offersAsync = ref.watch(featuredOffersProvider);
     final merchantState = ref.watch(studentMerchantsProvider);
+    // Prefetch categories so Filter sheet does not cold-fetch on first open
+    ref.watch(categoriesProvider);
 
     // Pull-to-refresh indicator height
     const double indicatorSize = 100.0;

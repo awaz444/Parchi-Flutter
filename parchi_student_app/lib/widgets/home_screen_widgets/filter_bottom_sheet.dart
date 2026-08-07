@@ -146,11 +146,24 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
-    final categories = categoriesAsync.value ?? _getStaticCategoriesFallback();
+
+    final List<MerchantCategory>? categories;
+    final bool isCategoriesLoading;
+    if (categoriesAsync.hasValue && categoriesAsync.value != null) {
+      categories = categoriesAsync.value!;
+      isCategoriesLoading = false;
+    } else if (categoriesAsync.hasError) {
+      categories = _getStaticCategoriesFallback();
+      isCategoriesLoading = false;
+    } else {
+      // Loading with no cached data — do not paint static chips (avoids flash)
+      categories = null;
+      isCategoriesLoading = true;
+    }
 
     // Find active subcategories for selected category
     List<String> subcategories = [];
-    if (_tempCategory != null) {
+    if (_tempCategory != null && categories != null) {
       final matchedCat = categories.firstWhere(
         (cat) => cat.name == _tempCategory,
         orElse: () => MerchantCategory(id: '', name: '', sortOrder: 0, isActive: false, subcategories: []),
@@ -222,52 +235,64 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: categories.where((c) => c.isActive).map((cat) {
-              final isSelected = _tempCategory == cat.name;
-              return GestureDetector(
-                onTap: () => _onCategorySelected(cat.name),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.lightCanvas,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : Colors.grey[200]!,
-                    ),
-                    boxShadow: isSelected ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ] : [],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _categoryIcons[cat.name] ?? Icons.category_rounded,
-                        size: 18,
-                        color: isSelected ? Colors.white : AppColors.textPrimary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        cat.name,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.textPrimary,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+          if (isCategoriesLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: categories!.where((c) => c.isActive).map((cat) {
+                final isSelected = _tempCategory == cat.name;
+                return GestureDetector(
+                  onTap: () => _onCategorySelected(cat.name),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : AppColors.lightCanvas,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : Colors.grey[200]!,
+                      ),
+                      boxShadow: isSelected ? [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        )
+                      ] : [],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _categoryIcons[cat.name] ?? Icons.category_rounded,
+                          size: 18,
+                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          cat.name,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : AppColors.textPrimary,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
 
           // Subcategories
           AnimatedSize(
@@ -328,13 +353,17 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {
-                ref.read(studentMerchantsProvider.notifier).setFilters(_tempCategory, _tempSubCategory);
-                Navigator.pop(context);
-              },
+              onPressed: isCategoriesLoading
+                  ? null
+                  : () {
+                      ref.read(studentMerchantsProvider.notifier).setFilters(_tempCategory, _tempSubCategory);
+                      Navigator.pop(context);
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+                disabledForegroundColor: Colors.white70,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
