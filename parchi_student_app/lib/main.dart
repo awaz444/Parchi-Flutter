@@ -56,6 +56,76 @@ bool _tryClaimRedeemNav(String branchId) {
   return true;
 }
 
+/// Auth deep-link params from fragment and/or query (Supabase uses both).
+class _AuthDeepLinkParams {
+  final String? accessToken;
+  final String? refreshToken;
+  final String? type;
+  final String? errorCode;
+  final String? errorDescription;
+
+  const _AuthDeepLinkParams({
+    this.accessToken,
+    this.refreshToken,
+    this.type,
+    this.errorCode,
+    this.errorDescription,
+  });
+}
+
+_AuthDeepLinkParams _parseAuthDeepLinkParams(Uri uri) {
+  String? accessToken;
+  String? refreshToken;
+  String? type;
+  String? errorCode;
+  String? errorDescription;
+
+  if (uri.fragment.isNotEmpty) {
+    try {
+      final fragmentParams = Uri.splitQueryString(uri.fragment);
+      accessToken = fragmentParams['access_token'];
+      refreshToken = fragmentParams['refresh_token'];
+      type = fragmentParams['type'];
+      errorCode = fragmentParams['error_code'];
+      errorDescription = fragmentParams['error_description'];
+    } catch (e) {
+      debugPrint("Error parsing auth deep-link fragment: $e");
+    }
+  }
+
+  final query = uri.queryParameters;
+  accessToken ??= query['access_token'];
+  refreshToken ??= query['refresh_token'];
+  // Always merge type/error from query — verify links put type in query even
+  // when tokens later land in the fragment on the custom-scheme redirect.
+  type ??= query['type'];
+  errorCode ??= query['error_code'];
+  errorDescription ??= query['error_description'];
+
+  return _AuthDeepLinkParams(
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+    type: type,
+    errorCode: errorCode,
+    errorDescription: errorDescription,
+  );
+}
+
+bool _isPasswordRecoveryDeepLink(Uri uri, String? type) {
+  return type == 'recovery' ||
+      uri.host.contains('reset-password') ||
+      uri.path.contains('reset-password');
+}
+
+bool _isSignupVerificationDeepLink(Uri uri, String? type) {
+  if (_isPasswordRecoveryDeepLink(uri, type)) return false;
+  return type == 'signup' ||
+      type == 'magiclink' ||
+      type == 'email' ||
+      uri.host.contains('auth-callback') ||
+      uri.path.contains('auth-callback');
+}
+
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -142,65 +212,27 @@ class _ParchiAppState extends State<ParchiApp> {
     // even when Flutter strips the scheme+host (warm-start on iOS).
     _lastDeepLinkUri = uri;
 
-    // Check if the route is related to auth-callback OR contains an access token fragment
-    // Note: Supabase magic links often come as https://project.supabase.co/auth/v1/verify?token=...&type=signup&redirect_to=parchi://auth-callback
-    // Or simpler: parchi://auth-callback#access_token=...
+    // Password reset uses parchi://reset-password; signup uses parchi://auth-callback.
+    // Also honor type=recovery / type=signup when both share a callback host.
+    final params = _parseAuthDeepLinkParams(uri);
 
-    // We need to parse fragment parameters primarily
-    String? accessToken;
-    String? refreshToken;
-    String? type;
-    String? errorCode;
-    String? errorDescription;
-
-    // 1. Try extracting from fragment (typical for implicit flow / magic link redirects)
-    if (uri.fragment.isNotEmpty) {
-      try {
-        final queryParams = Uri.splitQueryString(uri.fragment);
-        accessToken = queryParams['access_token'];
-        refreshToken = queryParams['refresh_token'];
-        type = queryParams['type'];
-        errorCode = queryParams['error_code'];
-        errorDescription = queryParams['error_description'];
-      } catch (e) {
-        debugPrint("Error parsing fragment: $e");
-      }
-    }
-
-    // 2. Try extracting from query parameters (if not in fragment)
-    if (accessToken == null) {
-      accessToken = uri.queryParameters['access_token'];
-      refreshToken = uri.queryParameters['refresh_token'];
-      type = uri.queryParameters['type'];
-      errorCode = uri.queryParameters['error_code'];
-      errorDescription = uri.queryParameters['error_description'];
-    }
-
-    // Identify if it's a reset password or signup verification
-    // Sometimes 'type' param tells us.
-    // Also check path/host
-    if (uri.path.contains('reset-password') ||
-        uri.host.contains('reset-password') ||
-        type == 'recovery') {
+    if (_isPasswordRecoveryDeepLink(uri, params.type)) {
       NavigationService.navigatorKey.currentState?.push(
         MaterialPageRoute(
           builder: (context) => ResetPasswordScreen(
-            accessToken: accessToken,
-            refreshToken: refreshToken,
+            accessToken: params.accessToken,
+            refreshToken: params.refreshToken,
           ),
         ),
       );
-    } else if (uri.path.contains('auth-callback') ||
-        uri.host.contains('auth-callback') ||
-        type == 'signup' ||
-        type == 'magiclink') {
+    } else if (_isSignupVerificationDeepLink(uri, params.type)) {
       NavigationService.navigatorKey.currentState?.push(
         MaterialPageRoute(
           builder: (context) => SignupVerificationScreen(
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            errorCode: errorCode,
-            errorDescription: errorDescription,
+            accessToken: params.accessToken,
+            refreshToken: params.refreshToken,
+            errorCode: params.errorCode,
+            errorDescription: params.errorDescription,
           ),
         ),
       );
@@ -268,55 +300,23 @@ class _ParchiAppState extends State<ParchiApp> {
                 // [NEW] Check for tokens in fragment (implicit flow) or query
                 uri.fragment.contains('access_token') ||
                 uri.queryParameters.containsKey('access_token'))) {
-          String? accessToken;
-          String? refreshToken;
-          String? type;
-          String? errorCode;
-          String? errorDescription;
+          final params = _parseAuthDeepLinkParams(uri);
 
-          // 1. Fragment parsing (primary for Supabase)
-          // We treat settings.name as a full URI or path
-          try {
-            // Retrieve fragment directly if possible, or parse logic
-            // If settings.name is just `/auth-callback#...`, Uri.tryParse handles it.
-            if (uri.fragment.isNotEmpty) {
-              final queryParams = Uri.splitQueryString(uri.fragment);
-              accessToken = queryParams['access_token'];
-              refreshToken = queryParams['refresh_token'];
-              type = queryParams['type'];
-              errorCode = queryParams['error_code'];
-              errorDescription = queryParams['error_description'];
-            }
-          } catch (e) {
-            debugPrint("Error parsing fragment in generateRoute: $e");
-          }
-
-          // 2. Query param parsing
-          if (accessToken == null) {
-            accessToken = uri.queryParameters['access_token'];
-            refreshToken = uri.queryParameters['refresh_token'];
-            type = uri.queryParameters['type'];
-            errorCode = uri.queryParameters['error_code'];
-            errorDescription = uri.queryParameters['error_description'];
-          }
-
-          // Determine screen
-          if (uri.path.contains('reset-password') ||
-              uri.host.contains('reset-password') ||
-              type == 'recovery') {
+          // Determine screen — recovery must win over auth-callback host
+          if (_isPasswordRecoveryDeepLink(uri, params.type)) {
             return MaterialPageRoute(
               builder: (context) => ResetPasswordScreen(
-                accessToken: accessToken,
-                refreshToken: refreshToken,
+                accessToken: params.accessToken,
+                refreshToken: params.refreshToken,
               ),
             );
-          } else {
+          } else if (_isSignupVerificationDeepLink(uri, params.type)) {
             return MaterialPageRoute(
               builder: (context) => SignupVerificationScreen(
-                accessToken: accessToken,
-                refreshToken: refreshToken,
-                errorCode: errorCode,
-                errorDescription: errorDescription,
+                accessToken: params.accessToken,
+                refreshToken: params.refreshToken,
+                errorCode: params.errorCode,
+                errorDescription: params.errorDescription,
               ),
             );
           }

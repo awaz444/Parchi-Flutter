@@ -61,15 +61,9 @@
                 <data android:scheme="http" android:host="www.parchipakistan.com" android:pathPrefix="/merchant/" />
             </intent-filter>
 
-            <!-- App Links for Supabase -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" />
-                <data android:host="zjghfwnrzazmukykgyhh.supabase.co" />
-                <data android:pathPrefix="/auth/v1/verify" />
-            </intent-filter>
+            <!-- Do NOT claim supabase.co/auth/v1/verify — let the browser complete
+                 the redirect to parchi://reset-password / parchi://auth-callback
+                 so tokens and type land in the custom-scheme deep link. -->
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
