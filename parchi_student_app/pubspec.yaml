@@ -1,7 +1,7 @@
 name: parchi_student_app
 description: "A student discount app."
 publish_to: 'none'
-version: 2.2.7+5
+version: 2.2.7+53
 environment:
   sdk: ^3.0.0 # Adjusted to ensure compatibility
 
@@ -38,18 +38,18 @@ dependencies:
   package_info_plus: ^9.0.1
   mobile_scanner: ^7.2.0
   permission_handler: ^11.3.1
+  flutter_native_splash: ^2.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  
+
   # Code Generation (Required for Riverpod)
   build_runner: ^2.4.9
   riverpod_generator: ^2.4.0
   custom_refresh_indicator: ^3.0.0
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.4.0
 
 flutter_native_splash:
   color: "#0069db"
