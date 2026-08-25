@@ -216,13 +216,21 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           ),
         ),
         const SizedBox(height: 8),
-        // Match the Brand Name formatting
+        // Fixed-height block matches BrandCard's SizedBox(height: 28) label
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: BlinkingSkeleton(
-              width: double.infinity,
-              height: 11,
-              baseColor: Colors.grey.withOpacity(0.15)),
+          child: SizedBox(
+            height: 28,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                BlinkingSkeleton(
+                    width: double.infinity,
+                    height: 11,
+                    baseColor: Colors.grey.withOpacity(0.15)),
+              ],
+            ),
+          ),
         ),
       ],
     );
