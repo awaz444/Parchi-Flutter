@@ -14,6 +14,7 @@ import '../common/blinking_skeleton.dart';
 import 'filter_bottom_sheet.dart';
 // import 'CLIENT_DEMO_ad_banner_16x9_mockup.dart'; // CLIENT DEMO ONLY — disabled
 // import '../../widgets/home_screen_restraunts_widgets/CLIENT_DEMO_ad_card_1x1_mockup.dart'; // CLIENT DEMO ONLY — disabled
+import 'CLIENT_DEMO_ad_carousel_2x1_mockup.dart'; // CLIENT DEMO ONLY — remove before production
 
 import '../../screens/home/merchant_details_screen.dart';
 import '../../models/merchant_detail_model.dart';
@@ -163,6 +164,22 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
             _MerchantDetailsScreenWrapper(merchantId: merchantId),
       ),
     );
+  }
+
+  // ── Aspect ratio for Top Brands grid ─────────────────────────────────────
+  // Computes childAspectRatio so each image box is strictly 1:1 regardless
+  // of label height below. Must be called with a valid BuildContext.
+  double _topBrandsCellAspectRatio(BuildContext context) {
+    const crossAxisCount = 4;
+    const crossAxisSpacing = 10.0;
+    const gridHorizontalPadding = 16.0;
+    const labelBlockHeight = 36.0; // SizedBox(8) + 2 lines of ~14px text
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cellWidth = (screenWidth -
+            (2 * gridHorizontalPadding) -
+            ((crossAxisCount - 1) * crossAxisSpacing)) /
+        crossAxisCount;
+    return cellWidth / (cellWidth + labelBlockHeight);
   }
 
   // ── Skeleton helpers ───────────────────────────────────────────────────────
@@ -503,14 +520,13 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                 sliver: SliverGrid(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _buildBrandSkeleton(),
-                    childCount: 6,
+                    childCount: 8,
                   ),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.85,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 18,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    childAspectRatio: _topBrandsCellAspectRatio(context),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 16,
                   ),
                 ),
               ),
@@ -519,14 +535,13 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                 sliver: SliverGrid(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _buildBrandSkeleton(),
-                    childCount: 6,
+                    childCount: 8,
                   ),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.85,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 18,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    childAspectRatio: _topBrandsCellAspectRatio(context),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 16,
                   ),
                 ),
               ),
@@ -537,14 +552,13 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                     sliver: SliverGrid(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => _buildBrandSkeleton(),
-                        childCount: 6,
+                        childCount: 8,
                       ),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 0.85,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 18,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4,
+                        childAspectRatio: _topBrandsCellAspectRatio(context),
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 16,
                       ),
                     ),
                   );
@@ -559,7 +573,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                   );
                 }
 
-                final displayBrands = brands.take(6).toList();
+                final displayBrands = brands.take(8).toList();
 
                 return SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -583,16 +597,24 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                       },
                       childCount: displayBrands.length,
                     ),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 0.85,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 18,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      childAspectRatio: _topBrandsCellAspectRatio(context),
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 16,
                     ),
                   ),
                 );
               },
+            ),
+
+          // ── CLIENT DEMO MOCKUP: 3.2:1 ad banner under Top Brands ──────────
+          if (!widget.isSearching)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(top: 18),
+                child: AdCarousel2x1Mockup(),
+              ),
             ),
 
           // ── SECTION 2: FEATURED OFFERS ────────────────────────────────────
