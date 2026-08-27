@@ -173,7 +173,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
     const crossAxisCount = 4;
     const crossAxisSpacing = 10.0;
     const gridHorizontalPadding = 16.0;
-    const labelBlockHeight = 36.0; // SizedBox(8) + 2 lines of ~14px text
+    const labelBlockHeight = 42.0; // SizedBox(8) + 2 lines of text (34px)
     final screenWidth = MediaQuery.sizeOf(context).width;
     final cellWidth = (screenWidth -
             (2 * gridHorizontalPadding) -
@@ -216,11 +216,11 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           ),
         ),
         const SizedBox(height: 8),
-        // Fixed-height block matches BrandCard's SizedBox(height: 28) label
+        // Fixed-height block matches BrandCard's SizedBox(height: 34) label
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: SizedBox(
-            height: 28,
+            height: 34,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

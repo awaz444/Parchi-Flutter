@@ -60,16 +60,17 @@ class BrandCard extends StatelessWidget {
           // Fixed-height label block so short (1-line) names don't let the
           // Expanded image box grow taller than its neighbours.
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            padding: const EdgeInsets.symmetric(horizontal: 2.0),
             child: SizedBox(
-              height: 28, // labelBlockHeight(36) − spacing(8); keeps boxes 1:1
+              height: 34, // labelBlockHeight(42) − spacing(8); keeps boxes 1:1
               child: Text(
                 name,
                 maxLines: 2,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
+                  height: 1.15,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
