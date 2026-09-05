@@ -91,7 +91,7 @@ class AppIntroModal extends StatelessWidget {
                     _buildIntroPoint(
                       icon: Icons.loyalty_rounded,
                       text:
-                          'Every time you redeem, you’ll see the "punch holes" on your digital ticket fill up. Reach the goal at your favorite spot to unlock exclusive Loyalty Bonuses that regular customers can\'t get.',
+                          'Every time you redeem this month, you’ll see the punch holes on your digital ticket fill up. Hit the goal to unlock a Loyalty Bonus. Unused visits reset next month — your redemption history stays.',
                     ),
                     const SizedBox(height: 16),
                     _buildIntroPoint(

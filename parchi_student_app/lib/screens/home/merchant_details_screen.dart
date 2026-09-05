@@ -636,7 +636,7 @@ class _OfferTicketBody extends StatelessWidget {
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  "Earn progress on every visit at a valid branch to unlock loyalty rewards.",
+                  "Visits this month count toward the bonus. Progress resets at the start of each month.",
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -736,7 +736,10 @@ class _LoyaltyBonusSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final int req = loyalty.redemptionsRequired > 0 ? loyalty.redemptionsRequired : 1;
     final int total = req;
-    final int current = (loyalty.currentRedemptions ?? 0) % req;
+    final int raw = loyalty.currentRedemptions ?? 0;
+    // Backend sends visits this calendar month. Show a full card on the bonus
+    // visit (5/5) rather than wrapping to 0/5.
+    final int current = raw <= 0 ? 0 : (raw % req == 0 ? req : raw % req);
     final int remaining = total - current;
 
     return Container(
@@ -788,7 +791,7 @@ class _LoyaltyBonusSection extends StatelessWidget {
                       color: const Color(0xFFEEEEEE), width: 1),
                 ),
                 child: Text(
-                  "$current / $total",
+                  "$current / $total · this month",
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -804,7 +807,7 @@ class _LoyaltyBonusSection extends StatelessWidget {
           // Description
           Text(
             remaining > 0
-                ? "Redeem $remaining more time${remaining == 1 ? '' : 's'} to unlock ${loyalty.discountDescription}"
+                ? "Redeem $remaining more time${remaining == 1 ? '' : 's'} this month to unlock ${loyalty.discountDescription}"
                 : "🎉 Bonus unlocked! Enjoy ${loyalty.discountDescription}",
             style: const TextStyle(
               fontSize: 13,

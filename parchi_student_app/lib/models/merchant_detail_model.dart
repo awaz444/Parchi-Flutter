@@ -142,7 +142,7 @@ class BranchModel {
 
 class LoyaltySettingsModel {
   final int redemptionsRequired;
-  final int? currentRedemptions; // For user progress (optional if not logged in)
+  final int? currentRedemptions; // Visits this calendar month toward the bonus
   final String discountDescription; // e.g., "50% OFF"
   final bool isActive;
 
