@@ -11,7 +11,6 @@ import '../../providers/leaderboard_provider.dart';
 import '../../services/auth_service.dart';
 import '../../utils/colours.dart';
 import '../../widgets/common/guest_login_prompt.dart';
-import '../../models/redemption_model.dart';
 
 // ── Phase enum ─────────────────────────────────────────────────────────────
 
@@ -39,8 +38,6 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   String? _bonusDiscountType;
   String? _bonusDescription;
   String? _bonusAdditionalItem;
-  num? _offerDiscountValue;
-  String? _offerDiscountType;
   String? _merchantBusinessName;
   String? _rejectionReason;
   String? _errorMessage;
@@ -183,9 +180,6 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
       if (redemption['offer'] != null) {
         _offerTitle = redemption['offer']['title'] ?? _offerTitle;
         _formattedDiscount = redemption['offer']['formattedDiscount'] ?? _formattedDiscount;
-        _offerDiscountType = redemption['offer']['discountType'] ?? _offerDiscountType;
-        _offerDiscountValue =
-            _readNum(redemption['offer']['discountValue']) ?? _offerDiscountValue;
       }
 
       // Load branch/merchant fields if present in the response
@@ -241,8 +235,6 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         );
         _offerTitle = selectedOffer?['title'];
         _formattedDiscount = selectedOffer?['formattedDiscount'];
-        _offerDiscountType = selectedOffer?['discountType'];
-        _offerDiscountValue = _readNum(selectedOffer?['discountValue']);
 
         if (result['autoApproved'] == true) {
           // Skip pending — jump straight to success
@@ -947,7 +939,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                           letterSpacing: 0.5,
                         ),
                       ),
-                      if (_offerTitle != null) ...[
+                      if (!bonusVisit && _offerTitle != null) ...[
                         const SizedBox(height: 10),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1121,44 +1113,25 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     return null;
   }
 
-  bool get _isStackedPercentageBonus {
-    return _isBonusApplied &&
-        (_offerDiscountType ?? '').toLowerCase() == 'percentage' &&
-        (_bonusDiscountType ?? '').toLowerCase() == 'percentage' &&
-        _offerDiscountValue != null &&
-        _bonusDiscountApplied != null &&
-        _bonusDiscountApplied! > 0;
-  }
-
   String get _successHeadline {
-    if (_isStackedPercentageBonus) {
-      final total = (_offerDiscountValue! + _bonusDiscountApplied!).toInt();
-      return '$total% off';
+    if (_isBonusApplied) {
+      final type = (_bonusDiscountType ?? '').toLowerCase();
+      final value = _bonusDiscountApplied ?? 0;
+      if (type == 'percentage' && value > 0) return '${value.toInt()}% off';
+      if ((type == 'fixed' || type == 'pkr') && value > 0) {
+        return 'Rs. ${value.toInt()} off';
+      }
+      final item = _bonusAdditionalItem?.trim();
+      if (item != null && item.isNotEmpty) return 'Free $item';
+      final description = _bonusDescription?.trim();
+      if (description != null && description.isNotEmpty) return description;
     }
     return _formattedDiscount ?? 'Discount';
   }
 
   String get _successStatusLabel {
     if (!_isBonusApplied) return 'Discount Unlocked';
-    if (_isStackedPercentageBonus) return 'Deal + loyalty bonus';
     return 'Loyalty bonus unlocked';
-  }
-
-  String get _bonusEarnedMessage {
-    return formatBonusEarnedMessage(
-      _bonusDiscountApplied ?? 0,
-      _bonusDiscountType,
-      additionalItem: _bonusAdditionalItem,
-      description: _bonusDescription,
-    );
-  }
-
-  String get _bonusBadgeLabel {
-    return formatBonusDiscountLabel(
-      _bonusDiscountApplied ?? 0,
-      _bonusDiscountType,
-      additionalItem: _bonusAdditionalItem,
-    );
   }
 
   Widget _buildPremiumBonusSection() {
@@ -1169,7 +1142,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         clipRadius: 12,
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
         child: Column(
           children: [
             Row(
@@ -1188,63 +1161,21 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Text(
-              _bonusEarnedMessage,
+              _successHeadline,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 26,
+                fontSize: 28,
                 fontWeight: FontWeight.w900,
                 color: Color(0xFF2C2205),
                 height: 1.15,
                 letterSpacing: -0.4,
               ),
             ),
-            const SizedBox(height: 16),
-            Container(height: 1, color: const Color(0xFF2C2205).withValues(alpha: 0.12)),
-            const SizedBox(height: 14),
-            _bonusBreakdownRow('Deal', _formattedDiscount ?? 'Offer applied'),
-            const SizedBox(height: 8),
-            _bonusBreakdownRow('Bonus', _bonusBadgeLabel, emphasize: true),
-            if (_isStackedPercentageBonus) ...[
-              const SizedBox(height: 10),
-              Container(height: 1, color: const Color(0xFF2C2205).withValues(alpha: 0.12)),
-              const SizedBox(height: 10),
-              _bonusBreakdownRow('Total this visit', _successHeadline, emphasize: true),
-            ],
           ],
         ),
       ),
-    );
-  }
-
-  Widget _bonusBreakdownRow(String label, String value, {bool emphasize = false}) {
-    return Row(
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-            color: Color(0xFF2C2205).withValues(alpha: emphasize ? 0.9 : 0.55),
-          ),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: emphasize ? 16 : 14,
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFF2C2205),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
