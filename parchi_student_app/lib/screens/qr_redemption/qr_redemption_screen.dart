@@ -37,6 +37,10 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   bool _isBonusApplied = false;
   num? _bonusDiscountApplied;
   String? _bonusDiscountType;
+  String? _bonusDescription;
+  String? _bonusAdditionalItem;
+  num? _offerDiscountValue;
+  String? _offerDiscountType;
   String? _merchantBusinessName;
   String? _rejectionReason;
   String? _errorMessage;
@@ -170,13 +174,18 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     if (redemption == null) return;
     setState(() {
       _isBonusApplied = redemption['isBonusApplied'] ?? false;
-      _bonusDiscountApplied = redemption['bonusDiscountApplied'];
+      _bonusDiscountApplied = _readNum(redemption['bonusDiscountApplied']);
       _bonusDiscountType = redemption['bonusDiscountType'];
+      _bonusDescription = redemption['bonusDescription'];
+      _bonusAdditionalItem = redemption['bonusAdditionalItem'];
 
       // Load offer fields if present in the response
       if (redemption['offer'] != null) {
         _offerTitle = redemption['offer']['title'] ?? _offerTitle;
         _formattedDiscount = redemption['offer']['formattedDiscount'] ?? _formattedDiscount;
+        _offerDiscountType = redemption['offer']['discountType'] ?? _offerDiscountType;
+        _offerDiscountValue =
+            _readNum(redemption['offer']['discountValue']) ?? _offerDiscountValue;
       }
 
       // Load branch/merchant fields if present in the response
@@ -232,6 +241,8 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
         );
         _offerTitle = selectedOffer?['title'];
         _formattedDiscount = selectedOffer?['formattedDiscount'];
+        _offerDiscountType = selectedOffer?['discountType'];
+        _offerDiscountValue = _readNum(selectedOffer?['discountValue']);
 
         if (result['autoApproved'] == true) {
           // Skip pending — jump straight to success
@@ -412,7 +423,9 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     final bool isSuccess = _phase == _QrPhase.success;
 
     return Scaffold(
-      backgroundColor: isSuccess ? const Color(0xFFFAFAFE) : AppColors.backgroundLight,
+      backgroundColor: isSuccess
+          ? (_isBonusApplied ? const Color(0xFFFFFAF0) : const Color(0xFFFAFAFE))
+          : AppColors.backgroundLight,
       extendBodyBehindAppBar: isSuccess,
       appBar: AppBar(
         backgroundColor: isSuccess ? Colors.transparent : AppColors.surface,
@@ -767,16 +780,23 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
   }
 
   Widget _buildSuccessContent() {
+    final bool bonusVisit = _isBonusApplied;
     return Container(
       width: double.infinity,
       height: MediaQuery.of(context).size.height,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFFEEF2FE), // Very soft Parchi blue tint
-            Color(0xFFF9FAFF),
-            Colors.white,
-          ],
+          colors: bonusVisit
+              ? const [
+                  Color(0xFFFFF6DC),
+                  Color(0xFFFFFAF0),
+                  Colors.white,
+                ]
+              : const [
+                  Color(0xFFEEF2FE),
+                  Color(0xFFF9FAFF),
+                  Colors.white,
+                ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -793,23 +813,22 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const SizedBox(height: 16),
-                      const Text(
-                        'ALL DONE!',
+                      Text(
+                        bonusVisit ? 'BONUS UNLOCKED!' : 'ALL DONE!',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.5,
-                          color: Color(0xFF2D2A3A),
+                          color: bonusVisit
+                              ? const Color(0xFFB8860B)
+                              : const Color(0xFF2D2A3A),
                         ),
                       ),
                       const SizedBox(height: 24),
                       Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Confetti/particles floating around the checkmark
                           ..._buildConfettiParticles(),
-
-                          // Outer glowing checkmark
                           ScaleTransition(
                             scale: _checkAnimation,
                             child: _FlippingSuccessIcon(
@@ -818,30 +837,44 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: const Color(0xFFE2FBE9),
-                                  border: Border.all(color: const Color(0xFFB3F5C7), width: 2),
+                                  color: bonusVisit
+                                      ? const Color(0xFFFFF3CD)
+                                      : const Color(0xFFE2FBE9),
+                                  border: Border.all(
+                                    color: bonusVisit
+                                        ? const Color(0xFFFFE08A)
+                                        : const Color(0xFFB3F5C7),
+                                    width: 2,
+                                  ),
                                 ),
                                 child: Container(
                                   width: 80,
                                   height: 80,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF2ECC71), Color(0xFF27AE60)],
+                                    gradient: LinearGradient(
+                                      colors: bonusVisit
+                                          ? const [Color(0xFFFFD54F), Color(0xFFFF8F00)]
+                                          : const [Color(0xFF2ECC71), Color(0xFF27AE60)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF2ECC71).withValues(alpha: 0.3),
+                                        color: (bonusVisit
+                                                ? const Color(0xFFFF8F00)
+                                                : const Color(0xFF2ECC71))
+                                            .withValues(alpha: 0.3),
                                         blurRadius: 20,
                                         spreadRadius: 4,
                                         offset: const Offset(0, 8),
                                       ),
                                     ],
                                   ),
-                                  child: const Icon(
-                                    Icons.check_rounded,
+                                  child: Icon(
+                                    bonusVisit
+                                        ? Icons.stars_rounded
+                                        : Icons.check_rounded,
                                     size: 46,
                                     color: Colors.white,
                                   ),
@@ -851,8 +884,15 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: const Color(0xFFE8F1FF), // Soft Parchi blue halo
-                                  border: Border.all(color: const Color(0xFFB3D4FF), width: 2),
+                                  color: bonusVisit
+                                      ? const Color(0xFFFFF3CD)
+                                      : const Color(0xFFE8F1FF),
+                                  border: Border.all(
+                                    color: bonusVisit
+                                        ? const Color(0xFFFFE08A)
+                                        : const Color(0xFFB3D4FF),
+                                    width: 2,
+                                  ),
                                 ),
                                 child: Container(
                                   width: 80,
@@ -862,7 +902,10 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                                     color: Colors.white,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF0069db).withValues(alpha: 0.15),
+                                        color: (bonusVisit
+                                                ? const Color(0xFFFF8F00)
+                                                : const Color(0xFF0069db))
+                                            .withValues(alpha: 0.15),
                                         blurRadius: 20,
                                         spreadRadius: 4,
                                         offset: const Offset(0, 8),
@@ -883,7 +926,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        _formattedDiscount ?? "Discount",
+                        _successHeadline,
                         style: const TextStyle(
                           fontSize: 38,
                           fontWeight: FontWeight.w900,
@@ -893,12 +936,14 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Discount Unlocked',
+                      Text(
+                        _successStatusLabel,
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF8E8E93),
-                          fontWeight: FontWeight.w600,
+                          color: bonusVisit
+                              ? const Color(0xFFB8860B)
+                              : const Color(0xFF8E8E93),
+                          fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -917,11 +962,15 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                           ),
                         ),
                       ],
+                      if (bonusVisit) ...[
+                        const SizedBox(height: 28),
+                        _buildPremiumBonusSection(),
+                      ],
                       const SizedBox(height: 28),
                       Container(
                         width: 48,
                         height: 1.5,
-                        color: const Color(0xFFE5E5EA), // Light grey divider line
+                        color: const Color(0xFFE5E5EA),
                       ),
                       const SizedBox(height: 28),
                       const Text(
@@ -955,13 +1004,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
                           textAlign: TextAlign.center,
                         ),
                       ],
-                      if (_isBonusApplied) ...[
-                        const SizedBox(height: 48),
-                        _buildPremiumBonusSection(),
-                        const SizedBox(height: 48),
-                      ] else ...[
-                        const SizedBox(height: 32),
-                      ],
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
@@ -1072,92 +1115,136 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
     ];
   }
 
+  num? _readNum(dynamic value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value);
+    return null;
+  }
+
+  bool get _isStackedPercentageBonus {
+    return _isBonusApplied &&
+        (_offerDiscountType ?? '').toLowerCase() == 'percentage' &&
+        (_bonusDiscountType ?? '').toLowerCase() == 'percentage' &&
+        _offerDiscountValue != null &&
+        _bonusDiscountApplied != null &&
+        _bonusDiscountApplied! > 0;
+  }
+
+  String get _successHeadline {
+    if (_isStackedPercentageBonus) {
+      final total = (_offerDiscountValue! + _bonusDiscountApplied!).toInt();
+      return '$total% off';
+    }
+    return _formattedDiscount ?? 'Discount';
+  }
+
+  String get _successStatusLabel {
+    if (!_isBonusApplied) return 'Discount Unlocked';
+    if (_isStackedPercentageBonus) return 'Deal + loyalty bonus';
+    return 'Loyalty bonus unlocked';
+  }
+
+  String get _bonusEarnedMessage {
+    return formatBonusEarnedMessage(
+      _bonusDiscountApplied ?? 0,
+      _bonusDiscountType,
+      additionalItem: _bonusAdditionalItem,
+      description: _bonusDescription,
+    );
+  }
+
+  String get _bonusBadgeLabel {
+    return formatBonusDiscountLabel(
+      _bonusDiscountApplied ?? 0,
+      _bonusDiscountType,
+      additionalItem: _bonusAdditionalItem,
+    );
+  }
+
   Widget _buildPremiumBonusSection() {
     return CustomPaint(
       painter: TicketPainter(
         borderColor: const Color(0xFFB8860B),
-        borderRadius: 16,
-        clipRadius: 10,
+        borderRadius: 20,
+        clipRadius: 12,
       ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.only(left: 20, right: 16, top: 16, bottom: 16),
-        child: Row(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+        child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2C2205).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFF2C2205).withValues(alpha: 0.15),
-                  width: 1,
-                ),
-              ),
-              child: const Icon(
-                Icons.stars_rounded,
-                color: Color(0xFF2C2205),
-                size: 26,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'LOYALTY BONUS UNLOCKED',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF2C2205),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Additional discount applied!',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF4A3B12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 20),
-            if (_bonusDiscountApplied != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2C2205), // Dark luxury bronze contrast capsule
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  formatBonusDiscountLabel(
-                    _bonusDiscountApplied ?? 0,
-                    _bonusDiscountType,
-                  ),
-                  style: const TextStyle(
-                    color: Color(0xFFFFF6D1), // Champagne text on dark capsule
-                    fontSize: 14,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.star_rounded, color: Color(0xFF2C2205), size: 16),
+                const SizedBox(width: 6),
+                const Text(
+                  'LOYALTY BONUS EARNED',
+                  style: TextStyle(
+                    fontSize: 11,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
+                    color: Color(0xFF2C2205),
+                    letterSpacing: 1.1,
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _bonusEarnedMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF2C2205),
+                height: 1.15,
+                letterSpacing: -0.4,
               ),
+            ),
+            const SizedBox(height: 16),
+            Container(height: 1, color: const Color(0xFF2C2205).withValues(alpha: 0.12)),
+            const SizedBox(height: 14),
+            _bonusBreakdownRow('Deal', _formattedDiscount ?? 'Offer applied'),
+            const SizedBox(height: 8),
+            _bonusBreakdownRow('Bonus', _bonusBadgeLabel, emphasize: true),
+            if (_isStackedPercentageBonus) ...[
+              const SizedBox(height: 10),
+              Container(height: 1, color: const Color(0xFF2C2205).withValues(alpha: 0.12)),
+              const SizedBox(height: 10),
+              _bonusBreakdownRow('Total this visit', _successHeadline, emphasize: true),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _bonusBreakdownRow(String label, String value, {bool emphasize = false}) {
+    return Row(
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: Color(0xFF2C2205).withValues(alpha: emphasize ? 0.9 : 0.55),
+          ),
+        ),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: emphasize ? 16 : 14,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF2C2205),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

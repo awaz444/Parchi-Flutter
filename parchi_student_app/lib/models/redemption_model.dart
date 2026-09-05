@@ -1,29 +1,71 @@
 import 'offer_model.dart';
 
-String formatBonusDiscountLabel(num value, String? discountType) {
-  if (discountType == null) return 'Bonus Unlocked';
-  final type = discountType.toLowerCase();
-  if (value <= 0 || type == 'item') return 'Free Reward';
-  if (type == 'percentage') return '+ ${value.toInt()}%';
-  if (type == 'fixed' || type == 'pkr') return '+ Rs. ${value.toInt()}';
+String formatBonusDiscountLabel(num value, String? discountType, {String? additionalItem}) {
+  if (discountType == null && (additionalItem == null || additionalItem.trim().isEmpty)) {
+    return 'Bonus Unlocked';
+  }
+  final type = (discountType ?? '').toLowerCase();
+  if (type == 'item' || value <= 0) {
+    final item = additionalItem?.trim();
+    return (item != null && item.isNotEmpty) ? 'FREE' : 'Free Reward';
+  }
+  if (type == 'percentage') return '${value.toInt()}% OFF';
+  if (type == 'fixed' || type == 'pkr') return 'Rs. ${value.toInt()}';
   return 'Bonus Unlocked';
 }
 
-String formatBonusDiscountOffLabel(num value, String? discountType) {
-  if (discountType == null) return 'Bonus Unlocked';
-  final type = discountType.toLowerCase();
-  if (value <= 0 || type == 'item') return 'Free Item / Reward';
+String formatBonusDiscountOffLabel(num value, String? discountType, {String? additionalItem}) {
+  if (discountType == null && (additionalItem == null || additionalItem.trim().isEmpty)) {
+    return 'Bonus Unlocked';
+  }
+  final type = (discountType ?? '').toLowerCase();
+  if (type == 'item' || value <= 0) {
+    final item = additionalItem?.trim();
+    return (item != null && item.isNotEmpty) ? 'FREE' : 'Free Item / Reward';
+  }
   if (type == 'percentage') return '${value.toInt()}% OFF';
   if (type == 'fixed' || type == 'pkr') return 'Rs. ${value.toInt()} OFF';
   return 'Bonus Unlocked';
 }
 
-String formatBonusDiscountSubtitle(String? discountType) {
-  if (discountType == null) return 'Additional discount applied';
-  final type = discountType.toLowerCase();
-  if (type == 'item') return 'Special Item Reward';
-  if (type == 'fixed' || type == 'pkr') return 'Additional Cash Discount';
-  return 'Additional Discount';
+String formatBonusDiscountSubtitle(String? discountType, {String? additionalItem}) {
+  final type = (discountType ?? '').toLowerCase();
+  if (type == 'item') {
+    final item = additionalItem?.trim();
+    return (item != null && item.isNotEmpty)
+        ? 'Free $item'
+        : 'Special item reward';
+  }
+  if (type == 'fixed' || type == 'pkr') return 'Extra cash discount on this visit';
+  if (type == 'percentage') return 'Extra off on this visit';
+  return 'Additional discount applied';
+}
+
+String formatBonusEarnedMessage(
+  num value,
+  String? discountType, {
+  String? additionalItem,
+  String? description,
+}) {
+  final trimmedDescription = description?.trim();
+  if (trimmedDescription != null && trimmedDescription.isNotEmpty) {
+    return trimmedDescription;
+  }
+  final type = (discountType ?? '').toLowerCase();
+  if (type == 'percentage' && value > 0) {
+    return '${value.toInt()}% extra off this visit';
+  }
+  if ((type == 'fixed' || type == 'pkr') && value > 0) {
+    return 'Rs. ${value.toInt()} extra off this visit';
+  }
+  final item = additionalItem?.trim();
+  if (item != null && item.isNotEmpty) {
+    return 'Free $item';
+  }
+  if (type == 'item' || value <= 0) {
+    return 'Free reward unlocked';
+  }
+  return 'Loyalty bonus unlocked';
 }
 
 class RedemptionModel {
@@ -35,6 +77,8 @@ class RedemptionModel {
   final bool isBonusApplied;
   final num bonusDiscountApplied;
   final String? bonusDiscountType;
+  final String? bonusDescription;
+  final String? bonusAdditionalItem;
   final String? verifiedBy;
   final String? notes;
   final String status;
@@ -49,6 +93,8 @@ class RedemptionModel {
     this.isBonusApplied = false,
     this.bonusDiscountApplied = 0,
     this.bonusDiscountType,
+    this.bonusDescription,
+    this.bonusAdditionalItem,
     this.verifiedBy,
     this.notes,
     required this.status,
@@ -70,6 +116,10 @@ class RedemptionModel {
           json['bonus_discount_applied'] ?? json['bonusDiscountApplied'] ?? 0,
       bonusDiscountType:
           json['bonus_discount_type'] ?? json['bonusDiscountType'],
+      bonusDescription:
+          json['bonus_description'] ?? json['bonusDescription'],
+      bonusAdditionalItem:
+          json['bonus_additional_item'] ?? json['bonusAdditionalItem'],
       verifiedBy: json['verified_by'] ?? json['verifiedBy'],
       notes: json['notes'],
       status: json['status'] ??

@@ -217,6 +217,7 @@ class RedemptionDetailScreen extends ConsumerWidget {
                     formatBonusDiscountOffLabel(
                       redemption.bonusDiscountApplied,
                       redemption.bonusDiscountType,
+                      additionalItem: redemption.bonusAdditionalItem,
                     ),
                     style: const TextStyle(
                       color: Color(0xFFE65100),
@@ -226,7 +227,12 @@ class RedemptionDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    formatBonusDiscountSubtitle(redemption.bonusDiscountType),
+                    formatBonusEarnedMessage(
+                      redemption.bonusDiscountApplied,
+                      redemption.bonusDiscountType,
+                      additionalItem: redemption.bonusAdditionalItem,
+                      description: redemption.bonusDescription,
+                    ),
                     style: TextStyle(
                       color: const Color(0xFFE65100).withOpacity(0.8),
                       fontSize: 12,
