@@ -173,7 +173,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
     const crossAxisCount = 4;
     const crossAxisSpacing = 10.0;
     const gridHorizontalPadding = 16.0;
-    const labelBlockHeight = 42.0; // SizedBox(8) + 2 lines of text (34px)
+    // Gap + a text box sized to exactly two lines — kept in one place on
+    // BrandCard so the grid and the card can never drift apart.
+    final labelBlockHeight = BrandCard.labelBlockHeight(context);
     final screenWidth = MediaQuery.sizeOf(context).width;
     final cellWidth = (screenWidth -
             (2 * gridHorizontalPadding) -
@@ -184,7 +186,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
   // ── Skeleton helpers ───────────────────────────────────────────────────────
 
-  Widget _buildBrandSkeleton() {
+  Widget _buildBrandSkeleton(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -216,11 +218,11 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           ),
         ),
         const SizedBox(height: 8),
-        // Fixed-height block matches BrandCard's SizedBox(height: 34) label
+        // Matches BrandCard's two-line label box exactly.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: SizedBox(
-            height: 34,
+            height: BrandCard.nameBoxHeight(context),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -500,7 +502,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
 
           // ── Gap between card and first section ───────────────────────────
           if (!widget.isSearching)
-            const SliverToBoxAdapter(child: SizedBox(height: 18)),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
           // ── SECTION 1: TOP BRANDS ─────────────────────────────────────────
           if (!widget.isSearching)
@@ -518,7 +520,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
             ),
 
           if (!widget.isSearching)
-            const SliverToBoxAdapter(child: SizedBox(height: 18)),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
           // Brands grid — SliverGrid measures its own height, no fixed SizedBox needed.
           if (!widget.isSearching)
@@ -527,7 +529,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverGrid(
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildBrandSkeleton(),
+                    (context, index) => _buildBrandSkeleton(context),
                     childCount: 8,
                   ),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -542,7 +544,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverGrid(
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildBrandSkeleton(),
+                    (context, index) => _buildBrandSkeleton(context),
                     childCount: 8,
                   ),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -559,7 +561,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverGrid(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => _buildBrandSkeleton(),
+                        (context, index) => _buildBrandSkeleton(context),
                         childCount: 8,
                       ),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -620,7 +622,10 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
           if (!widget.isSearching)
             const SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.only(top: 18),
+                // Small — the brand label box below the logos is already
+                // sized to two lines, so this is the whole visual gap even
+                // when every name wraps.
+                padding: EdgeInsets.only(top: 14),
                 child: AdCarousel2x1Mockup(),
               ),
             ),

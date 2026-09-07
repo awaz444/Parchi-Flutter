@@ -4,6 +4,27 @@ import '../../utils/colours.dart';
 import '../common/blinking_skeleton.dart';
 
 class BrandCard extends StatelessWidget {
+  // ── Label metrics ─────────────────────────────────────────────────────────
+  // The name block is sized to exactly two lines of text — no more — so the
+  // whitespace between the grid and whatever sits below it stays tight even
+  // when every brand name is short enough to fit on one line.
+  static const double _nameFontSize = 10.5;
+  static const double _nameLineHeight = 1.15;
+  static const double _nameGap = 8.0; // logo box → first text line
+
+  /// Height of just the two-line text box (respects the user's text scale).
+  static double nameBoxHeight(BuildContext context) {
+    final line =
+        MediaQuery.textScalerOf(context).scale(_nameFontSize) * _nameLineHeight;
+    return (line * 2).ceilToDouble();
+  }
+
+  /// Total vertical space the card spends below the square logo box:
+  /// gap + two-line text box. Feed this into the grid's childAspectRatio so
+  /// the logo box stays exactly square.
+  static double labelBlockHeight(BuildContext context) =>
+      _nameGap + nameBoxHeight(context);
+
   final String name;
   final String image;
   final bool showName;
@@ -55,22 +76,23 @@ class BrandCard extends StatelessWidget {
           ),
         ),
         if (showName) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: _nameGap),
 
           // Fixed-height label block so short (1-line) names don't let the
-          // Expanded image box grow taller than its neighbours.
+          // Expanded image box grow taller than its neighbours. Sized to two
+          // lines exactly — see nameBoxHeight().
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2.0),
             child: SizedBox(
-              height: 34, // labelBlockHeight(42) − spacing(8); keeps boxes 1:1
+              height: nameBoxHeight(context),
               child: Text(
                 name,
                 maxLines: 2,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 10.5,
-                  height: 1.15,
+                  fontSize: _nameFontSize,
+                  height: _nameLineHeight,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
