@@ -14,6 +14,18 @@ class NotificationHandlerService {
 
   NotificationHandlerService._internal();
 
+  void Function(Uri uri)? _onOpenLink;
+  Uri? _pendingOpenLink;
+
+  set onOpenLink(void Function(Uri uri)? handler) {
+    _onOpenLink = handler;
+    if (handler != null && _pendingOpenLink != null) {
+      final pending = _pendingOpenLink!;
+      _pendingOpenLink = null;
+      handler(pending);
+    }
+  }
+
   // 1. Initialize Everything
   Future<void> initialize() async {
     // Request Permission (Critical for iOS)
@@ -42,7 +54,25 @@ class NotificationHandlerService {
     const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings, iOS: iosSettings);
 
-    await _localNotifications.initialize(initSettings);
+    // Create the Android channel up front. Server-sent pushes reference 'broadcast_channel';
+    // if it does not exist yet, Android 8+ falls back to a low-importance default channel and
+    // time-critical prompts (like partner verification) would not pop up.
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'broadcast_channel',
+            'Student Broadcasts',
+            importance: Importance.max,
+          ),
+        );
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        _dispatchLink(response.payload);
+      },
+    );
 
     // 2. Handle Foreground Messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -55,8 +85,30 @@ class NotificationHandlerService {
 
     // Handle Background Message Open
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Message clicked!');
+      _handleRemoteMessage(message);
     });
+
+    final initialMessage = await _fcm.getInitialMessage();
+    if (initialMessage != null) {
+      _handleRemoteMessage(initialMessage);
+    }
+  }
+
+  void _handleRemoteMessage(RemoteMessage message) {
+    final link = message.data['link_url'];
+    _dispatchLink(link);
+  }
+
+  void _dispatchLink(String? link) {
+    if (link == null || link.isEmpty) return;
+    final uri = Uri.tryParse(link);
+    if (uri == null) return;
+    final handler = _onOpenLink;
+    if (handler != null) {
+      handler(uri);
+    } else {
+      _pendingOpenLink = uri;
+    }
   }
 
   // 2. Subscribe to FCM topics — guarded for iOS Simulator (no APNS token)
@@ -127,8 +179,7 @@ class NotificationHandlerService {
       message.notification?.title,
       message.notification?.body,
       platformDetails,
-      // Pass the DB ID so we can mark it read later if needed
-      payload: message.data['notification_id'],
+      payload: message.data['link_url'] ?? message.data['notification_id'],
     );
   }
 

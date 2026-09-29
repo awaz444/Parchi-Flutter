@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../utils/colours.dart';
+import '../../utils/deep_link_utils.dart';
 import '../qr_redemption/qr_redemption_screen.dart';
+import '../partner_verification/partner_verification_screen.dart';
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
@@ -27,7 +29,29 @@ class _QrScanScreenState extends State<QrScanScreen> {
     for (final barcode in capture.barcodes) {
       final rawValue = barcode.rawValue;
       if (rawValue == null) continue;
-      final branchId = _extractBranchId(rawValue);
+      Uri? parsed;
+      try {
+        parsed = Uri.parse(rawValue);
+      } catch (_) {}
+
+      final verifyId = parsed != null ? extractVerifyRequestId(parsed) : null;
+      if (verifyId != null) {
+        _isProcessing = true;
+        _controller.stop();
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) =>
+                  PartnerVerificationScreen(requestId: verifyId, viaQr: true),
+            ),
+          );
+        }
+        return;
+      }
+
+      final branchId = parsed != null
+          ? extractRedeemBranchId(parsed)
+          : _extractBranchId(rawValue);
       if (branchId != null) {
         _isProcessing = true;
         _controller.stop();

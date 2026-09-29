@@ -873,7 +873,15 @@ class AuthService {
   }
 
   // Helper method to handle authenticated GET requests with auto-refresh retry
-  Future<http.Response> authenticatedGet(String url) async {
+  ///
+  /// [forbiddenIsSessionError]: when true (default) a 403 is treated like an
+  /// expired/deactivated session (refresh, retry, then force logout). Pass
+  /// false for endpoints where 403 is an ordinary business error (for example
+  /// "this request belongs to another account") so the user is never logged out.
+  Future<http.Response> authenticatedGet(
+    String url, {
+    bool forbiddenIsSessionError = true,
+  }) async {
     // 0. Bail out immediately if a logout is already in progress
     if (_isLoggingOut) throw Exception('Session expired');
 
@@ -892,7 +900,8 @@ class AuthService {
     var response = await _httpClient.get(uri, headers: _authHeaders(token));
 
     // 3. On 401/403 refresh once and retry
-    if (response.statusCode == 401 || response.statusCode == 403) {
+    if (response.statusCode == 401 ||
+        (forbiddenIsSessionError && response.statusCode == 403)) {
       if (_isLoggingOut) throw Exception('Session expired');
 
       print(
@@ -904,7 +913,8 @@ class AuthService {
         if (token != null) {
           response = await _httpClient.get(uri, headers: _authHeaders(token));
 
-          if (response.statusCode == 401 || response.statusCode == 403) {
+          if (response.statusCode == 401 ||
+              (forbiddenIsSessionError && response.statusCode == 403)) {
             final errorMessage = _extractErrorMessage(response);
             _authErrorController.add(errorMessage);
             await logout();
@@ -921,7 +931,11 @@ class AuthService {
   }
 
   // Helper method to handle authenticated POST requests
-  Future<http.Response> authenticatedPost(String url, {Object? body}) async {
+  Future<http.Response> authenticatedPost(
+    String url, {
+    Object? body,
+    bool forbiddenIsSessionError = true,
+  }) async {
     // 0. Bail out immediately if a logout is already in progress
     if (_isLoggingOut) throw Exception('Session expired');
 
@@ -937,7 +951,8 @@ class AuthService {
       body: body != null ? jsonEncode(body) : null,
     );
 
-    if (response.statusCode == 401 || response.statusCode == 403) {
+    if (response.statusCode == 401 ||
+        (forbiddenIsSessionError && response.statusCode == 403)) {
       if (_isLoggingOut) throw Exception('Session expired');
 
       print(
@@ -953,7 +968,8 @@ class AuthService {
             body: body != null ? jsonEncode(body) : null,
           );
 
-          if (response.statusCode == 401 || response.statusCode == 403) {
+          if (response.statusCode == 401 ||
+              (forbiddenIsSessionError && response.statusCode == 403)) {
             final errorMessage = _extractErrorMessage(response);
             _authErrorController.add(errorMessage);
             await logout();

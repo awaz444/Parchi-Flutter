@@ -49,6 +49,8 @@
                 <data android:scheme="parchi" android:host="auth-callback" />
                 <data android:scheme="parchi" android:host="reset-password" />
                 <data android:scheme="parchi" android:host="merchant" />
+                <data android:scheme="parchi" android:host="verify" />
+                <data android:scheme="parchi" android:host="redeem" />
             </intent-filter>
             <!-- App Links for Merchants -->
             <intent-filter android:autoVerify="true">
@@ -59,6 +61,10 @@
                 <data android:scheme="https" android:host="www.parchipakistan.com" android:pathPrefix="/merchant/" />
                 <data android:scheme="http" android:host="parchipakistan.com" android:pathPrefix="/merchant/" />
                 <data android:scheme="http" android:host="www.parchipakistan.com" android:pathPrefix="/merchant/" />
+                <data android:scheme="https" android:host="parchipakistan.com" android:pathPrefix="/verify/" />
+                <data android:scheme="https" android:host="www.parchipakistan.com" android:pathPrefix="/verify/" />
+                <data android:scheme="https" android:host="parchipakistan.com" android:pathPrefix="/redeem/" />
+                <data android:scheme="https" android:host="www.parchipakistan.com" android:pathPrefix="/redeem/" />
             </intent-filter>
 
             <!-- Do NOT claim supabase.co/auth/v1/verify — let the browser complete

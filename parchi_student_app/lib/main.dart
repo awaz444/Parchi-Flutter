@@ -31,7 +31,10 @@ import 'screens/auth/sign_up_screens/signup_verification_screen.dart'; // [NEW] 
 import 'providers/user_provider.dart'; // [NEW] For guest detection
 import 'providers/redemption_provider.dart';
 import 'screens/qr_redemption/qr_redemption_screen.dart';
+import 'screens/events/events_screen.dart';
+import 'screens/partner_verification/partner_verification_screen.dart';
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
+import 'utils/deep_link_utils.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'screens/force_update/force_update_screen.dart';
 import 'widgets/common/parchi_qr_fab.dart';
@@ -145,11 +148,22 @@ void main() async {
   // Log app open
   analyticsService.logEvent('app_opened');
 
+  // Read the launch link BEFORE the first frame. onGenerateRoute runs during that first build
+  // and needs the full URI: Flutter hands it only a stripped path such as "/<uuid>" for
+  // custom-scheme links, which is indistinguishable from a redeem link without it.
+  Uri? initialLaunchUri;
+  try {
+    initialLaunchUri =
+        await AppLinks().getInitialLink().timeout(const Duration(milliseconds: 800));
+  } catch (e) {
+    debugPrint('Could not read initial link before runApp: $e');
+  }
+
   runApp(
 
     // [NEW] Wrap entire app in ProviderScope
-    const ProviderScope(
-      child: ParchiApp(),
+    ProviderScope(
+      child: ParchiApp(initialLaunchUri: initialLaunchUri),
     ),
   );
 
@@ -158,7 +172,9 @@ void main() async {
 }
 
 class ParchiApp extends StatefulWidget {
-  const ParchiApp({super.key});
+  final Uri? initialLaunchUri;
+
+  const ParchiApp({super.key, this.initialLaunchUri});
 
   @override
   State<ParchiApp> createState() => _ParchiAppState();
@@ -173,6 +189,15 @@ class _ParchiAppState extends State<ParchiApp> {
   @override
   void initState() {
     super.initState();
+    final launchUri = widget.initialLaunchUri;
+    if (launchUri != null) {
+      // Available synchronously so the very first onGenerateRoute can use it.
+      _pendingInitialUri = launchUri;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleDeepLink(launchUri);
+        _pendingInitialUri = null;
+      });
+    }
     _initDeepLinkListener();
   }
 
@@ -185,9 +210,17 @@ class _ParchiAppState extends State<ParchiApp> {
   Future<void> _initDeepLinkListener() async {
     _appLinks = AppLinks();
 
-    // Handle cold-start / initial link (app launched via deep link)
+    NotificationHandlerService().onOpenLink = (uri) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleDeepLink(uri);
+      });
+    };
+
+    // Handle cold-start / initial link (app launched via deep link).
+    // Already read before runApp when available; only fall back to reading it here if not.
     try {
-      final initialUri = await _appLinks.getInitialLink();
+      final initialUri =
+          widget.initialLaunchUri == null ? await _appLinks.getInitialLink() : null;
       if (initialUri != null) {
         _pendingInitialUri = initialUri;
         // Defer until the navigator is ready
@@ -211,6 +244,12 @@ class _ParchiAppState extends State<ParchiApp> {
     // Always cache the full URI so onGenerateRoute can reconstruct host/path
     // even when Flutter strips the scheme+host (warm-start on iOS).
     _lastDeepLinkUri = uri;
+
+    final verifyId = extractVerifyRequestId(uri);
+    if (verifyId != null) {
+      openPartnerVerificationScreen(verifyId);
+      return;
+    }
 
     // Password reset uses parchi://reset-password; signup uses parchi://auth-callback.
     // Also honor type=recovery / type=signup when both share a callback host.
@@ -291,12 +330,34 @@ class _ParchiAppState extends State<ParchiApp> {
                 ? _lastDeepLinkUri
                 : parsedUri);
 
+        // A route name like "/verify/<uuid>" (https App Link) identifies itself; otherwise use
+        // the full URI. Both parsers are strict (known schemes/hosts, exact shape only).
+        final verifyId = extractVerifyRequestIdFromRoute(settings.name) ??
+            (uri != null ? extractVerifyRequestId(uri) : null);
+        if (verifyId != null) {
+          if (tryClaimVerifyNav(verifyId)) {
+            return MaterialPageRoute(
+              builder: (_) => PartnerVerificationScreen(requestId: verifyId),
+            );
+          }
+          return MaterialPageRoute(
+            builder: (ctx) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+              });
+              return const SizedBox.shrink();
+            },
+          );
+        }
+
         if (uri != null &&
             (uri.path.contains('auth-callback') ||
                 uri.host.contains('auth-callback') ||
                 uri.path.contains('reset-password') ||
                 uri.host.contains('reset-password') ||
-                uri.path.contains('verify') ||
+                // Auth email "verify" links include tokens; partner verify is handled above.
+                (uri.path.contains('verify') &&
+                    uri.queryParameters.containsKey('token')) ||
                 // [NEW] Check for tokens in fragment (implicit flow) or query
                 uri.fragment.contains('access_token') ||
                 uri.queryParameters.containsKey('access_token'))) {
@@ -687,6 +748,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     if (!isCustomScheme && !isWebScheme) return;
 
+    final verifyId = extractVerifyRequestId(uri);
+    if (verifyId != null) {
+      if (mounted) openPartnerVerificationScreen(verifyId);
+      return;
+    }
+
     // ── Redeem link: parchi://redeem/{branchId} or https://parchipakistan.com/redeem/{branchId}
     final bool isRedeemPath = uri.path.contains('/redeem/') || uri.host == 'redeem';
     if (isRedeemPath) {
@@ -769,7 +836,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       case 1:
         activePage = const LeaderboardScreen();
       case 2:
-        activePage = const _AchievementsPlaceholder();
+        activePage = const EventsScreen();
       case 3:
         activePage = !isAuthenticated
             ? const GuestLoginPrompt(
@@ -840,21 +907,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             ),
             // Gap for FAB
             const SizedBox(width: 72),
-            // Achievements
+            // Events
             Expanded(
               child: InkWell(
                 onTap: () => _onNavTap(2),
                 splashColor: Colors.transparent,
                 highlightColor: Colors.transparent,
                 child: Center(
-                  child: SvgPicture.asset(
-                    'assets/medal-ribbon-star-svgrepo-com.svg',
-                    width: 28,
-                    height: 28,
-                    colorFilter: ColorFilter.mode(
-                      _currentIndex == 2 ? activeColor : inactiveColor,
-                      BlendMode.srcIn,
-                    ),
+                  child: Icon(
+                    Icons.confirmation_number_rounded,
+                    size: 26,
+                    color: _currentIndex == 2 ? activeColor : inactiveColor,
                   ),
                 ),
               ),
@@ -877,39 +940,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AchievementsPlaceholder extends StatelessWidget {
-  const _AchievementsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.emoji_events_rounded, size: 64, color: AppColors.textSecondary),
-            SizedBox(height: 16),
-            Text(
-              'Achievements',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Coming soon',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
             ),
           ],
         ),

@@ -60,4 +60,15 @@ class ApiConfig {
 
   // Categories Endpoint
   static String get categoriesEndpoint => '$baseUrl/categories';
+
+  // Events Endpoint
+  static String get activeEventsEndpoint => '$baseUrl/events/active';
+
+  // Partner verification (student)
+  static String verificationRequestEndpoint(String id) =>
+      '$baseUrl/verification-requests/$id';
+  static String approveVerificationEndpoint(String id) =>
+      '$baseUrl/verification-requests/$id/approve';
+  static String rejectVerificationEndpoint(String id) =>
+      '$baseUrl/verification-requests/$id/reject';
 }

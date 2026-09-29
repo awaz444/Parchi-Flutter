@@ -39,6 +39,7 @@ dependencies:
   mobile_scanner: ^7.2.0
   permission_handler: ^11.3.1
   flutter_native_splash: ^2.4.0
+  custom_refresh_indicator: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -48,7 +49,6 @@ dev_dependencies:
   # Code Generation (Required for Riverpod)
   build_runner: ^2.4.9
   riverpod_generator: ^2.4.0
-  custom_refresh_indicator: ^3.0.0
   flutter_launcher_icons: ^0.13.1
 
 flutter_native_splash:
