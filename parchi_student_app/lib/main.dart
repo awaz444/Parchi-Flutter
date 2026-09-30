@@ -35,6 +35,7 @@ import 'screens/events/events_screen.dart';
 import 'screens/partner_verification/partner_verification_screen.dart';
 import 'widgets/common/guest_login_prompt.dart'; // [NEW] Guest gate widget
 import 'utils/deep_link_utils.dart';
+import 'utils/initial_app_link_store.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'screens/force_update/force_update_screen.dart';
 import 'widgets/common/parchi_qr_fab.dart';
@@ -193,8 +194,11 @@ class _ParchiAppState extends State<ParchiApp> {
     if (launchUri != null) {
       // Available synchronously so the very first onGenerateRoute can use it.
       _pendingInitialUri = launchUri;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleDeepLink(launchUri);
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // iOS re-surfaces the last launch URL on later opens / remounts — only act once.
+        if (await tryConsumeInitialAppLink(launchUri)) {
+          _handleDeepLink(launchUri);
+        }
         _pendingInitialUri = null;
       });
     }
@@ -224,8 +228,10 @@ class _ParchiAppState extends State<ParchiApp> {
       if (initialUri != null) {
         _pendingInitialUri = initialUri;
         // Defer until the navigator is ready
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _handleDeepLink(initialUri);
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (await tryConsumeInitialAppLink(initialUri)) {
+            _handleDeepLink(initialUri);
+          }
           _pendingInitialUri = null;
         });
       }
@@ -705,20 +711,25 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     super.dispose();
   }
 
+  // getInitialLink must not re-run on every MainScreen mount (login / auth rebuild),
+  // or a stale verify/merchant URL from the last cold start opens again.
+  static bool _consumedProcessInitialLink = false;
+
   Future<void> _initMerchantDeepLinks() async {
-    // 1. Cold-start: app was launched via a merchant deep link.
-    //    getInitialLink() is only called once here, so it won't re-fire.
-    try {
-      final initialUri = await _appLinks.getInitialLink();
-      if (initialUri != null) {
-        // Defer by one frame so the widget is fully mounted and
-        // Navigator.of(context) is available.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _handleMerchantLink(initialUri);
-        });
+    // 1. Cold-start: only the first MainScreen in this process may consume getInitialLink.
+    if (!_consumedProcessInitialLink) {
+      _consumedProcessInitialLink = true;
+      try {
+        final initialUri = await _appLinks.getInitialLink();
+        if (initialUri != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!await tryConsumeInitialAppLink(initialUri)) return;
+            if (mounted) _handleMerchantLink(initialUri);
+          });
+        }
+      } catch (e) {
+        debugPrint('MainScreen – error reading initial link: $e');
       }
-    } catch (e) {
-      debugPrint('MainScreen – error reading initial link: $e');
     }
 
     // 2. Warm-start: app was already running when the link was tapped.
