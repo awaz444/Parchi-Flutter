@@ -37,19 +37,19 @@ class EventsScreen extends ConsumerWidget {
     final target = uri.replace(queryParameters: params);
 
     try {
-      final launched = await launchUrl(target, mode: LaunchMode.inAppBrowserView);
-      if (!launched) {
-        await launchUrl(target, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {
-      try {
-        await launchUrl(target, mode: LaunchMode.externalApplication);
-      } catch (e) {
-        if (!context.mounted) return;
+      // External browser so the user can switch back to Parchi for 2FA while
+      // checkout stays open in Safari/Chrome.
+      final launched = await launchUrl(target, mode: LaunchMode.externalApplication);
+      if (!launched && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open this event right now.')),
         );
       }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open this event right now.')),
+      );
     }
   }
 
