@@ -19,7 +19,7 @@ class EventsScreen extends ConsumerWidget {
     if (event.externalUrl.isEmpty) return;
 
     final user = ref.read(userProfileProvider).valueOrNull;
-    final uri = Uri.tryParse(event.externalUrl);
+    final uri = Uri.tryParse('https://www.insidekarachi.com/events/prismfest-26');
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
