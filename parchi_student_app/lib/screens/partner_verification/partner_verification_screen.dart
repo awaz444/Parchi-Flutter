@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/partner_discount_redemption_model.dart';
 import '../../models/partner_verification_model.dart';
 import '../../providers/user_provider.dart';
 import '../../services/partner_verification_service.dart';
@@ -11,7 +12,7 @@ import '../../utils/colours.dart';
 import '../../utils/verify_nav_guard.dart';
 import '../../widgets/common/guest_login_prompt.dart';
 
-enum _VerifyPhase { loading, pending, success, rejected, expired, error }
+enum _VerifyPhase { loading, pending, verified, redeemed, rejected, expired, error }
 
 class PartnerVerificationScreen extends ConsumerStatefulWidget {
   final String requestId;
@@ -33,24 +34,37 @@ class PartnerVerificationScreen extends ConsumerStatefulWidget {
 }
 
 class _PartnerVerificationScreenState
-    extends ConsumerState<PartnerVerificationScreen> with WidgetsBindingObserver {
+    extends ConsumerState<PartnerVerificationScreen>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   static const Duration _basePollInterval = Duration(seconds: 5);
   static const Duration _maxPollInterval = Duration(seconds: 15);
   // Keep polling a little past expiry so the server-side expired state is picked up.
   static const Duration _pollGraceAfterExpiry = Duration(seconds: 20);
+  static const Duration _discountPollInterval = Duration(seconds: 3);
+  // Partner checkout + PayFast can take a while; keep watching after approve.
+  static const Duration _discountWatchWindow = Duration(minutes: 30);
 
   _VerifyPhase _phase = _VerifyPhase.loading;
   PartnerVerificationModel? _request;
+  PartnerDiscountRedemptionModel? _discount;
   String? _errorMessage;
   bool _acting = false;
   String? _selectedCode;
 
   RealtimeChannel? _realtimeChannel;
+  RealtimeChannel? _discountRealtimeChannel;
   Timer? _pollTimer;
   Timer? _expiryTimer;
+  Timer? _discountPollTimer;
   bool _pollInFlight = false;
+  bool _discountPollInFlight = false;
   int _pollFailures = 0;
   bool _loadStarted = false;
+
+  late final AnimationController _checkController;
+  late final AnimationController _successFadeController;
+  late final Animation<double> _checkAnimation;
+  late final Animation<double> _successFadeAnimation;
 
   /// serverTime - deviceTime, so countdown/expiry do not depend on a correct device clock.
   Duration _clockOffset = Duration.zero;
@@ -61,6 +75,22 @@ class _PartnerVerificationScreenState
     super.initState();
     markVerifyScreenOpen(widget.requestId);
     WidgetsBinding.instance.addObserver(this);
+
+    _checkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _checkAnimation = CurvedAnimation(parent: _checkController, curve: Curves.elasticOut);
+
+    _successFadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _successFadeAnimation = CurvedAnimation(
+      parent: _successFadeController,
+      curve: Curves.easeOut,
+    );
+
     _load();
   }
 
@@ -69,18 +99,25 @@ class _PartnerVerificationScreenState
     WidgetsBinding.instance.removeObserver(this);
     markVerifyScreenClosed(widget.requestId);
     _stopWatching();
+    _stopDiscountWatching();
+    _checkController.dispose();
+    _successFadeController.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Timers are unreliable while suspended; refresh immediately on return.
-    if (state == AppLifecycleState.resumed && _phase == _VerifyPhase.pending) {
-      _pollOnce();
+    if (state == AppLifecycleState.resumed) {
+      if (_phase == _VerifyPhase.pending) {
+        _pollOnce();
+      } else if (_phase == _VerifyPhase.verified) {
+        _pollDiscountOnce();
+      }
     }
   }
 
-  // ?? Loading / state ?????????????????????????????????????????????????????
+  // ── Loading / state ───────────────────────────────────────────────────────
 
   Future<void> _load() async {
     _loadStarted = true;
@@ -88,7 +125,7 @@ class _PartnerVerificationScreenState
       final request = await partnerVerificationService.getRequest(widget.requestId);
       if (!mounted) return;
       _noteServerTime(request);
-      _applyStatus(request, startWatching: true);
+      await _applyStatus(request, startWatching: true);
     } catch (e) {
       if (!mounted) return;
       _showError(e);
@@ -115,6 +152,7 @@ class _PartnerVerificationScreenState
     }
 
     _stopWatching();
+    _stopDiscountWatching();
     setState(() {
       _phase = phase;
       _errorMessage = message;
@@ -128,22 +166,40 @@ class _PartnerVerificationScreenState
     }
   }
 
-  void _applyStatus(PartnerVerificationModel request, {bool startWatching = false}) {
-    // Terminal states are final: never let a late/stale response move us out of one.
-    if (_request != null && _request!.isTerminal && !request.isTerminal) return;
+  Future<void> _applyStatus(
+    PartnerVerificationModel request, {
+    bool startWatching = false,
+  }) async {
+    // Terminal reject/expire are final; approved can still advance to redeemed.
+    if (_phase == _VerifyPhase.redeemed) return;
+    if (_request != null &&
+        (_request!.status == 'rejected' || _request!.status == 'expired') &&
+        request.status == 'pending') {
+      return;
+    }
 
     _request = request;
     switch (request.status) {
       case 'approved':
         _stopWatching();
-        setState(() => _phase = _VerifyPhase.success);
+        // Deep link / notification reopen: jump straight to paid success if logged.
+        final existing = await _tryFetchDiscount();
+        if (!mounted) return;
+        if (existing != null) {
+          _showRedeemed(existing);
+          return;
+        }
+        setState(() => _phase = _VerifyPhase.verified);
+        _watchDiscount();
         break;
       case 'rejected':
         _stopWatching();
+        _stopDiscountWatching();
         setState(() => _phase = _VerifyPhase.rejected);
         break;
       case 'expired':
         _stopWatching();
+        _stopDiscountWatching();
         setState(() => _phase = _VerifyPhase.expired);
         break;
       default:
@@ -153,7 +209,28 @@ class _PartnerVerificationScreenState
     }
   }
 
-  // ?? Realtime + polling ??????????????????????????????????????????????????
+  void _showRedeemed(PartnerDiscountRedemptionModel discount) {
+    _stopWatching();
+    _stopDiscountWatching();
+    setState(() {
+      _discount = discount;
+      _phase = _VerifyPhase.redeemed;
+    });
+    HapticFeedback.heavyImpact();
+    _checkController.forward(from: 0);
+    _successFadeController.forward(from: 0);
+  }
+
+  Future<PartnerDiscountRedemptionModel?> _tryFetchDiscount() async {
+    try {
+      return await partnerVerificationService.getDiscountRedemption(widget.requestId);
+    } on PartnerVerificationException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  // ── Realtime + polling (pending verification) ─────────────────────────────
 
   void _watch(PartnerVerificationModel request) {
     _stopWatching();
@@ -162,18 +239,15 @@ class _PartnerVerificationScreenState
     if (expiresAt != null) {
       final remaining = expiresAt.difference(_now);
       if (remaining <= Duration.zero) {
-        // Do not trust the clock alone: confirm with the server.
         _pollOnce();
       } else {
         _expiryTimer = Timer(remaining, () {
           if (!mounted || _phase != _VerifyPhase.pending) return;
-          _pollOnce(); // server decides; UI flips when it says expired
+          _pollOnce();
         });
       }
     }
 
-    // Filtered to this request only, so the server does not evaluate every update on the
-    // table for every connected student.
     _realtimeChannel = Supabase.instance.client
         .channel('partner-verify-${widget.requestId}')
         .onPostgresChanges(
@@ -227,7 +301,6 @@ class _PartnerVerificationScreenState
     });
   }
 
-  /// One poll. Guarded so slow networks never stack overlapping requests.
   Future<void> _pollOnce() async {
     if (_pollInFlight || !mounted) return;
     if (_phase != _VerifyPhase.pending && _phase != _VerifyPhase.loading) return;
@@ -237,14 +310,13 @@ class _PartnerVerificationScreenState
       if (!mounted) return;
       _pollFailures = 0;
       _noteServerTime(latest);
-      if (latest.isTerminal) _applyStatus(latest);
+      if (latest.isTerminal) await _applyStatus(latest);
     } catch (e) {
       if (!mounted) return;
       _pollFailures = math.min(_pollFailures + 1, 3);
       if (e is PartnerVerificationException && (e.statusCode == 404 || e.statusCode == 410)) {
         _showError(e);
       }
-      // Other errors (offline, 5xx, 429): keep the screen, back off, try again.
     } finally {
       _pollInFlight = false;
     }
@@ -258,12 +330,80 @@ class _PartnerVerificationScreenState
     final channel = _realtimeChannel;
     _realtimeChannel = null;
     if (channel != null) {
-      // removeChannel fully unregisters it (unsubscribe alone leaves it in the client).
       Supabase.instance.client.removeChannel(channel);
     }
   }
 
-  // ?? Actions ?????????????????????????????????????????????????????????????
+  // ── Discount watch (after approve, waiting for partner payment log) ───────
+
+  void _watchDiscount() {
+    _stopDiscountWatching();
+
+    _discountRealtimeChannel = Supabase.instance.client
+        .channel('partner-discount-${widget.requestId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'partner_discount_redemptions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'verification_request_id',
+            value: widget.requestId,
+          ),
+          callback: (_) {
+            if (!mounted || _phase != _VerifyPhase.verified) return;
+            _pollDiscountOnce();
+          },
+        )
+        .subscribe();
+
+    _scheduleDiscountPoll();
+  }
+
+  void _scheduleDiscountPoll() {
+    _discountPollTimer?.cancel();
+    if (!mounted || _phase != _VerifyPhase.verified) return;
+
+    final approvedAt = _request?.approvedAt ?? _request?.createdAt;
+    if (approvedAt != null && _now.isAfter(approvedAt.add(_discountWatchWindow))) {
+      return;
+    }
+
+    _discountPollTimer = Timer(_discountPollInterval, () async {
+      await _pollDiscountOnce();
+      _scheduleDiscountPoll();
+    });
+  }
+
+  Future<void> _pollDiscountOnce() async {
+    if (_discountPollInFlight || !mounted) return;
+    if (_phase != _VerifyPhase.verified) return;
+    _discountPollInFlight = true;
+    try {
+      final discount = await _tryFetchDiscount();
+      if (!mounted || discount == null) return;
+      _showRedeemed(discount);
+    } on PartnerVerificationException catch (e) {
+      // 404 = not paid yet; keep waiting. Other errors: soft-fail and retry.
+      if (e.statusCode == 404) return;
+    } catch (_) {
+      // Offline / 5xx: keep waiting.
+    } finally {
+      _discountPollInFlight = false;
+    }
+  }
+
+  void _stopDiscountWatching() {
+    _discountPollTimer?.cancel();
+    _discountPollTimer = null;
+    final channel = _discountRealtimeChannel;
+    _discountRealtimeChannel = null;
+    if (channel != null) {
+      Supabase.instance.client.removeChannel(channel);
+    }
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
 
   bool get _needsMatch =>
       !widget.viaQr && (_request?.matchOptions?.isNotEmpty ?? false);
@@ -280,7 +420,7 @@ class _PartnerVerificationScreenState
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
-      _applyStatus(updated);
+      await _applyStatus(updated);
     } catch (e) {
       await _recoverAfterActionError(e);
     } finally {
@@ -295,7 +435,7 @@ class _PartnerVerificationScreenState
       final updated = await partnerVerificationService.reject(widget.requestId);
       if (!mounted) return;
       HapticFeedback.mediumImpact();
-      _applyStatus(updated);
+      await _applyStatus(updated);
     } catch (e) {
       await _recoverAfterActionError(e);
     } finally {
@@ -303,8 +443,6 @@ class _PartnerVerificationScreenState
     }
   }
 
-  /// The action may have succeeded even though we got an error (timeout, lost response, another
-  /// device acted first). Ask the server what really happened before showing anything.
   Future<void> _recoverAfterActionError(Object original) async {
     if (!mounted) return;
     try {
@@ -312,7 +450,7 @@ class _PartnerVerificationScreenState
       if (!mounted) return;
       _noteServerTime(truth);
       if (truth.isTerminal) {
-        _applyStatus(truth);
+        await _applyStatus(truth);
         return;
       }
     } catch (_) {
@@ -322,13 +460,12 @@ class _PartnerVerificationScreenState
     _showError(original);
   }
 
-  // ?? UI ??????????????????????????????????????????????????????????????????
+  // ── UI ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
 
-    // When the user signs in (from the guest prompt) after an initial failed load, load now.
     ref.listen(userProfileProvider, (previous, next) {
       final user = next.valueOrNull;
       if (user != null && _request == null && _loadStarted) {
@@ -337,8 +474,6 @@ class _PartnerVerificationScreenState
       }
     });
 
-    // Only show the guest prompt once we KNOW there is no user. While the profile is still
-    // loading (or briefly errored) do not flash "Sign in" at a signed-in student.
     final knownGuest = userAsync.hasValue && userAsync.valueOrNull == null;
     if (knownGuest) {
       return const Scaffold(
@@ -350,25 +485,30 @@ class _PartnerVerificationScreenState
       );
     }
 
+    final hideAppBar = _phase == _VerifyPhase.redeemed;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Confirm student status',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      backgroundColor:
+          hideAppBar ? const Color(0xFFF9FAFF) : AppColors.backgroundLight,
+      appBar: hideAppBar
+          ? null
+          : AppBar(
+              backgroundColor: AppColors.surface,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text(
+                'Confirm student status',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              centerTitle: true,
+            ),
       body: _buildBody(),
     );
   }
@@ -379,7 +519,7 @@ class _PartnerVerificationScreenState
         return const Center(child: CircularProgressIndicator(color: AppColors.primary));
       case _VerifyPhase.pending:
         return _buildPending();
-      case _VerifyPhase.success:
+      case _VerifyPhase.verified:
         return _buildResult(
           icon: Icons.check_rounded,
           iconColor: const Color(0xFF27AE60),
@@ -388,6 +528,8 @@ class _PartnerVerificationScreenState
           subtitle:
               'Return to checkout to finish buying your ticket. Parchi does not store the ticket.',
         );
+      case _VerifyPhase.redeemed:
+        return _buildRedeemed();
       case _VerifyPhase.rejected:
         return _buildResult(
           icon: Icons.close_rounded,
@@ -535,6 +677,189 @@ class _PartnerVerificationScreenState
           ),
           const SizedBox(height: 12),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRedeemed() {
+    final discount = _discount;
+    final partner = discount?.partnerName ?? _request?.partnerName ?? 'Partner';
+    final eventLabel = discount?.eventLabel ?? _request?.eventLabel;
+    final headline = discount?.formattedDiscount ?? 'Discount';
+
+    return FadeTransition(
+      opacity: _successFadeAnimation,
+      child: Container(
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFEEF2FE),
+              Color(0xFFF9FAFF),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        const Text(
+                          'ALL DONE!',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            color: Color(0xFF2D2A3A),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ScaleTransition(
+                          scale: _checkAnimation,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFFE2FBE9),
+                              border: Border.all(
+                                color: const Color(0xFFB3F5C7),
+                                width: 2,
+                              ),
+                            ),
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF2ECC71), Color(0xFF27AE60)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF2ECC71).withValues(alpha: 0.3),
+                                    blurRadius: 20,
+                                    spreadRadius: 4,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                size: 46,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          headline,
+                          style: const TextStyle(
+                            fontSize: 38,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2D2A3A),
+                            letterSpacing: -0.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Discount Unlocked',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF8E8E93),
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        if (eventLabel != null && eventLabel.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              eventLabel,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF8E8E93),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 28),
+                        Container(
+                          width: 48,
+                          height: 1.5,
+                          color: const Color(0xFFE5E5EA),
+                        ),
+                        const SizedBox(height: 28),
+                        const Text(
+                          'REDEEMED AT',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF8E8E93),
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          partner,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2D2A3A),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'DONE',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

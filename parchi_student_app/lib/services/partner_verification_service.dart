@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../config/api_config.dart';
+import '../models/partner_discount_redemption_model.dart';
 import '../models/partner_verification_model.dart';
 import 'auth_service.dart';
 
@@ -22,7 +23,16 @@ class PartnerVerificationService {
       ApiConfig.verificationRequestEndpoint(requestId),
       forbiddenIsSessionError: false,
     );
-    return _parse(response, 'Failed to load verification request');
+    return _parseRequest(response, 'Failed to load verification request');
+  }
+
+  /// Returns the paid-checkout attribution row, or throws 404 until the partner posts it.
+  Future<PartnerDiscountRedemptionModel> getDiscountRedemption(String requestId) async {
+    final response = await authService.authenticatedGet(
+      ApiConfig.verificationDiscountRedemptionEndpoint(requestId),
+      forbiddenIsSessionError: false,
+    );
+    return _parseDiscount(response, 'Failed to load discount redemption');
   }
 
   /// [viaQr] = the student scanned the code from the partner's screen in-app. Otherwise the
@@ -40,7 +50,7 @@ class PartnerVerificationService {
       },
       forbiddenIsSessionError: false,
     );
-    return _parse(response, 'Failed to approve verification');
+    return _parseRequest(response, 'Failed to approve verification');
   }
 
   Future<PartnerVerificationModel> reject(String requestId) async {
@@ -49,10 +59,20 @@ class PartnerVerificationService {
       body: const {},
       forbiddenIsSessionError: false,
     );
-    return _parse(response, 'Failed to reject verification');
+    return _parseRequest(response, 'Failed to reject verification');
   }
 
-  PartnerVerificationModel _parse(dynamic response, String fallback) {
+  PartnerVerificationModel _parseRequest(dynamic response, String fallback) {
+    final data = _parseData(response, fallback);
+    return PartnerVerificationModel.fromJson(data);
+  }
+
+  PartnerDiscountRedemptionModel _parseDiscount(dynamic response, String fallback) {
+    final data = _parseData(response, fallback);
+    return PartnerDiscountRedemptionModel.fromJson(data);
+  }
+
+  Map<String, dynamic> _parseData(dynamic response, String fallback) {
     Map<String, dynamic> responseData;
     try {
       responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -63,9 +83,7 @@ class PartnerVerificationService {
     if (response.statusCode >= 200 &&
         response.statusCode < 300 &&
         responseData['data'] != null) {
-      return PartnerVerificationModel.fromJson(
-        responseData['data'] as Map<String, dynamic>,
-      );
+      return responseData['data'] as Map<String, dynamic>;
     }
     final message = responseData['message'];
     final errorMessage = message is List

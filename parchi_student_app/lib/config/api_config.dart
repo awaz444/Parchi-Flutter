@@ -71,4 +71,6 @@ class ApiConfig {
       '$baseUrl/verification-requests/$id/approve';
   static String rejectVerificationEndpoint(String id) =>
       '$baseUrl/verification-requests/$id/reject';
+  static String verificationDiscountRedemptionEndpoint(String id) =>
+      '$baseUrl/verification-requests/$id/discount-redemption';
 }
