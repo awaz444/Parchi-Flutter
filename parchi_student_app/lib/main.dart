@@ -253,7 +253,7 @@ class _ParchiAppState extends State<ParchiApp> {
 
     final verifyId = extractVerifyRequestId(uri);
     if (verifyId != null) {
-      openPartnerVerificationScreen(verifyId);
+      openPartnerVerificationScreen(verifyId, viaQr: isVerifyViaQr(uri));
       return;
     }
 
@@ -338,12 +338,19 @@ class _ParchiAppState extends State<ParchiApp> {
 
         // A route name like "/verify/<uuid>" (https App Link) identifies itself; otherwise use
         // the full URI. Both parsers are strict (known schemes/hosts, exact shape only).
-        final verifyId = extractVerifyRequestIdFromRoute(settings.name) ??
+        final verifyIdFromRoute = extractVerifyRequestIdFromRoute(settings.name);
+        final verifyId = verifyIdFromRoute ??
             (uri != null ? extractVerifyRequestId(uri) : null);
         if (verifyId != null) {
+          final viaQr = verifyIdFromRoute != null
+              ? isVerifyViaQrFromRoute(settings.name)
+              : (uri != null && isVerifyViaQr(uri));
           if (tryClaimVerifyNav(verifyId)) {
             return MaterialPageRoute(
-              builder: (_) => PartnerVerificationScreen(requestId: verifyId),
+              builder: (_) => PartnerVerificationScreen(
+                requestId: verifyId,
+                viaQr: viaQr,
+              ),
             );
           }
           return MaterialPageRoute(
@@ -761,7 +768,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     final verifyId = extractVerifyRequestId(uri);
     if (verifyId != null) {
-      if (mounted) openPartnerVerificationScreen(verifyId);
+      if (mounted) {
+        openPartnerVerificationScreen(verifyId, viaQr: isVerifyViaQr(uri));
+      }
       return;
     }
 

@@ -16,6 +16,11 @@ void main() {
       expect(extractVerifyRequestId(Uri.parse('https://www.parchipakistan.com/verify/$id?x=1')), id);
     });
 
+    test('accepts the partner QR short link', () {
+      expect(extractVerifyRequestId(Uri.parse('https://link.parchi.pk/a/v/$id')), id);
+      expect(extractVerifyRequestId(Uri.parse('https://www.link.parchi.pk/a/v/$id')), id);
+    });
+
     test('normalises the id to lower case', () {
       expect(
         extractVerifyRequestId(Uri.parse('parchi://verify/${id.toUpperCase()}')),
@@ -67,6 +72,25 @@ void main() {
       expect(extractVerifyRequestIdFromRoute('https://evil.example/verify/$id'), isNull);
       expect(extractVerifyRequestIdFromRoute(null), isNull);
       expect(extractVerifyRequestIdFromRoute(''), isNull);
+    });
+  });
+
+  group('isVerifyViaQr', () {
+    test('treats short links and https verify URLs as QR', () {
+      expect(isVerifyViaQr(Uri.parse('https://link.parchi.pk/a/v/$id')), isTrue);
+      expect(isVerifyViaQr(Uri.parse('https://www.parchipakistan.com/verify/$id')), isTrue);
+      expect(isVerifyViaQr(Uri.parse('https://www.parchipakistan.com/verify/$id?via=qr')), isTrue);
+    });
+
+    test('keeps plain push custom-scheme links on the match path', () {
+      expect(isVerifyViaQr(Uri.parse('parchi://verify/$id')), isFalse);
+      expect(isVerifyViaQr(Uri.parse('parchi://verify/$id?via=qr')), isTrue);
+    });
+
+    test('route-only App Links count as QR', () {
+      expect(isVerifyViaQrFromRoute('/verify/$id'), isTrue);
+      expect(isVerifyViaQrFromRoute('/verify/$id?via=qr'), isTrue);
+      expect(isVerifyViaQrFromRoute('/redeem/$id'), isFalse);
     });
   });
 

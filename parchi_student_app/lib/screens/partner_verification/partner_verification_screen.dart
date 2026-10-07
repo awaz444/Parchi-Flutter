@@ -11,6 +11,7 @@ import '../../services/partner_verification_service.dart';
 import '../../utils/colours.dart';
 import '../../utils/verify_nav_guard.dart';
 import '../../widgets/common/guest_login_prompt.dart';
+import '../../widgets/common/redemption_success_view.dart';
 
 enum _VerifyPhase { loading, pending, verified, redeemed, rejected, expired, error }
 
@@ -34,15 +35,12 @@ class PartnerVerificationScreen extends ConsumerStatefulWidget {
 }
 
 class _PartnerVerificationScreenState
-    extends ConsumerState<PartnerVerificationScreen>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
+    extends ConsumerState<PartnerVerificationScreen> with WidgetsBindingObserver {
   static const Duration _basePollInterval = Duration(seconds: 5);
   static const Duration _maxPollInterval = Duration(seconds: 15);
   // Keep polling a little past expiry so the server-side expired state is picked up.
   static const Duration _pollGraceAfterExpiry = Duration(seconds: 20);
   static const Duration _discountPollInterval = Duration(seconds: 3);
-  // Partner checkout + PayFast can take a while; keep watching after approve.
-  static const Duration _discountWatchWindow = Duration(minutes: 30);
 
   _VerifyPhase _phase = _VerifyPhase.loading;
   PartnerVerificationModel? _request;
@@ -61,11 +59,6 @@ class _PartnerVerificationScreenState
   int _pollFailures = 0;
   bool _loadStarted = false;
 
-  late final AnimationController _checkController;
-  late final AnimationController _successFadeController;
-  late final Animation<double> _checkAnimation;
-  late final Animation<double> _successFadeAnimation;
-
   /// serverTime - deviceTime, so countdown/expiry do not depend on a correct device clock.
   Duration _clockOffset = Duration.zero;
   DateTime get _now => DateTime.now().add(_clockOffset);
@@ -75,22 +68,6 @@ class _PartnerVerificationScreenState
     super.initState();
     markVerifyScreenOpen(widget.requestId);
     WidgetsBinding.instance.addObserver(this);
-
-    _checkController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _checkAnimation = CurvedAnimation(parent: _checkController, curve: Curves.elasticOut);
-
-    _successFadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _successFadeAnimation = CurvedAnimation(
-      parent: _successFadeController,
-      curve: Curves.easeOut,
-    );
-
     _load();
   }
 
@@ -100,8 +77,6 @@ class _PartnerVerificationScreenState
     markVerifyScreenClosed(widget.requestId);
     _stopWatching();
     _stopDiscountWatching();
-    _checkController.dispose();
-    _successFadeController.dispose();
     super.dispose();
   }
 
@@ -217,8 +192,6 @@ class _PartnerVerificationScreenState
       _phase = _VerifyPhase.redeemed;
     });
     HapticFeedback.heavyImpact();
-    _checkController.forward(from: 0);
-    _successFadeController.forward(from: 0);
   }
 
   Future<PartnerDiscountRedemptionModel?> _tryFetchDiscount() async {
@@ -363,11 +336,6 @@ class _PartnerVerificationScreenState
   void _scheduleDiscountPoll() {
     _discountPollTimer?.cancel();
     if (!mounted || _phase != _VerifyPhase.verified) return;
-
-    final approvedAt = _request?.approvedAt ?? _request?.createdAt;
-    if (approvedAt != null && _now.isAfter(approvedAt.add(_discountWatchWindow))) {
-      return;
-    }
 
     _discountPollTimer = Timer(_discountPollInterval, () async {
       await _pollDiscountOnce();
@@ -520,14 +488,7 @@ class _PartnerVerificationScreenState
       case _VerifyPhase.pending:
         return _buildPending();
       case _VerifyPhase.verified:
-        return _buildResult(
-          icon: Icons.check_rounded,
-          iconColor: const Color(0xFF27AE60),
-          iconBg: const Color(0xFFE2FBE9),
-          title: 'You are verified',
-          subtitle:
-              'Return to checkout to finish buying your ticket. Parchi does not store the ticket.',
-        );
+        return _buildVerifiedWaiting();
       case _VerifyPhase.redeemed:
         return _buildRedeemed();
       case _VerifyPhase.rejected:
@@ -681,186 +642,74 @@ class _PartnerVerificationScreenState
     );
   }
 
+  Widget _buildVerifiedWaiting() {
+    final partner = _request?.partnerName ?? 'Partner';
+    final eventLabel = _request?.eventLabel;
+
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          const Spacer(),
+          Container(
+            width: 110,
+            height: 110,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFE2FBE9),
+            ),
+            child: const Icon(Icons.check_rounded, size: 64, color: Color(0xFF27AE60)),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'You are verified',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            eventLabel == null || eventLabel.isEmpty
+                ? 'Finish checkout and pay on $partner. This screen updates when your discount is applied.'
+                : 'Finish checkout and pay for $eventLabel. This screen updates when your discount is applied.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 15, color: AppColors.textSecondary, height: 1.4),
+          ),
+          const SizedBox(height: 28),
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Waiting for payment…',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRedeemed() {
     final discount = _discount;
     final partner = discount?.partnerName ?? _request?.partnerName ?? 'Partner';
     final eventLabel = discount?.eventLabel ?? _request?.eventLabel;
-    final headline = discount?.formattedDiscount ?? 'Discount';
 
-    return FadeTransition(
-      opacity: _successFadeAnimation,
-      child: Container(
-        width: double.infinity,
-        height: MediaQuery.of(context).size.height,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFEEF2FE),
-              Color(0xFFF9FAFF),
-              Colors.white,
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-                        const Text(
-                          'ALL DONE!',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                            color: Color(0xFF2D2A3A),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ScaleTransition(
-                          scale: _checkAnimation,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFFE2FBE9),
-                              border: Border.all(
-                                color: const Color(0xFFB3F5C7),
-                                width: 2,
-                              ),
-                            ),
-                            child: Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF2ECC71), Color(0xFF27AE60)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF2ECC71).withValues(alpha: 0.3),
-                                    blurRadius: 20,
-                                    spreadRadius: 4,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.check_rounded,
-                                size: 46,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          headline,
-                          style: const TextStyle(
-                            fontSize: 38,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF2D2A3A),
-                            letterSpacing: -0.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Discount Unlocked',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF8E8E93),
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        if (eventLabel != null && eventLabel.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              eventLabel,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF8E8E93),
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 28),
-                        Container(
-                          width: 48,
-                          height: 1.5,
-                          color: const Color(0xFFE5E5EA),
-                        ),
-                        const SizedBox(height: 28),
-                        const Text(
-                          'REDEEMED AT',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF8E8E93),
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          partner,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF2D2A3A),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'DONE',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return RedemptionSuccessView(
+      headline: discount?.formattedDiscount ?? 'Discount',
+      statusLabel: 'Discount Unlocked',
+      subtitle: eventLabel,
+      redeemedAtPrimary: partner,
+      onDone: () => Navigator.of(context).pop(),
     );
   }
 

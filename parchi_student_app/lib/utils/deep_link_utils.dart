@@ -3,7 +3,12 @@ import '../screens/partner_verification/partner_verification_screen.dart';
 import '../services/navigation_service.dart';
 import 'verify_nav_guard.dart';
 
-export 'verify_link_parser.dart' show extractVerifyRequestId, extractVerifyRequestIdFromRoute;
+export 'verify_link_parser.dart'
+    show
+        extractVerifyRequestId,
+        extractVerifyRequestIdFromRoute,
+        isVerifyViaQr,
+        isVerifyViaQrFromRoute;
 export 'verify_nav_guard.dart' show tryClaimVerifyNav;
 
 String? extractRedeemBranchId(Uri uri) {
