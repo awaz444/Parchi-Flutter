@@ -16,10 +16,12 @@ class EventsScreen extends ConsumerWidget {
   const EventsScreen({super.key});
 
   Future<void> _openEvent(BuildContext context, WidgetRef ref, EventModel event) async {
-    if (event.externalUrl.isEmpty) return;
-
     final user = ref.read(userProfileProvider).valueOrNull;
-    final uri = Uri.tryParse('https://www.insidekarachi.com/events/prismfest-26');
+    // Prefer the admin-configured ticket URL; fall back to Prismfest.
+    final base = event.externalUrl.trim().isNotEmpty
+        ? event.externalUrl.trim()
+        : 'https://www.insidekarachi.com/events/prismfest-26';
+    final uri = Uri.tryParse(base);
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -29,6 +31,7 @@ class EventsScreen extends ConsumerWidget {
     }
 
     // Preserve every existing query parameter (including repeated keys) and add ours.
+    // `ref=parchi_app` lets Inside Karachi treat this as the Parchi channel.
     final params = Map<String, List<String>>.from(uri.queryParametersAll);
     params['ref'] = ['parchi_app'];
     if (user?.parchiId != null && user!.parchiId!.isNotEmpty) {
