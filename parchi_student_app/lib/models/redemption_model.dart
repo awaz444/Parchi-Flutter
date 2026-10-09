@@ -84,6 +84,8 @@ class RedemptionModel {
   final String status;
   final String? branchName; // Often returned by join
   final Merchant? merchant;
+  /// `partner_discount` = paid partner ticket purchase (IK). Null/other = cafe redeem.
+  final String? source;
 
   RedemptionModel({
     required this.id,
@@ -100,7 +102,13 @@ class RedemptionModel {
     required this.status,
     this.branchName,
     this.merchant,
+    this.source,
   });
+
+  /// Paid Inside Karachi / partner event ticket (not a cafe QR redeem).
+  bool get isPartnerDiscountPurchase =>
+      source == 'partner_discount' ||
+      merchant?.category?.toLowerCase() == 'events';
 
   factory RedemptionModel.fromJson(Map<String, dynamic> json) {
     return RedemptionModel(
@@ -128,6 +136,7 @@ class RedemptionModel {
           json['branch']?['branchName'] ??
           'Unknown Branch',
       merchant: json['merchant'] != null ? Merchant.fromJson(json['merchant']) : null,
+      source: json['source'] as String?,
     );
   }
 }

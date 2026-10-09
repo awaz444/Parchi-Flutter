@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../utils/colours.dart';
 import '../../../services/student_notifications_service.dart';
+import '../../../services/navigation_service.dart';
 import '../../../models/notification_model.dart';
 
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
@@ -11,6 +12,7 @@ import '../../../widgets/common/blinking_skeleton.dart';
 import '../../../widgets/common/hagrid_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/user_provider.dart';
+import '../../../providers/user_tickets_provider.dart';
 import '../../../widgets/common/guest_login_prompt.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
@@ -125,13 +127,51 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     }
   }
 
-  Future<void> _openNotificationLink(String linkUrl) async {
-    final uri = Uri.tryParse(linkUrl);
-    if (uri != null) {
-      try {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } catch (_) {
-        // silently ignore if the URL can't be opened
+  bool _isTicketOrDiscountNotification(NotificationItem item) {
+    final titleLower = item.title.toLowerCase();
+    final contentLower = item.content.toLowerCase();
+    final linkLower = (item.linkUrl ?? '').toLowerCase();
+    final uri = item.linkUrl != null ? Uri.tryParse(item.linkUrl!) : null;
+
+    return titleLower.contains('discount unlocked') ||
+        titleLower.contains('ticket') ||
+        contentLower.contains('inside karachi') ||
+        contentLower.contains('saved rs') ||
+        linkLower.contains('ticket') ||
+        (uri != null && NavigationService.isMyTicketsUri(uri));
+  }
+
+  Future<void> _openNotificationLink(
+      String? linkUrl, {
+      required NotificationItem item,
+  }) async {
+    // Discount unlocked / My Tickets deep link → Events → My Tickets tab.
+    if (_isTicketOrDiscountNotification(item)) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      ref.invalidate(userTicketsProvider);
+      NavigationService.openMyTickets();
+      return;
+    }
+
+    if (linkUrl != null && linkUrl.isNotEmpty) {
+      final uri = Uri.tryParse(linkUrl);
+      if (uri != null) {
+        if (NavigationService.isMyTicketsUri(uri)) {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+          ref.invalidate(userTicketsProvider);
+          NavigationService.openMyTickets();
+          return;
+        }
+
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {
+          // silently ignore if the URL can't be opened
+        }
       }
     }
   }
@@ -394,15 +434,27 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                   ),
                   if (isExpanded &&
-                      item.linkUrl != null &&
-                      item.linkUrl!.isNotEmpty) ...[
+                      ((item.linkUrl != null && item.linkUrl!.isNotEmpty) ||
+                          _isTicketOrDiscountNotification(item))) ...[
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
-                        onPressed: () => _openNotificationLink(item.linkUrl!),
-                        icon: const Icon(Icons.open_in_new, size: 16),
-                        label: const Text('Open'),
+                        onPressed: () => _openNotificationLink(
+                          item.linkUrl,
+                          item: item,
+                        ),
+                        icon: Icon(
+                          _isTicketOrDiscountNotification(item)
+                              ? Icons.confirmation_number_outlined
+                              : Icons.open_in_new,
+                          size: 16,
+                        ),
+                        label: Text(
+                          _isTicketOrDiscountNotification(item)
+                              ? 'Open My Tickets'
+                              : 'Open',
+                        ),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           padding: EdgeInsets.zero,

@@ -251,6 +251,11 @@ class _ParchiAppState extends State<ParchiApp> {
     // even when Flutter strips the scheme+host (warm-start on iOS).
     _lastDeepLinkUri = uri;
 
+    if (NavigationService.isMyTicketsUri(uri)) {
+      NavigationService.openMyTickets();
+      return;
+    }
+
     final verifyId = extractVerifyRequestId(uri);
     if (verifyId != null) {
       openPartnerVerificationScreen(verifyId, viaQr: isVerifyViaQr(uri));
@@ -698,6 +703,7 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
+  int _eventsSubTab = 0;
 
   // ── Deep-link handling (merchant) ─────────────────────────────────────────
   final AppLinks _appLinks = AppLinks();
@@ -710,12 +716,26 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   void initState() {
     super.initState();
     _initMerchantDeepLinks();
+    NavigationService.tabIntent.addListener(_onTabIntent);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onTabIntent());
   }
 
   @override
   void dispose() {
+    NavigationService.tabIntent.removeListener(_onTabIntent);
     _merchantLinkSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onTabIntent() {
+    final intent = NavigationService.tabIntent.value;
+    if (intent == null || !mounted) return;
+    setState(() {
+      _currentIndex = intent.tabIndex;
+      if (intent.eventsSubTab != null) {
+        _eventsSubTab = intent.eventsSubTab!;
+      }
+    });
   }
 
   // getInitialLink must not re-run on every MainScreen mount (login / auth rebuild),
@@ -765,6 +785,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final bool isWebScheme = uri.scheme == 'https' || uri.scheme == 'http';
 
     if (!isCustomScheme && !isWebScheme) return;
+
+    if (NavigationService.isMyTicketsUri(uri)) {
+      NavigationService.openMyTickets();
+      return;
+    }
 
     final verifyId = extractVerifyRequestId(uri);
     if (verifyId != null) {
@@ -856,7 +881,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       case 1:
         activePage = const LeaderboardScreen();
       case 2:
-        activePage = const EventsScreen();
+        activePage = EventsScreen(
+          key: ValueKey('events-sub-$_eventsSubTab'),
+          initialTabIndex: _eventsSubTab,
+        );
       case 3:
         activePage = !isAuthenticated
             ? const GuestLoginPrompt(
