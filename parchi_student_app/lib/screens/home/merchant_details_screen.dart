@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:math' as math;
 import '../../widgets/common/hagrid_text.dart';
 import '../../models/merchant_detail_model.dart';
 import '../../utils/colours.dart';
-import '../../widgets/common/parchi_refresh_loader.dart';
+import '../../widgets/common/parchi_pull_to_refresh.dart';
 import '../../widgets/common/blinking_skeleton.dart';
 import '../../providers/merchants_provider.dart';
 import '../../widgets/common/parchi_qr_fab.dart';
@@ -117,34 +116,8 @@ class MerchantDetailsScreen extends ConsumerWidget {
             ),
           ];
         },
-        body: CustomRefreshIndicator(
+        body: ParchiPullToRefresh(
           onRefresh: refresh,
-          offsetToArmed: 100.0,
-          builder: (context, child, controller) {
-            return Stack(
-              children: [
-                AnimatedBuilder(
-                  animation: controller,
-                  builder: (context, _) => SizedBox(
-                    height: controller.value * 100.0,
-                    width: double.infinity,
-                    child: Center(
-                      child: ParchiLoader(
-                        isLoading: controller.isLoading,
-                        progress: controller.value,
-                        color: AppColors.secondary,
-                        size: 50,
-                      ),
-                    ),
-                  ),
-                ),
-                Transform.translate(
-                  offset: Offset(0.0, controller.value * 100.0),
-                  child: child,
-                ),
-              ],
-            );
-          },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [

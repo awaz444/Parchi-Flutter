@@ -11,6 +11,7 @@ import '../../providers/leaderboard_provider.dart';
 import '../../services/auth_service.dart';
 import '../../utils/colours.dart';
 import '../../widgets/common/guest_login_prompt.dart';
+import '../../widgets/common/parchi_inline_loaders.dart';
 import '../../widgets/common/redemption_success_view.dart';
 
 // ── Phase enum ─────────────────────────────────────────────────────────────
@@ -405,7 +406,7 @@ class _QrRedemptionScreenState extends ConsumerState<QrRedemptionScreen>
 
   Widget _buildBody() {
     if (_isLoadingOffers) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      return const ParchiPageLoader();
     }
 
     switch (_phase) {

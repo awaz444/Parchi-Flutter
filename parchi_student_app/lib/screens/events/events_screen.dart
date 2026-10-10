@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,9 +13,11 @@ import '../../providers/user_provider.dart';
 import '../../providers/user_tickets_provider.dart';
 import '../../services/navigation_service.dart';
 import '../../utils/colours.dart';
+import '../../utils/tab_scroll_to_top.dart';
 import '../../widgets/common/blinking_skeleton.dart';
 import '../../widgets/common/hagrid_text.dart';
-import '../../widgets/common/parchi_loader.dart';
+import '../../widgets/common/parchi_pull_to_refresh.dart';
+import '../../widgets/common/parchi_segmented_tabs.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
   final int initialTabIndex;
@@ -37,9 +38,6 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
     final initial = widget.initialTabIndex.clamp(0, 1);
     _tabController =
         TabController(length: 2, vsync: this, initialIndex: initial);
-    _tabController.addListener(() {
-      if (mounted) setState(() {});
-    });
     NavigationService.tabIntent.addListener(_onTabIntent);
   }
 
@@ -70,361 +68,10 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
     }
   }
 
-  Future<void> _openBookingsPage(
-      BuildContext context, EventTicketModel ticket) async {
-    final raw = ticket.bookingsUrl?.trim();
-    if (raw == null || raw.isEmpty) return;
-    final uri = Uri.tryParse(raw);
-    if (uri == null || uri.scheme != 'https') {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Bookings link is not available right now.')),
-      );
-      return;
-    }
-    final params = Map<String, List<String>>.from(uri.queryParametersAll);
-    params['ref'] = ['parchi_app'];
-    final target = uri.replace(queryParameters: params);
-    try {
-      final launched =
-          await launchUrl(target, mode: LaunchMode.externalApplication);
-      if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open bookings right now.')),
-        );
-      }
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open bookings right now.')),
-      );
-    }
-  }
-
-  void _onTicketTap(BuildContext context, EventTicketModel ticket) {
-    if (ticket.opensExternalBookings) {
-      _openBookingsPage(context, ticket);
-      return;
-    }
-    _showTicketDetailsSheet(context, ticket);
-  }
-
-  Future<void> _openEvent(
-      BuildContext context, WidgetRef ref, EventModel event) async {
-    final user = ref.read(userProfileProvider).valueOrNull;
-    final base = event.externalUrl.trim().isNotEmpty
-        ? event.externalUrl.trim()
-        : 'https://www.insidekarachi.com/events/prismfest-26';
-    final uri = Uri.tryParse(base);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('This event link is not available right now.')),
-      );
-      return;
-    }
-
-    final params = Map<String, List<String>>.from(uri.queryParametersAll);
-    params['ref'] = ['parchi_app'];
-    if (user?.parchiId != null && user!.parchiId!.isNotEmpty) {
-      params['parchiId'] = [user.parchiId!];
-    }
-    final target = uri.replace(queryParameters: params);
-
-    try {
-      final launched =
-          await launchUrl(target, mode: LaunchMode.externalApplication);
-      if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Could not open this event right now.')),
-        );
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Could not open this event right now.')),
-      );
-    }
-  }
-
-  Future<void> _refreshEvents() async {
-    ref.invalidate(eventsProvider);
-    await ref.read(eventsProvider.future);
-  }
-
-  Future<void> _refreshTickets() async {
-    await ref.read(userTicketsProvider.notifier).refresh();
-  }
-
-  Widget _withParchiRefresh({
-    required Future<void> Function() onRefresh,
-    required Widget child,
-  }) {
-    return CustomRefreshIndicator(
-      onRefresh: onRefresh,
-      offsetToArmed: 100.0,
-      builder: (BuildContext context, Widget child,
-          IndicatorController controller) {
-        return Stack(
-          children: <Widget>[
-            AnimatedBuilder(
-              animation: controller,
-              builder: (context, _) {
-                return SizedBox(
-                  height: controller.value * 100.0,
-                  width: double.infinity,
-                  child: Center(
-                    child: ParchiLoader(
-                      isLoading: controller.isLoading,
-                      progress: controller.value,
-                      color: AppColors.secondary,
-                    ),
-                  ),
-                );
-              },
-            ),
-            Transform.translate(
-              offset: Offset(0.0, controller.value * 100.0),
-              child: child,
-            ),
-          ],
-        );
-      },
-      child: child,
-    );
-  }
-
-  void _showTicketDetailsSheet(
-      BuildContext context, EventTicketModel ticket) {
-    final user = ref.read(userProfileProvider).valueOrNull;
-    final attendeeName = [user?.firstName, user?.lastName]
-        .where((s) => s != null && s.isNotEmpty)
-        .join(' ')
-        .trim();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final dateLabel = ticket.eventDate != null
-            ? DateFormat('EEEE, d MMMM y • h:mm a')
-                .format(ticket.eventDate!.toLocal())
-            : 'Date to be announced';
-
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            24,
-            16,
-            24,
-            MediaQuery.of(context).padding.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                ticket.eventTitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  ticket.ticketTier ?? 'General Admission',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFEEEEEE)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    QrImageView(
-                      data: ticket.qrPayload ?? ticket.ticketCode,
-                      version: QrVersions.auto,
-                      size: 190.0,
-                      gapless: false,
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: AppColors.textPrimary,
-                      ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Pass #${ticket.ticketCode}',
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            letterSpacing: 1.1,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            Clipboard.setData(
-                                ClipboardData(text: ticket.ticketCode));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Ticket code copied to clipboard'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          child: const Icon(
-                            Icons.copy_rounded,
-                            size: 16,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.lightCanvas,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF0F0F0)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_today_rounded,
-                            size: 15, color: AppColors.textSecondary),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            dateLabel,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (ticket.venue != null && ticket.venue!.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.place_outlined,
-                              size: 16, color: AppColors.textSecondary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              ticket.venue!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (attendeeName.isNotEmpty) ...[
-                      const Divider(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Attendee:',
-                            style: TextStyle(
-                                fontSize: 12, color: AppColors.textSecondary),
-                          ),
-                          Text(
-                            attendeeName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Show this QR code at the entrance gate for instant check-in.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final ticketsState = ref.watch(userTicketsProvider);
-    final ticketCount = ticketsState.valueOrNull?.length ?? 0;
+    final ticketCount = ref
+        .watch(userTicketsProvider.select((s) => s.valueOrNull?.length ?? 0));
 
     return Scaffold(
       backgroundColor: AppColors.lightCanvas,
@@ -445,53 +92,22 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
       ),
       body: Column(
         children: [
-          // Sleek Segmented Tab Selector
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              height: 46,
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF1F4),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+          ParchiSegmentedTabs(
+            controller: _tabController,
+            tabs: [
+              const ParchiSegmentedTab(label: 'Events'),
+              ParchiSegmentedTab(
+                label: 'My Tickets',
+                badgeCount: ticketCount > 0 ? ticketCount : null,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _TabButton(
-                      title: 'Events',
-                      isSelected: _tabController.index == 0,
-                      onTap: () {
-                        _tabController.animateTo(0);
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _TabButton(
-                      title: 'My Tickets',
-                      badgeCount: ticketCount > 0 ? ticketCount : null,
-                      isSelected: _tabController.index == 1,
-                      onTap: () {
-                        _tabController.animateTo(1);
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
-
-          // Tab Content Views
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildEventsTab(),
-                _buildMyTicketsTab(),
+              children: const [
+                _EventsTab(),
+                _TicketsTab(),
               ],
             ),
           ),
@@ -499,272 +115,601 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
       ),
     );
   }
+}
 
-  Widget _buildEventsTab() {
-    final eventsAsync = ref.watch(eventsProvider);
-
-    return eventsAsync.when(
-      loading: () => const _EventsSkeleton(),
-      error: (_, __) => _withParchiRefresh(
-        onRefresh: _refreshEvents,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.22),
-            const Icon(Icons.wifi_off_rounded,
-                size: 48, color: AppColors.textSecondary),
-            const SizedBox(height: 16),
-            const Text(
-              'Could not load events',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Pull down to try again',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-      data: (events) {
-        if (events.isEmpty) {
-          return _withParchiRefresh(
-            onRefresh: _refreshEvents,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                const Icon(
-                  Icons.confirmation_number_outlined,
-                  size: 64,
-                  color: AppColors.textSecondary,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No events right now',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(
-                    'When partner events drop, you will find them here.',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(color: AppColors.textSecondary, fontSize: 15),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return _withParchiRefresh(
-          onRefresh: _refreshEvents,
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-            itemCount: events.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final event = events[index];
-              return _EventCard(
-                event: event,
-                onTap: () => _openEvent(context, ref, event),
-              );
-            },
-          ),
-        );
-      },
+Future<void> _openBookingsPage(
+    BuildContext context, EventTicketModel ticket) async {
+  final raw = ticket.bookingsUrl?.trim();
+  if (raw == null || raw.isEmpty) return;
+  final uri = Uri.tryParse(raw);
+  if (uri == null || uri.scheme != 'https') {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text('Bookings link is not available right now.')),
     );
+    return;
   }
-
-  Widget _buildMyTicketsTab() {
-    final ticketsAsync = ref.watch(userTicketsProvider);
-
-    return ticketsAsync.when(
-      loading: () => const _TicketsSkeleton(),
-      error: (_, __) => _withParchiRefresh(
-        onRefresh: _refreshTickets,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: AppColors.textSecondary),
-            const SizedBox(height: 16),
-            const Text(
-              'Could not load your tickets',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Pull down to refresh',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-      data: (tickets) {
-        if (tickets.isEmpty) {
-          return _withParchiRefresh(
-            onRefresh: _refreshTickets,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.18),
-                Center(
-                  child: Container(
-                    width: 84,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.confirmation_number_outlined,
-                      size: 42,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'No Tickets Yet',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(
-                    'When you buy a ticket with your Parchi discount on Inside Karachi, it will show up here. Tap a ticket to open your bookings page.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return _withParchiRefresh(
-          onRefresh: _refreshTickets,
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-            itemCount: tickets.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final ticket = tickets[index];
-              return _TicketCard(
-                ticket: ticket,
-                onTap: () => _onTicketTap(context, ticket),
-              );
-            },
-          ),
-        );
-      },
+  final params = Map<String, List<String>>.from(uri.queryParametersAll);
+  params['ref'] = ['parchi_app'];
+  final target = uri.replace(queryParameters: params);
+  try {
+    final launched =
+        await launchUrl(target, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open bookings right now.')),
+      );
+    }
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open bookings right now.')),
     );
   }
 }
 
-class _TabButton extends StatelessWidget {
-  final String title;
-  final int? badgeCount;
-  final bool isSelected;
-  final VoidCallback onTap;
+Future<void> _openEvent(
+    BuildContext context, WidgetRef ref, EventModel event) async {
+  final user = ref.read(userProfileProvider).valueOrNull;
+  final base = event.externalUrl.trim().isNotEmpty
+      ? event.externalUrl.trim()
+      : 'https://www.insidekarachi.com/events/prismfest-26';
+  final uri = Uri.tryParse(base);
+  if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text('This event link is not available right now.')),
+    );
+    return;
+  }
 
-  const _TabButton({
-    required this.title,
-    this.badgeCount,
-    required this.isSelected,
-    required this.onTap,
-  });
+  final params = Map<String, List<String>>.from(uri.queryParametersAll);
+  params['ref'] = ['parchi_app'];
+  if (user?.parchiId != null && user!.parchiId!.isNotEmpty) {
+    params['parchiId'] = [user.parchiId!];
+  }
+  final target = uri.replace(queryParameters: params);
+
+  try {
+    final launched =
+        await launchUrl(target, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open this event right now.')),
+      );
+    }
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open this event right now.')),
+    );
+  }
+}
+
+void _onTicketTap(
+    BuildContext context, WidgetRef ref, EventTicketModel ticket) {
+  if (ticket.opensExternalBookings) {
+    _openBookingsPage(context, ticket);
+    return;
+  }
+  _showTicketDetailsSheet(context, ref, ticket);
+}
+
+void _showTicketDetailsSheet(
+    BuildContext context, WidgetRef ref, EventTicketModel ticket) {
+  final user = ref.read(userProfileProvider).valueOrNull;
+  final attendeeName = [user?.firstName, user?.lastName]
+      .where((s) => s != null && s.isNotEmpty)
+      .join(' ')
+      .trim();
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      final dateLabel = ticket.eventDate != null
+          ? DateFormat('EEEE, d MMMM y • h:mm a')
+              .format(ticket.eventDate!.toLocal())
+          : 'Date to be announced';
+
+      return Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          16,
+          24,
+          MediaQuery.of(context).padding.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              ticket.eventTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                ticket.ticketTier ?? 'General Admission',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFEEEEEE)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  QrImageView(
+                    data: ticket.qrPayload ?? ticket.ticketCode,
+                    version: QrVersions.auto,
+                    size: 190.0,
+                    gapless: false,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: AppColors.textPrimary,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Pass #${ticket.ticketCode}',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          letterSpacing: 1.1,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          Clipboard.setData(
+                              ClipboardData(text: ticket.ticketCode));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ticket code copied to clipboard'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.copy_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.lightCanvas,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFF0F0F0)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded,
+                          size: 15, color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          dateLabel,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (ticket.venue != null && ticket.venue!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.place_outlined,
+                            size: 16, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            ticket.venue!,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (attendeeName.isNotEmpty) ...[
+                    const Divider(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Attendee:',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                        Text(
+                          attendeeName,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Show this QR code at the entrance gate for instant check-in.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _EventsTab extends ConsumerStatefulWidget {
+  const _EventsTab();
+
+  @override
+  ConsumerState<_EventsTab> createState() => _EventsTabState();
+}
+
+class _EventsTabState extends ConsumerState<_EventsTab>
+    with AutomaticKeepAliveClientMixin {
+  bool _isRefreshing = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    TabScrollToTop.listenable(TabScrollToTop.events)
+        .addListener(_onNavReselected);
+  }
+
+  void _onNavReselected() => TabScrollToTop.scrollToTop(_scrollController);
+
+  @override
+  void dispose() {
+    TabScrollToTop.listenable(TabScrollToTop.events)
+        .removeListener(_onNavReselected);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+
+  Future<void> _onRefresh() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    _reload();
+  }
+
+  Future<void> _reload() async {
+    try {
+      ref.invalidate(eventsProvider);
+      await ref.read(eventsProvider.future);
+    } catch (_) {
+      // Provider already holds the error; UI reads eventsAsync.hasError.
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    super.build(context);
+    final eventsAsync = ref.watch(eventsProvider);
+    final showSkeleton = _isRefreshing || eventsAsync.isLoading;
+
+    Widget body;
+    if (showSkeleton) {
+      body = const _EventsSkeleton();
+    } else if (eventsAsync.hasError) {
+      body = ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.22),
+          const Icon(Icons.wifi_off_rounded,
+              size: 48, color: AppColors.textSecondary),
+          const SizedBox(height: 16),
+          const Text(
+            'Could not load events',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pull down to try again',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
+      );
+    } else {
+      final events = eventsAsync.valueOrNull ?? const <EventModel>[];
+      if (events.isEmpty) {
+        body = ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Text(
-              title,
+            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+            const Icon(
+              Icons.confirmation_number_outlined,
+              size: 64,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No events right now',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
             ),
-            if (badgeCount != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                'When partner events drop, you will find them here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+              ),
+            ),
+          ],
+        );
+      } else {
+        body = ListView.separated(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          itemCount: events.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final event = events[index];
+            return _EventCard(
+              event: event,
+              onTap: () => _openEvent(context, ref, event),
+            );
+          },
+        );
+      }
+    }
+
+    return RepaintBoundary(
+      child: ParchiPullToRefresh(
+        onRefresh: _onRefresh,
+        child: body,
+      ),
+    );
+  }
+}
+
+class _TicketsTab extends ConsumerStatefulWidget {
+  const _TicketsTab();
+
+  @override
+  ConsumerState<_TicketsTab> createState() => _TicketsTabState();
+}
+
+class _TicketsTabState extends ConsumerState<_TicketsTab>
+    with AutomaticKeepAliveClientMixin {
+  bool _isRefreshing = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    TabScrollToTop.listenable(TabScrollToTop.events)
+        .addListener(_onNavReselected);
+  }
+
+  void _onNavReselected() => TabScrollToTop.scrollToTop(_scrollController);
+
+  @override
+  void dispose() {
+    TabScrollToTop.listenable(TabScrollToTop.events)
+        .removeListener(_onNavReselected);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+
+  Future<void> _onRefresh() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    _reload();
+  }
+
+  Future<void> _reload() async {
+    try {
+      await ref.read(userTicketsProvider.notifier).refresh();
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final ticketsAsync = ref.watch(userTicketsProvider);
+    final showSkeleton = _isRefreshing || ticketsAsync.isLoading;
+
+    Widget body;
+    if (showSkeleton) {
+      body = const _TicketsSkeleton();
+    } else if (ticketsAsync.hasError) {
+      body = ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+          const Icon(Icons.error_outline_rounded,
+              size: 48, color: AppColors.textSecondary),
+          const SizedBox(height: 16),
+          const Text(
+            'Could not load your tickets',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pull down to refresh',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
+      );
+    } else {
+      final tickets = ticketsAsync.valueOrNull ?? const <EventTicketModel>[];
+      if (tickets.isEmpty) {
+        body = ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.18),
+            Center(
+              child: Container(
+                width: 84,
+                height: 84,
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.12)
-                      : Colors.black.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
                 ),
-                child: Text(
-                  badgeCount.toString(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
-                  ),
+                child: const Icon(
+                  Icons.confirmation_number_outlined,
+                  size: 42,
+                  color: AppColors.primary,
                 ),
               ),
-            ],
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'No Tickets Yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                'When you buy a ticket with your Parchi discount on Inside Karachi, it will show up here. Tap a ticket to open your bookings page.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+            ),
           ],
-        ),
+        );
+      } else {
+        body = ListView.separated(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          itemCount: tickets.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final ticket = tickets[index];
+            return _TicketCard(
+              ticket: ticket,
+              onTap: () => _onTicketTap(context, ref, ticket),
+            );
+          },
+        );
+      }
+    }
+
+    return RepaintBoundary(
+      child: ParchiPullToRefresh(
+        onRefresh: _onRefresh,
+        child: body,
       ),
     );
   }
@@ -1205,8 +1150,7 @@ class _TicketCard extends StatelessWidget {
                                 Row(
                                   children: [
                                     const Icon(Icons.place_outlined,
-                                        size: 14,
-                                        color: AppColors.textPrimary),
+                                        size: 14, color: AppColors.textPrimary),
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
@@ -1250,8 +1194,7 @@ class _TicketCard extends StatelessWidget {
                                 Row(
                                   children: [
                                     const Icon(Icons.calendar_today_rounded,
-                                        size: 13,
-                                        color: AppColors.textPrimary),
+                                        size: 13, color: AppColors.textPrimary),
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
@@ -1328,7 +1271,7 @@ class _EventsSkeleton extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       itemCount: 3,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (_, __) => Container(
         decoration: BoxDecoration(
@@ -1416,7 +1359,7 @@ class _TicketsSkeleton extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       itemCount: 2,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (_, __) => Container(
         decoration: BoxDecoration(

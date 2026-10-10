@@ -6,8 +6,7 @@ import '../../../services/student_notifications_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../models/notification_model.dart';
 
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
-import '../../../widgets/common/parchi_loader.dart';
+import '../../../widgets/common/parchi_pull_to_refresh.dart';
 import '../../../widgets/common/blinking_skeleton.dart';
 import '../../../widgets/common/hagrid_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -258,35 +257,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       );
     }
 
-    return CustomRefreshIndicator(
+    return ParchiPullToRefresh(
       onRefresh: _handleRefresh,
-      offsetToArmed: 100.0,
-      builder: (BuildContext context, Widget child, IndicatorController controller) {
-        return Stack(
-          children: <Widget>[
-            AnimatedBuilder(
-              animation: controller,
-              builder: (context, _) {
-                return SizedBox(
-                  height: controller.value * 100.0,
-                  width: double.infinity,
-                  child: Center(
-                    child: ParchiLoader(
-                      isLoading: controller.isLoading,
-                      progress: controller.value,
-                      color: AppColors.secondary,
-                    ),
-                  ),
-                );
-              },
-            ),
-            Transform.translate(
-              offset: Offset(0.0, controller.value * 100.0),
-              child: child,
-            ),
-          ],
-        );
-      },
       child: ListView.separated(
         padding: EdgeInsets.zero,
         itemCount: _notifications.length,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../utils/colours.dart';
+import '../../../widgets/common/parchi_inline_loaders.dart';
 import '../../../utils/toast_utils.dart'; // [NEW] Import ToastUtils
 import 'verification_success_screen.dart'; // [NEW]
 import '../../../services/analytics_service.dart';
@@ -459,7 +460,7 @@ class _SignupVerificationScreenState extends State<SignupVerificationScreen>
                             ] else ...[
                                // Verified State Loading Indicator
                                const SizedBox(height: 20),
-                               const CircularProgressIndicator(color: AppColors.primary),
+                               const ParchiPageLoader(),
                             ],
                             
                             const SizedBox(height: 20),

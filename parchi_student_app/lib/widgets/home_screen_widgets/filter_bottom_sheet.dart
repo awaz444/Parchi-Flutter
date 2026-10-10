@@ -4,6 +4,7 @@ import '../../utils/colours.dart';
 import '../../providers/merchants_provider.dart';
 import '../../providers/categories_provider.dart';
 import '../../models/category_model.dart';
+import '../common/parchi_inline_loaders.dart';
 
 class FilterBottomSheet extends ConsumerStatefulWidget {
   const FilterBottomSheet({super.key});
@@ -238,13 +239,7 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
           if (isCategoriesLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
-              ),
+              child: ParchiPageLoader(size: 28),
             )
           else
             Wrap(

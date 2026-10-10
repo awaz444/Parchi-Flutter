@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../utils/colours.dart';
+import '../../../widgets/common/parchi_inline_loaders.dart';
 import '../../../models/offer_model.dart';
 import '../../../services/offers_service.dart';
 
@@ -41,8 +42,7 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
           builder: (context, snapshot) {
             // 1. Loading
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary));
+              return const ParchiPageLoader();
             }
             // 2. Error
             else if (snapshot.hasError) {

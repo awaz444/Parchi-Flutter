@@ -579,19 +579,9 @@ class CardFrontContent extends StatelessWidget {
 
 /// The transition design:
 ///
-/// The big ParchiCard (primary-colored rounded rect) and this header share
-/// the same background color (AppColors.primary). As the user scrolls, the
-/// card physically scrolls up and disappears beneath the header — the header
-/// simultaneously materialises from the top. Because both surfaces are the
-/// same color, the visual effect is that the card "melts" into the header
-/// rather than two separate widgets fading over each other.
-///
-/// On top of that physical scroll we add:
-///   • The card's content fades out quickly (handled in HomeSheetContent
-///     via scroll-position-based opacity).
-///   • The header's content fades + slides in from a slight upward offset,
-///     using [scrollProgress] driven animations — no separate AnimationController
-///     needed, the scroll IS the animation timeline.
+/// The ParchiCard scrolls up under this header. The header turns solid first
+/// (so the card never shows through), then grows to reveal the student row
+/// (name / university / Parchi ID) once the card's own text is covered.
 ///
 /// Search mode:
 ///   • When [isSearching] is true, profile avatar slides out to the left and
@@ -648,24 +638,33 @@ class CompactParchiHeader extends StatelessWidget {
         ? AppColors.textPrimary.withOpacity(0.54)
         : AppColors.textOnPrimary.withOpacity(0.7);
 
-    // ── Background color ──────────────────────────────────────────────────
-    // At progress=0 the header is completely transparent (you see the card
-    // sitting below it in the scroll view). As the card scrolls up and
-    // progress→1 the header fades to fully opaque primary — but because
-    // the card beneath is also primary, there is never a visible seam.
+    final double p = scrollProgress.clamp(0.0, 1.0);
+
+    // ── Three-phase scroll choreography ────────────────────────────────────
+    // The card scrolls UNDER this header, so the header must never be
+    // translucent while the card is still visible below it (that is what made
+    // the card's name/ID show through the header's name/ID mid-scroll).
+    //
+    //  1. [0 → 0.2]   header turns solid. By the time card text reaches the
+    //                 header band the background is already opaque.
+    //  2. [0.5 → 0.8] header grows downward to make room for the student row,
+    //                 following the card's bottom edge (same colour = merges).
+    //  3. [0.72 → 1]  student row fades in, only after the card's own text
+    //                 has been covered, so the two never overlap.
+    final double t = Curves.easeOut.transform((p / 0.2).clamp(0.0, 1.0));
+    final double grow =
+        Curves.easeInOut.transform(((p - 0.5) / 0.3).clamp(0.0, 1.0));
+    final double reveal =
+        Curves.easeOut.transform(((p - 0.72) / 0.28).clamp(0.0, 1.0));
+
     final backgroundColor = Color.lerp(
       Colors.transparent,
       isGolden ? AppColors.goldStart : AppColors.primary,
-      scrollProgress,
+      t,
     );
 
-    // ── Content slide-in ──────────────────────────────────────────────────
-    // The student info row (name, uni, ID) in the expanded header slides
-    // down from -8px to 0 as progress goes 0→1. This removes the "pop-in"
-    // feeling and makes it feel like it flows out of the card.
-    // Curve it so most of the motion happens in the second half of the scroll.
-    final double contentSlide =
-        (1.0 - Curves.easeOut.transform(scrollProgress.clamp(0.0, 1.0))) * -8.0;
+    // Student info slides down a few px as it fades in.
+    final double contentSlide = (1.0 - reveal) * -8.0;
 
     final iconColor = isGolden
         ? AppColors.textOnPrimary.withOpacity(0.3)
@@ -676,35 +675,36 @@ class CompactParchiHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-        gradient: (isGolden && scrollProgress > 0.5)
+        gradient: (isGolden && t > 0)
             ? LinearGradient(
                 colors: [
-                  AppColors.goldStart.withOpacity(scrollProgress),
-                  AppColors.goldMid.withOpacity(scrollProgress),
+                  AppColors.goldStart.withOpacity(t),
+                  AppColors.goldMid.withOpacity(t),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               )
             : null,
-        boxShadow: scrollProgress > 0.1
+        boxShadow: t > 0
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12 * scrollProgress),
-                  blurRadius: 8 * scrollProgress,
+                  color: Colors.black.withOpacity(0.12 * t),
+                  blurRadius: 8 * t,
                   offset: const Offset(0, 3),
                 ),
               ]
             : null,
       ),
       child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
           // Decorative background icon — fades in with scroll
-          if (scrollProgress > 0.1)
+          if (t > 0)
             Positioned(
               right: -110,
               top: -90,
               child: Opacity(
-                opacity: scrollProgress.clamp(0.0, 1.0),
+                opacity: t,
                 child: isGolden
                     ? Icon(Icons.emoji_events, size: 150, color: iconColor)
                     : Transform.flip(
@@ -756,16 +756,15 @@ class CompactParchiHeader extends StatelessWidget {
                                   height: 35,
                                   margin: const EdgeInsets.only(right: 8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(
-                                        scrollProgress > 0.5 ? 0.2 : 0.9),
+                                    color: Colors.white
+                                        .withOpacity(0.9 - 0.7 * t),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     Icons.close,
                                     size: 18,
-                                    color: scrollProgress > 0.5
-                                        ? Colors.white
-                                        : AppColors.textSecondary,
+                                    color: Color.lerp(AppColors.textSecondary,
+                                        Colors.white, t),
                                   ),
                                 ),
                               )
@@ -790,9 +789,10 @@ class CompactParchiHeader extends StatelessWidget {
                                       margin:
                                           const EdgeInsets.only(right: 8),
                                       decoration: BoxDecoration(
-                                        color: scrollProgress > 0.3
-                                            ? Colors.white.withOpacity(0.2)
-                                            : AppColors.surfaceVariant,
+                                        color: Color.lerp(
+                                            AppColors.surfaceVariant,
+                                            Colors.white.withOpacity(0.2),
+                                            t),
                                         shape: BoxShape.circle,
                                       ),
                                       child: ClipOval(
@@ -806,11 +806,11 @@ class CompactParchiHeader extends StatelessWidget {
                                                       child: Text(
                                                         studentInitials,
                                                         style: TextStyle(
-                                                          color: scrollProgress >
-                                                                  0.3
-                                                              ? Colors.white
-                                                              : AppColors
+                                                          color: Color.lerp(
+                                                              AppColors
                                                                   .textSecondary,
+                                                              Colors.white,
+                                                              t),
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           fontSize: 12,
@@ -822,10 +822,11 @@ class CompactParchiHeader extends StatelessWidget {
                                                 child: Text(
                                                   studentInitials,
                                                   style: TextStyle(
-                                                    color: scrollProgress > 0.3
-                                                        ? Colors.white
-                                                        : AppColors
+                                                    color: Color.lerp(
+                                                        AppColors
                                                             .textSecondary,
+                                                        Colors.white,
+                                                        t),
                                                     fontWeight:
                                                         FontWeight.bold,
                                                     fontSize: 12,
@@ -842,9 +843,8 @@ class CompactParchiHeader extends StatelessWidget {
                         child: Container(
                           height: 35,
                           decoration: BoxDecoration(
-                            color: scrollProgress > 0.5
-                                ? Colors.white
-                                : AppColors.lightSurface,
+                            color: Color.lerp(
+                                AppColors.lightSurface, Colors.white, t),
                             borderRadius: BorderRadius.circular(25),
                           ),
                           child: TextField(
@@ -890,9 +890,10 @@ class CompactParchiHeader extends StatelessWidget {
                                       width: 35,
                                       height: 35,
                                       decoration: BoxDecoration(
-                                        color: scrollProgress > 0.5
-                                            ? Colors.white.withOpacity(0.2)
-                                            : AppColors.lightSurface,
+                                        color: Color.lerp(
+                                            AppColors.lightSurface,
+                                            Colors.white.withOpacity(0.2),
+                                            t),
                                         shape: BoxShape.circle,
                                       ),
                                       child: IconButton(
@@ -900,9 +901,10 @@ class CompactParchiHeader extends StatelessWidget {
                                         icon: Icon(
                                           Icons.notifications_none,
                                           size: 20,
-                                          color: scrollProgress > 0.5
-                                              ? Colors.white
-                                              : AppColors.textSecondary,
+                                          color: Color.lerp(
+                                              AppColors.textSecondary,
+                                              Colors.white,
+                                              t),
                                         ),
                                         onPressed: onNotificationTap,
                                       ),
@@ -915,14 +917,13 @@ class CompactParchiHeader extends StatelessWidget {
                                           width: 10,
                                           height: 10,
                                           decoration: BoxDecoration(
-                                            color: scrollProgress > 0.5
-                                                ? Colors.white
-                                                : AppColors.primary,
+                                            color: Color.lerp(AppColors.primary,
+                                                Colors.white, t),
                                             shape: BoxShape.circle,
                                             border: Border.all(
-                                              color: scrollProgress > 0.5
-                                                  ? AppColors.primary
-                                                  : Colors.white,
+                                              color: Color.lerp(Colors.white,
+                                                      AppColors.primary, t) ??
+                                                  Colors.white,
                                               width: 2,
                                             ),
                                           ),
@@ -936,123 +937,99 @@ class CompactParchiHeader extends StatelessWidget {
                   ),
                 ),
 
-                // ── Row 2: Student info — slides + fades in ──────────────
-                // Uses ClipRect + Align heightFactor trick (existing approach)
-                // plus a translate for the smooth slide.
+                // ── Row 2: Student info — grows, then fades in ───────────
                 ClipRect(
                   child: Align(
                     alignment: Alignment.topCenter,
-                    heightFactor:
-                        scrollProgress.clamp(0.0, 1.0),
+                    heightFactor: grow,
                     child: Transform.translate(
                       offset: Offset(0, contentSlide),
                       child: Opacity(
-                        opacity: scrollProgress.clamp(0.0, 1.0),
+                        opacity: reveal,
                         child: Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                           child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.end,
+                              SizedBox(
+                                width: 180,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    SizedBox(
-                                      width: 180,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const SizedBox(height: 5),
-                                          isLoading
-                                              ? BlinkingSkeleton(
-                                                  width: 120,
-                                                  height: 16,
-                                                  baseColor: Colors.white
-                                                      .withOpacity(0.3),
-                                                )
-                                              : Text(
-                                                  studentName,
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    color: textColor,
-                                                    fontSize: 14,
-                                                    fontWeight:
-                                                        FontWeight.w900,
-                                                  ),
-                                                ),
-                                          const SizedBox(height: 1),
-                                          isLoading
-                                              ? Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          top: 4.0),
-                                                  child: BlinkingSkeleton(
-                                                    width: 80,
-                                                    height: 10,
-                                                    baseColor: Colors.white
-                                                        .withOpacity(0.3),
-                                                  ),
-                                                )
-                                              : Text(
-                                                  universityName
-                                                      .toUpperCase(),
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    color:
-                                                        secondaryTextColor,
-                                                    fontSize: 10,
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                  ),
-                                                ),
-                                        ],
-                                      ),
-                                    ),
+                                    const SizedBox(height: 5),
                                     isLoading
                                         ? BlinkingSkeleton(
-                                            width: 60,
-                                            height: 20,
-                                            baseColor: Colors.white
-                                                .withOpacity(0.3),
+                                            width: 120,
+                                            height: 16,
+                                            baseColor:
+                                                Colors.white.withOpacity(0.3),
                                           )
-                                        : Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                studentId,
-                                                style: TextStyle(
-                                                  color: textColor,
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.w900,
-                                                ),
-                                              ),
-                                              Text(
-                                                "PARCHI ID",
-                                                style: TextStyle(
-                                                  color: secondaryTextColor,
-                                                  fontSize: 7,
-                                                  fontWeight: FontWeight.w900,
-                                                  letterSpacing: 0.5,
-                                                ),
-                                              ),
-                                            ],
+                                        : Text(
+                                            studentName,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: textColor,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                    const SizedBox(height: 1),
+                                    isLoading
+                                        ? Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 4.0),
+                                            child: BlinkingSkeleton(
+                                              width: 80,
+                                              height: 10,
+                                              baseColor:
+                                                  Colors.white.withOpacity(0.3),
+                                            ),
+                                          )
+                                        : Text(
+                                            universityName.toUpperCase(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: secondaryTextColor,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                   ],
                                 ),
                               ),
+                              isLoading
+                                  ? BlinkingSkeleton(
+                                      width: 60,
+                                      height: 20,
+                                      baseColor: Colors.white.withOpacity(0.3),
+                                    )
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          studentId,
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        Text(
+                                          "PARCHI ID",
+                                          style: TextStyle(
+                                            color: secondaryTextColor,
+                                            fontSize: 7,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             ],
                           ),
                         ),

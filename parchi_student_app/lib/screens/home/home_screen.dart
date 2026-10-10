@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/colours.dart';
+import '../../utils/tab_scroll_to_top.dart';
 import '../../widgets/home_screen_parchicard_widgets/parchi_card.dart';
 import '../../widgets/home_screen_widgets/home_sheet_content.dart';
 import '../../providers/user_provider.dart';
@@ -42,6 +43,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    TabScrollToTop.listenable(TabScrollToTop.home)
+        .addListener(_onNavReselected);
     _userProfileSub = ref.listenManual(userProfileProvider, (previous, next) {
       if (!next.isLoading && !next.hasError) {
         final user = next.value;
@@ -76,6 +79,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  void _onNavReselected() => TabScrollToTop.scrollToTop(_scrollController);
+
   void _onScroll() {
     final pixels =
         _scrollController.hasClients ? _scrollController.position.pixels : 0.0;
@@ -86,6 +91,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _debounce?.cancel();
     _userProfileSub?.close();
+    TabScrollToTop.listenable(TabScrollToTop.home)
+        .removeListener(_onNavReselected);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchController.dispose();

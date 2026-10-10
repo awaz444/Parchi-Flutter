@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
-import 'dart:math' as math;
-import 'dart:ui' as ui;
 import '../../utils/colours.dart';
+import '../common/parchi_pull_to_refresh.dart';
+import '../common/parchi_inline_loaders.dart';
 import '../../providers/offers_provider.dart';
 import '../../providers/brands_provider.dart';
 import '../../providers/merchants_provider.dart';
@@ -417,53 +416,9 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
     // Prefetch categories so Filter sheet does not cold-fetch on first open
     ref.watch(categoriesProvider);
 
-    // Pull-to-refresh indicator height
-    const double indicatorSize = 100.0;
-
-    return CustomRefreshIndicator(
+    return ParchiPullToRefresh(
       onRefresh: _refreshData,
-      offsetToArmed: indicatorSize,
-      builder: (BuildContext context, Widget child,
-          IndicatorController controller) {
-        return Stack(
-          children: <Widget>[
-            // ── The pull-to-refresh loader ────────────────────────────────
-            // Because the card is now part of the scroll content, this loader
-            // renders between the fixed header and the card — exactly the right
-            // place visually (right above the card when you pull).
-            AnimatedBuilder(
-              animation: controller,
-              builder: (context, _) {
-                return SizedBox(
-                  // Positioned just below the header spacer so it lands
-                  // snugly between the search bar and the card.
-                  height: widget.headerSpacerHeight +
-                      controller.value * indicatorSize,
-                  width: double.infinity,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SizedBox(
-                      height: controller.value * indicatorSize,
-                      child: Center(
-                        child: ParchiLoader(
-                          isLoading: controller.isLoading,
-                          progress: controller.value,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            // ── Main content (pushed down by indicator) ───────────────────
-            Transform.translate(
-              offset: Offset(0.0, controller.value * indicatorSize),
-              child: child,
-            ),
-          ],
-        );
-      },
+      topInset: widget.headerSpacerHeight,
       child: CustomScrollView(
         controller: widget.scrollController,
         physics: const BouncingScrollPhysics(
@@ -807,17 +762,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                       (context, index) {
                         if (index == filteredMerchants.length) {
                           if (merchantState.isLoadingMore) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Center(
-                                child: SizedBox(
-                                  height: 60,
-                                  width: 60,
-                                  child: ParchiLoader(
-                                      isLoading: true, progress: 0),
-                                ),
-                              ),
-                            );
+                            return const ParchiLoadMoreIndicator(size: 40);
                           }
                           return const SizedBox(height: 50);
                         }
@@ -910,72 +855,6 @@ class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _FilterHeaderDelegate oldDelegate) =>
       false;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Custom loader widget (unchanged)
-// ─────────────────────────────────────────────────────────────────────────────
-class ParchiLoader extends StatefulWidget {
-  final bool isLoading;
-  final double progress;
-
-  const ParchiLoader(
-      {super.key, required this.isLoading, required this.progress});
-
-  @override
-  State<ParchiLoader> createState() => _ParchiLoaderState();
-}
-
-class _ParchiLoaderState extends State<ParchiLoader>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 1),
-      vsync: this,
-    );
-  }
-
-  @override
-  void didUpdateWidget(ParchiLoader oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isLoading && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!widget.isLoading && _controller.isAnimating) {
-      _controller.stop();
-      _controller.reset();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final double rotationValue = widget.isLoading
-            ? _controller.value * 2 * math.pi
-            : widget.progress * 2 * math.pi;
-
-        return Transform.rotate(
-          angle: rotationValue,
-          child: Image.asset(
-            'assets/parchi-icon.png',
-            width: 120,
-            height: 120,
-          ),
-        );
-      },
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

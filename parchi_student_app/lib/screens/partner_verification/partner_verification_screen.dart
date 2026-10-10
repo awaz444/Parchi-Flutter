@@ -11,6 +11,8 @@ import '../../services/partner_verification_service.dart';
 import '../../utils/colours.dart';
 import '../../utils/verify_nav_guard.dart';
 import '../../widgets/common/guest_login_prompt.dart';
+import '../../widgets/common/parchi_inline_loaders.dart';
+import '../../widgets/common/parchi_loader.dart';
 import '../../widgets/common/redemption_success_view.dart';
 
 enum _VerifyPhase { loading, pending, verified, redeemed, rejected, expired, error }
@@ -484,7 +486,7 @@ class _PartnerVerificationScreenState
   Widget _buildBody() {
     switch (_phase) {
       case _VerifyPhase.loading:
-        return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+        return const ParchiPageLoader();
       case _VerifyPhase.pending:
         return _buildPending();
       case _VerifyPhase.verified:
@@ -679,10 +681,11 @@ class _PartnerVerificationScreenState
             style: const TextStyle(fontSize: 15, color: AppColors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 28),
-          const SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
+          const ParchiLoader(
+            isLoading: true,
+            progress: 0,
+            size: 28,
+            color: AppColors.primary,
           ),
           const SizedBox(height: 12),
           const Text(

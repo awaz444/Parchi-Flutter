@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../utils/colours.dart';
+import '../../../utils/tab_scroll_to_top.dart';
 import '../../../models/redemption_model.dart';
 import 'redemption_detail_screen.dart';
 
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
-import '../../../widgets/common/parchi_refresh_loader.dart';
+import '../../../widgets/common/parchi_pull_to_refresh.dart';
+import '../../../widgets/common/parchi_inline_loaders.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/redemption_provider.dart';
 import '../../../providers/user_provider.dart'; // [GUEST] For auth check
@@ -26,6 +27,8 @@ class _RedemptionHistoryScreenState
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   final ScrollController _historyScrollController = ScrollController();
+  // Outer controller drives the collapsing stats header (NestedScrollView).
+  final ScrollController _outerScrollController = ScrollController();
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   final ValueNotifier<double> _expandProgress = ValueNotifier(0.0);
@@ -42,6 +45,14 @@ class _RedemptionHistoryScreenState
     _tabController = TabController(length: 2, vsync: this);
     _sheetController.addListener(_onSheetChanged);
     _historyScrollController.addListener(_onHistoryScroll);
+    TabScrollToTop.listenable(TabScrollToTop.history)
+        .addListener(_onNavReselected);
+  }
+
+  void _onNavReselected() {
+    // Inner list first, then the collapsing header above it.
+    TabScrollToTop.scrollToTop(_historyScrollController);
+    TabScrollToTop.scrollToTop(_outerScrollController);
   }
 
   void _onSheetChanged() {
@@ -90,8 +101,11 @@ class _RedemptionHistoryScreenState
   @override
   void dispose() {
     _tabController.dispose();
+    TabScrollToTop.listenable(TabScrollToTop.history)
+        .removeListener(_onNavReselected);
     _historyScrollController.removeListener(_onHistoryScroll);
     _historyScrollController.dispose();
+    _outerScrollController.dispose();
     _sheetController.removeListener(_onSheetChanged);
     _sheetController.dispose();
     super.dispose();
@@ -134,6 +148,7 @@ class _RedemptionHistoryScreenState
         centerTitle: true,
       ),
       body: NestedScrollView(
+        controller: _outerScrollController,
         // clipBehavior prevents the white rounded corner from "bleeding" past
         // the primary scroll area on Android during overscroll.
         clipBehavior: Clip.antiAlias,
@@ -208,36 +223,8 @@ class _RedemptionHistoryScreenState
             return ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(30)),
-              child: CustomRefreshIndicator(
+              child: ParchiPullToRefresh(
                 onRefresh: _refresh,
-                offsetToArmed: 100.0,
-                builder: (BuildContext context, Widget child,
-                    IndicatorController controller) {
-                  return Stack(
-                    children: <Widget>[
-                      AnimatedBuilder(
-                        animation: controller,
-                        builder: (context, _) {
-                          return SizedBox(
-                            height: controller.value * 100.0,
-                            width: double.infinity,
-                            child: Center(
-                              child: ParchiLoader(
-                                isLoading: controller.isLoading,
-                                progress: controller.value,
-                                color: AppColors.secondary,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      Transform.translate(
-                        offset: Offset(0.0, controller.value * 100.0),
-                        child: child,
-                      ),
-                    ],
-                  );
-                },
                 child: ListView.separated(
                   controller: _historyScrollController,
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -248,15 +235,7 @@ class _RedemptionHistoryScreenState
                   itemBuilder: (context, index) {
                     // Load-more trigger at the bottom
                     if (index == items.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                      );
+                      return const ParchiLoadMoreIndicator();
                     }
                     return _buildRedemptionNotificationItem(items[index]);
                   },

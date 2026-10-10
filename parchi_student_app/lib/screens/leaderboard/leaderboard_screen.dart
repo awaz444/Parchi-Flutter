@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/colours.dart';
+import '../../utils/tab_scroll_to_top.dart';
 import '../../models/leaderboard_model.dart';
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import '../../widgets/common/blinking_skeleton.dart';
-import '../../widgets/common/parchi_loader.dart';
+import '../../widgets/common/parchi_pull_to_refresh.dart';
+import '../../widgets/common/parchi_inline_loaders.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/leaderboard_provider.dart';
 import '../../providers/user_provider.dart';
@@ -31,6 +32,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
+    TabScrollToTop.listenable(TabScrollToTop.leaderboard)
+        .addListener(_onNavReselected);
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
@@ -41,6 +44,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       }
     });
   }
+
+  void _onNavReselected() => TabScrollToTop.scrollToTop(_scrollController);
 
   void _onScroll() {
     if (_scrollController.position.extentAfter < 200) {
@@ -59,6 +64,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
   @override
   void dispose() {
+    TabScrollToTop.listenable(TabScrollToTop.leaderboard)
+        .removeListener(_onNavReselected);
     _scrollController.dispose();
     _tabController.dispose();
     super.dispose();
@@ -164,37 +171,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         else if (isEmpty)
           _buildEmptyView()
         else
-          CustomRefreshIndicator(
+          ParchiPullToRefresh(
             onRefresh: _refresh,
-            offsetToArmed: 100.0,
-            builder: (BuildContext context, Widget child,
-                IndicatorController controller) {
-              return Stack(
-                children: <Widget>[
-                  AnimatedBuilder(
-                    animation: controller,
-                    builder: (context, _) {
-                      return SizedBox(
-                        height: controller.value * 100.0,
-                        width: double.infinity,
-                        child: Center(
-                          child: ParchiLoader(
-                            isLoading: controller.isLoading,
-                            progress: controller.value,
-                            size: 50,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  Transform.translate(
-                    offset: Offset(0.0, controller.value * 100.0),
-                    child: child,
-                  ),
-                ],
-              );
-            },
             child: ListView.separated(
               controller: _scrollController,
               padding: EdgeInsets.only(
@@ -445,16 +423,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
     final state = ref.watch(leaderboardProvider(_period));
     if (!state.hasMore) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      alignment: Alignment.center,
-      child: const ParchiLoader(
-        isLoading: true,
-        progress: 1.0,
-        size: 25,
-        color: AppColors.secondary,
-      ),
-    );
+    return const ParchiLoadMoreIndicator();
   }
 
   Widget _buildLeaderboardItem({

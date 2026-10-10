@@ -17,6 +17,7 @@ import '../../widgets/common/spinning_loader.dart'; // [REQUIRED]
 import 'about_us_screen.dart'; // [NEW]
 import 'help_center_screen.dart'; // [NEW]
 import '../../widgets/common/hagrid_text.dart';
+import '../../widgets/common/parchi_inline_loaders.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -527,11 +528,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               ],
             );
           },
-          loading: () => const Center(
-              child: CircularProgressIndicator(color: AppColors.textOnPrimary)),
-          error: (err, stack) => const Center(
-              child: CircularProgressIndicator(
-                  color: AppColors.textOnPrimary)), // Loading on error
+          loading: () =>
+              const ParchiPageLoader(color: AppColors.textOnPrimary),
+          error: (err, stack) => const ParchiPageLoader(
+              color: AppColors.textOnPrimary), // Loading on error
         ),
       ),
     );
@@ -721,8 +721,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => const Center(
-              child: CircularProgressIndicator())); // Default color is primary
+          builder: (_) => const ParchiPageLoader());
       try {
         await SessionService.signOut(ref: ref);
         if (context.mounted) {

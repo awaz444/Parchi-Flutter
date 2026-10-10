@@ -15,6 +15,7 @@ import 'config/supabase_config.dart';
 import 'config/api_config.dart';
 import 'utils/colours.dart';
 import 'utils/toast_utils.dart'; // [NEW] Error Toast Utilities
+import 'utils/tab_scroll_to_top.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/home/merchant_deep_link_screen.dart';
 import 'screens/leaderboard/leaderboard_screen.dart';
@@ -864,7 +865,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
   // ──────────────────────────────────────────────────────────────────────────
 
-  void _onNavTap(int index) => setState(() => _currentIndex = index);
+  void _onNavTap(int index) {
+    // Tapping the tab you're already on scrolls it back to the top.
+    if (index == _currentIndex) {
+      TabScrollToTop.trigger(index);
+      return;
+    }
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
