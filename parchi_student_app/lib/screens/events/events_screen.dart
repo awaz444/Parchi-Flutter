@@ -434,7 +434,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
           style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w800,
-            fontSize: 20,
+            fontSize: 16,
           ),
         ),
         backgroundColor: AppColors.lightCanvas,
