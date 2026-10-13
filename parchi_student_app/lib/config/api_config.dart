@@ -64,6 +64,9 @@ class ApiConfig {
   // Events Endpoint
   static String get activeEventsEndpoint => '$baseUrl/events/active';
 
+  // Home ad carousel
+  static String get activeAdsEndpoint => '$baseUrl/ads/active';
+
   // Partner verification (student)
   static String verificationRequestEndpoint(String id) =>
       '$baseUrl/verification-requests/$id';

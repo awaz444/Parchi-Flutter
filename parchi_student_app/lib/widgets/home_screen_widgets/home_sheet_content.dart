@@ -14,7 +14,7 @@ import '../common/blinking_skeleton.dart';
 import 'filter_bottom_sheet.dart';
 // import 'CLIENT_DEMO_ad_banner_16x9_mockup.dart'; // CLIENT DEMO ONLY — disabled
 // import '../../widgets/home_screen_restraunts_widgets/CLIENT_DEMO_ad_card_1x1_mockup.dart'; // CLIENT DEMO ONLY — disabled
-import 'CLIENT_DEMO_ad_carousel_2x1_mockup.dart'; // CLIENT DEMO ONLY — remove before production
+import 'home_ad_carousel.dart';
 
 import '../../screens/home/merchant_details_screen.dart';
 import '../../models/merchant_detail_model.dart';
@@ -618,7 +618,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
               },
             ),
 
-          // ── CLIENT DEMO MOCKUP: 3.2:1 ad banner under Top Brands ──────────
+          // ── AD CAROUSEL: 3.2:1 banners under Top Brands (managed at /admin/ads)
           if (!widget.isSearching)
             const SliverToBoxAdapter(
               child: Padding(
@@ -626,7 +626,7 @@ class _HomeSheetContentState extends ConsumerState<HomeSheetContent> {
                 // sized to two lines, so this is the whole visual gap even
                 // when every name wraps.
                 padding: EdgeInsets.only(top: 14),
-                child: AdCarousel2x1Mockup(),
+                child: HomeAdCarousel(),
               ),
             ),
 

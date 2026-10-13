@@ -6,6 +6,7 @@ import 'merchants_provider.dart';
 import 'user_provider.dart';
 import 'redemption_provider.dart';
 import 'categories_provider.dart';
+import 'home_ads_provider.dart';
 
 class HomeUIState {
   final bool isSkeletonLoading;
@@ -31,6 +32,10 @@ class HomeUINotifier extends StateNotifier<HomeUIState> {
   Future<void> startRefreshSequence() async {
     // 1. Switch to Skeleton immediately (Pulse removed)
     state = state.copyWith(isSkeletonLoading: true);
+
+    // Ads refetch in the background; the carousel keeps its current ads
+    // meanwhile, so it doesn't need to hold up the skeleton.
+    ref.invalidate(homeAdsProvider);
 
     try {
       // 2. Trigger Refreshes
