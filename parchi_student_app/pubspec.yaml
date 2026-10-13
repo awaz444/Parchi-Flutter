@@ -76,7 +76,6 @@ flutter:
     - assets/leaderboard-svgrepo-com.svg
     - assets/scan-svgrepo-com.svg
     - assets/medal-ribbon-star-svgrepo-com.svg
-    - assets/3.2-1-ad.png
     - sample_ads/
   fonts:
     - family: Hagrid
