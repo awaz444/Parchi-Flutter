@@ -7,10 +7,62 @@ class ToastUtils {
   /// Defines our "Deep Crimson" color.
   static const Color unexpectedErrorColor = Color(0xFFD32F2F);
 
+  // Signatures of failures where the request never got a usable answer from
+  // the server: offline, DNS failure, dropped connection, TLS failure, timeout.
+  static const List<String> _networkErrorMarkers = [
+    'socketexception',
+    'clientexception',
+    'failed host lookup',
+    'network is unreachable',
+    'connection refused',
+    'connection reset',
+    'connection closed',
+    'connection timed out',
+    'connection failed',
+    'handshakeexception',
+    'timeoutexception',
+    'network error',
+  ];
+
+  // Wrappers our services add around the original error text.
+  static final RegExp _wrapperPrefix = RegExp(
+    r'^(Exception|Error|Login failed|Signup failed|Student signup failed|Network error|Failed to get profile|Refresh token failed):\s*',
+    caseSensitive: false,
+  );
+
+  static bool isNetworkError(dynamic error) {
+    final lower = error.toString().toLowerCase();
+    return _networkErrorMarkers.any(lower.contains);
+  }
+
   /// Analyzes an exception/error object and maps it to a user-friendly UI Toast.
   static void handleApiError(BuildContext? context, dynamic error, {bool showDetailedErrors = false}) {
     String errorMessage = error.toString();
     String errorLower = errorMessage.toLowerCase();
+
+    // 0. No connection / server unreachable — never show raw socket errors.
+    if (isNetworkError(error)) {
+      showErrorToast(
+        context,
+        label: "No Connection",
+        message: "Couldn't reach Parchi. Check your internet connection and try again.",
+        labelColor: unexpectedErrorColor,
+      );
+      return;
+    }
+
+    // Server answered with something that isn't our JSON (e.g. a gateway
+    // error page while the backend is restarting).
+    if (errorLower.contains('formatexception') ||
+        errorLower.contains('unexpected response')) {
+      showErrorToast(
+        context,
+        label: "Server Unavailable",
+        message: "Parchi is having trouble right now. Please try again in a moment.",
+        labelColor: unexpectedErrorColor,
+      );
+      return;
+    }
 
     // 1. Session / Auth Expiration
     if (errorLower.contains("session") ||
@@ -43,7 +95,7 @@ class ToastUtils {
     }
 
     // 3. Unhandled Backend Crashes (500s, HTML traces, stack traces)
-    bool isUnexpected = !showDetailedErrors && (
+    bool isUnexpected = (
         errorLower.contains("internal server error") ||
         errorLower.contains("<html>") ||
         errorLower.contains("nginx") ||
@@ -61,12 +113,16 @@ class ToastUtils {
       return;
     }
 
-    // 4. Known / Standard Error (Strip 'Exception:' prefix if present)
-    String cleanMessage = errorMessage
-        .replaceFirst(RegExp(r'^Exception:\s*'), '')
-        .replaceFirst(RegExp(r'^Error:\s*'), '');
+    // 4. Known / Standard Error (strip service wrapper prefixes, possibly nested)
+    String cleanMessage = errorMessage.trim();
+    while (_wrapperPrefix.hasMatch(cleanMessage)) {
+      cleanMessage = cleanMessage.replaceFirst(_wrapperPrefix, '');
+    }
+    if (cleanMessage.isEmpty) {
+      cleanMessage = "Something went wrong. Please try again.";
+    }
 
-    if (!showDetailedErrors && cleanMessage.length > 200) {
+    if (cleanMessage.length > 200) {
       cleanMessage = '${cleanMessage.substring(0, 197)}...';
     }
 

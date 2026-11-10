@@ -61,7 +61,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
       }
     } catch (e) {
       if (!mounted) return;
-      ToastUtils.showErrorToast(context, label: "Error", message: e.toString().replaceAll('Exception: ', ''));
+      ToastUtils.handleApiError(context, e);
     } finally {
       if (mounted) {
         setState(() {
